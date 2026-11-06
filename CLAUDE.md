@@ -6,6 +6,9 @@
 ## 1. Contexte
 - ATS interne (suivi et matching de candidats) pour Unitech Solution, porté par une personne **non développeuse**.
 - Existant : fichier Excel de suivi (M365), ~2 000 CV dans SharePoint (Word nominatif + PDF anonymisé), 200 à 500 candidatures/mois.
+- L'utilisatrice est **elle-même administratrice Microsoft 365** : les réglages Entra ID / Exchange / SharePoint se font avec elle, en pas-à-pas.
+- Les CV SharePoint sont rangés **par métier** (un dossier par métier) ; CV reçus par email déposés dans le dossier métier détecté, sinon `À classer`.
+- Connexion des équipes : comptes Microsoft 365 (fournisseur Azure de Supabase), réservée au groupe Entra « ATS – Utilisateurs ».
 - Personne en interne ne maintiendra l'outil : **simple, robuste, documenté, peu coûteux**.
 - **Tout en français** : interface, explications, documentation, messages de commit.
 

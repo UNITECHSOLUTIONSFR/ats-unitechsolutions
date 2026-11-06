@@ -4,7 +4,7 @@ Dernière mise à jour : 6 novembre 2026
 
 ## Où on en est
 **Étape 0 — Cadrage** terminée : brief enregistré (`BRIEF.md`), règles du projet (`CLAUDE.md`), guide de préparation (`GUIDE_PREPARATION.md`).
-**En attente** : que tu suives `GUIDE_PREPARATION.md` (parties 1 à 6) et que tu répondes aux trois questions ci-dessous. Ensuite je démarre l'étape 1.
+**En attente** : que tu suives `GUIDE_PREPARATION.md` (parties 1 à 6). Les trois questions ont reçu leur réponse ; la partie 3 du guide a été réécrite en pas-à-pas d'administration Microsoft 365. Ensuite je démarre l'étape 1.
 
 ## Plan des 13 étapes
 
@@ -31,10 +31,13 @@ Dernière mise à jour : 6 novembre 2026
 - **Testé** : rien à tester (aucun code).
 - **Ensuite** : tu suis le guide de préparation ; je vérifie chaque point puis je démarre l'étape 1.
 
+## Réponses reçues (6 novembre 2026)
+1. Boîte de candidatures : **boîte partagée Microsoft 365**. L'utilisatrice **est l'administratrice Microsoft 365** → la partie 3 du guide est un pas-à-pas d'administration (plus de demande à un tiers).
+2. CV SharePoint rangés **par métier** (un dossier par métier).
+3. Connexion des équipes avec **leurs comptes Microsoft 365** : oui (coût supplémentaire : 0 €).
+
 ## Questions en attente (à toi)
-1. La boîte de candidatures est-elle bien dans Microsoft 365, et as-tu accès à l'administration Microsoft 365 ou faut-il passer par quelqu'un ? *Recommandation : boîte partagée M365 (gratuite) ; demande à l'administrateur avec le texte prêt du guide.*
-2. Les ~2 000 CV sont-ils dans un seul site SharePoint, et comment sont rangés les dossiers ? *Recommandation : un seul site, que l'application pourra seule lire.*
-3. Les équipes se connectent-elles avec leur compte Microsoft 365 ? *Recommandation : oui (pas de mot de passe de plus, départ d'un salarié = accès coupé automatiquement côté Microsoft).*
+Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties 1 à 6) puis écrire « Guide suivi ».
 
 ## Décisions à confirmer (appliquées par défaut, non bloquantes)
 | # | Décision recommandée | Pourquoi |
@@ -46,6 +49,8 @@ Dernière mise à jour : 6 novembre 2026
 | D5 | **Pas de rôle « lecture seule »** en V1. | Ajout facile plus tard si besoin. |
 | D6 | **Trigramme** : prendre le trigramme déjà présent dans l'Excel quand il existe ; pour les nouveaux, règle proposée : accents retirés, tirets/apostrophes/espaces supprimés ; particules « de, du, des, d' » ignorées si un autre mot suit ; « Le / La » conservés (partie du nom). Exemples : Le Goff → **LE** (JLE), De La Tour → **LA** (xLA), Jean-Marc Dupont → **JDU**, Éloïse Gérard → **EGE**, D'Artagnan → **AR**. | À valider sur les trigrammes réels de l'Excel à l'étape 4 (je mesurerai le % de concordance). |
 | D7 | **Accès Microsoft à la boîte** : `Mail.Read` seul (lecture), via le contrôle d'accès Exchange « RBAC for Applications » limité à la boîte. | Moindre privilège ; l'état « traité » est gardé dans la base. |
+| D9 | **Dépôt des CV reçus par email** : dans le dossier métier correspondant au poste détecté, sinon dans un dossier `À classer`. | Respecte le rangement actuel par métier ; l'outil suit le fichier s'il est déplacé ensuite. |
+| D10 | **Connexion réservée au groupe « ATS – Utilisateurs »** dans Entra ID ; si l'option groupe n'est pas incluse dans l'abonnement, affectation personne par personne (pas d'option payante). | Retrait d'accès en un clic côté Microsoft, sans surcoût. |
 | D8 | **Haiku et Sonnet 5.5** : thinking désactivé ou `effort: low` pour les extractions. | La réflexion est facturée comme sortie ; inutile pour de l'extraction. |
 
 ## Coûts IA réels
