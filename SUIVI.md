@@ -36,6 +36,11 @@ Dernière mise à jour : 6 novembre 2026
 - **Testé** : rien à tester (aucun code).
 - **Ensuite** : tu suis le guide de préparation ; je vérifie chaque point puis je démarre l'étape 1.
 
+### Étape 1 — Préparation des comptes (en cours)
+- **Fait** : accès réseau de la session ouvert à 5 services (Anthropic, Supabase, Microsoft Graph, connexion Microsoft, Vercel).
+- **Testé** : les 5 services répondent depuis la session (refus « sans clé » attendu pour Anthropic, Supabase et Vercel).
+- **Reste** : les parties 1, 2, 3, 4 et 5 du guide par l'utilisatrice, puis vérification de chaque clé et de chaque compte.
+
 ## Réponses reçues (6 novembre 2026)
 1. Boîte de candidatures : adresse existante **`recrutement@unitechsolutions.fr`** (type de boîte à relever en partie 3.1 du guide). L'utilisatrice **est l'administratrice Microsoft 365** → la partie 3 du guide est un pas-à-pas d'administration (plus de demande à un tiers).
 2. CV SharePoint rangés **par métier** (un dossier par métier).

@@ -271,7 +271,7 @@ Pour chaque personne : **prénom, nom, adresse Microsoft 365, rôle** (*administ
 
 Ouvre le menu de l'environnement cloud dans la barre de titre de la session (sur claude.ai/code) → **Edit**.
 
-**a) Accès réseau (Network access)** : choisis **Limited**, laisse cochée **Allow package managers** (bibliothèques de code), et ajoute **exactement** ces domaines dans **Allowed domains** :
+**a) Accès réseau (Network access)** — ✅ *déjà fait le 6 novembre 2026 pour `api.anthropic.com`, `api.supabase.com`, `graph.microsoft.com`, `login.microsoftonline.com`, `api.vercel.com`. Il restera seulement les deux adresses propres à ton compte (ton projet Supabase et ton SharePoint) : je te les demanderai, ou elles s'ajouteront quand tu saisiras la clé correspondante.* Pour mémoire : choisis **Limited**, laisse cochée **Allow package managers** (bibliothèques de code), et ajoute **exactement** ces domaines dans **Allowed domains** :
 
 | Domaine | À quoi il sert |
 |---|---|
