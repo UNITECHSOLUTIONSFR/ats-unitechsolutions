@@ -1,0 +1,149 @@
+/**
+ * Tests du schéma et des règles d'accès (Row Level Security) sur une base Postgres temporaire.
+ * Lancement : npm run test:base (démarre la base locale si besoin).
+ */
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { execSync } from "node:child_process";
+import { readFileSync, readdirSync } from "node:fs";
+import path from "node:path";
+import { Client } from "pg";
+
+const racine = path.resolve(__dirname, "..");
+const urlServeur = execSync(path.join(racine, "scripts/db-locale.sh")).toString().trim();
+const nomBase = `ats_test_${Date.now()}`;
+let db: Client;
+
+const ADMIN = "00000000-0000-0000-0000-00000000000a";
+const RECRUTEUR = "00000000-0000-0000-0000-00000000000b";
+const INACTIF = "00000000-0000-0000-0000-00000000000c";
+const INCONNU = "00000000-0000-0000-0000-00000000000d";
+
+/** Exécute une requête en se faisant passer pour un utilisateur connecté (ou un visiteur). */
+async function commeUtilisateur<T = Record<string, unknown>>(uid: string | null, sql: string, params: unknown[] = []) {
+  await db.query("begin");
+  try {
+    await db.query(`set local role ${uid ? "authenticated" : "anon"}`);
+    await db.query("select set_config('request.jwt.claim.sub', $1, true)", [uid ?? ""]);
+    const r = await db.query(sql, params);
+    await db.query("commit");
+    return r.rows as T[];
+  } catch (e) {
+    await db.query("rollback");
+    throw e;
+  }
+}
+
+beforeAll(async () => {
+  const admin = new Client({ connectionString: urlServeur });
+  await admin.connect();
+  await admin.query(`create database ${nomBase}`);
+  await admin.end();
+  db = new Client({ connectionString: urlServeur.replace(/\/postgres$/, `/${nomBase}`) });
+  await db.connect();
+  await db.query(readFileSync(path.join(racine, "tests/sql/supabase_simule.sql"), "utf8"));
+  const dossier = path.join(racine, "supabase/migrations");
+  for (const f of readdirSync(dossier).sort()) await db.query(readFileSync(path.join(dossier, f), "utf8"));
+  await db.query(`insert into auth.users (id, email) values ($1,'admin@u.fr'),($2,'rec@u.fr'),($3,'parti@u.fr'),($4,'inconnu@u.fr')`,
+    [ADMIN, RECRUTEUR, INACTIF, INCONNU]);
+  await db.query(`insert into utilisateurs (id, email, role, actif) values
+    ($1,'admin@u.fr','admin',true),($2,'rec@u.fr','recruteur',true),($3,'parti@u.fr','recruteur',false)`,
+    [ADMIN, RECRUTEUR, INACTIF]);
+});
+
+afterAll(async () => {
+  await db?.end();
+  const admin = new Client({ connectionString: urlServeur });
+  await admin.connect();
+  await admin.query(`drop database if exists ${nomBase} with (force)`);
+  await admin.end();
+});
+
+describe("schéma", () => {
+  it("la RLS est activée sur toutes les tables, sans exception", async () => {
+    const r = await db.query(`select tablename from pg_tables where schemaname='public' and not rowsecurity`);
+    expect(r.rows).toEqual([]);
+    const n = await db.query(`select count(*)::int as n from pg_tables where schemaname='public'`);
+    expect(n.rows[0].n).toBeGreaterThanOrEqual(17);
+  });
+
+  it("chaque table a created_at et updated_at", async () => {
+    const r = await db.query(`
+      select t.tablename from pg_tables t where t.schemaname='public' and (
+        not exists (select 1 from information_schema.columns c where c.table_name=t.tablename and c.column_name='created_at') or
+        not exists (select 1 from information_schema.columns c where c.table_name=t.tablename and c.column_name='updated_at'))`);
+    expect(r.rows).toEqual([]);
+  });
+
+  it("le référentiel de compétences est chargé, avec synonymes", async () => {
+    const r = await db.query(`select nom_canonique from competences where 'reactjs' = any(synonymes)`);
+    expect(r.rows[0].nom_canonique).toBe("React");
+  });
+
+  it("deux consultants peuvent avoir le même trigramme, pas le même email", async () => {
+    await db.query(`insert into consultants (prenom, nom, trigramme, email) values ('Jean','Dupont','JDU','j1@x.fr'),('Julie','Durand','JDU','j2@x.fr')`);
+    await expect(db.query(`insert into consultants (prenom, nom, trigramme, email) values ('X','Y','XY','j1@x.fr')`)).rejects.toThrow();
+  });
+});
+
+describe("règles d'accès", () => {
+  it("un visiteur non connecté n'a accès à rien", async () => {
+    await expect(commeUtilisateur(null, "select * from consultants")).rejects.toThrow(/permission denied/);
+  });
+
+  it("un compte non invité ne voit rien et ne peut rien créer", async () => {
+    expect(await commeUtilisateur(INCONNU, "select * from consultants")).toEqual([]);
+    await expect(commeUtilisateur(INCONNU, `insert into consultants (prenom, nom, trigramme) values ('A','B','ABB')`)).rejects.toThrow();
+  });
+
+  it("un utilisateur désactivé ne voit plus rien (retrait d'accès en un clic)", async () => {
+    expect(await commeUtilisateur(INACTIF, "select * from consultants")).toEqual([]);
+  });
+
+  it("un recruteur consulte, crée et modifie, mais ne supprime pas", async () => {
+    const [c] = await commeUtilisateur<{ id: string }>(RECRUTEUR,
+      `insert into consultants (prenom, nom, trigramme) values ('Paul','Martin','PMA') returning id`);
+    await commeUtilisateur(RECRUTEUR, `update consultants set notes='appelé' where id=$1`, [c.id]);
+    const lus = await commeUtilisateur<{ notes: string }>(RECRUTEUR, `select notes from consultants where id=$1`, [c.id]);
+    expect(lus[0].notes).toBe("appelé");
+    const supprimes = await commeUtilisateur(RECRUTEUR, `delete from consultants where id=$1 returning id`, [c.id]);
+    expect(supprimes).toEqual([]);
+  });
+
+  it("un recruteur ne voit pas les coûts IA, ne change pas les réglages, ne gère pas les utilisateurs", async () => {
+    await db.query(`insert into ai_usage (usage, modele, cout_estime_usd) values ('fiche_cv','claude-haiku-5-5',0.001)`);
+    expect(await commeUtilisateur(RECRUTEUR, "select * from ai_usage")).toEqual([]);
+    expect(await commeUtilisateur(ADMIN, "select * from ai_usage")).toHaveLength(1);
+    expect(await commeUtilisateur(RECRUTEUR, `update reglages set valeur='99' where cle='plafond_ia_mensuel_usd' returning cle`)).toEqual([]);
+    await expect(commeUtilisateur(RECRUTEUR, `insert into utilisateurs (id, email) values ($1,'inconnu@u.fr')`, [INCONNU])).rejects.toThrow();
+    expect(await commeUtilisateur(RECRUTEUR, "select email from utilisateurs")).toEqual([{ email: "rec@u.fr" }]);
+  });
+
+  it("un administrateur supprime une fiche, et la suppression est tracée", async () => {
+    const [c] = await commeUtilisateur<{ id: string }>(ADMIN,
+      `insert into consultants (prenom, nom, trigramme) values ('Léa','Petit','LPE') returning id`);
+    expect(await commeUtilisateur(ADMIN, `delete from consultants where id=$1 returning id`, [c.id])).toHaveLength(1);
+    const j = await db.query(`select utilisateur_id, details from journal_acces where action='suppression' and consultant_id=$1`, [c.id]);
+    expect(j.rows[0].utilisateur_id).toBe(ADMIN);
+    expect(j.rows[0].details.trigramme).toBe("LPE");
+  });
+
+  it("le journal d'accès est réservé aux administrateurs", async () => {
+    await commeUtilisateur(RECRUTEUR, `insert into journal_acces (utilisateur_id, action) values ($1,'consultation')`, [RECRUTEUR]);
+    await expect(commeUtilisateur(RECRUTEUR, `insert into journal_acces (utilisateur_id, action) values ($1,'export')`, [ADMIN])).rejects.toThrow();
+    expect(await commeUtilisateur(RECRUTEUR, "select * from journal_acces")).toEqual([]);
+  });
+
+  it("chaque changement de statut d'une proposition est historisé", async () => {
+    const [m] = await commeUtilisateur<{ id: string }>(RECRUTEUR,
+      `insert into missions (intitule, texte_besoin) values ('Dev React','Besoin…') returning id`);
+    const [c] = await commeUtilisateur<{ id: string }>(RECRUTEUR,
+      `insert into consultants (prenom, nom, trigramme) values ('Tom','Roux','TRO') returning id`);
+    const [p] = await commeUtilisateur<{ id: string }>(RECRUTEUR,
+      `insert into propositions (mission_id, consultant_id, score) values ($1,$2,82) returning id`, [m.id, c.id]);
+    await commeUtilisateur(RECRUTEUR, `update propositions set statut='appele' where id=$1`, [p.id]);
+    await commeUtilisateur(RECRUTEUR, `update propositions set statut='envoye_client' where id=$1`, [p.id]);
+    const h = await commeUtilisateur<{ nouveau_statut: string }>(RECRUTEUR,
+      `select nouveau_statut from propositions_historique where proposition_id=$1 order by created_at, nouveau_statut`, [p.id]);
+    expect(h.map((x) => x.nouveau_statut).sort()).toEqual(["appele", "envoye_client", "propose"]);
+  });
+});
