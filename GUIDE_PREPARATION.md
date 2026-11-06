@@ -123,7 +123,7 @@ Installe d'abord **Microsoft Authenticator** sur ton téléphone (App Store ou G
 **Pourquoi ?** L'application doit pouvoir lire les CV du site SharePoint, y déposer les CV reçus par email, lire la boîte de candidatures, et laisser tes équipes se connecter avec leur compte Microsoft. Pour la sécurité, on donne **le strict minimum** : un seul site SharePoint et une seule boîte, pas tout le tenant.
 
 **Ce que tu vas créer**
-- une **boîte partagée** pour les candidatures (gratuite) ;
+- *(pas de nouvelle boîte : on utilise `recrutement@unitechsolutions.fr`, vérifiée en 3.1)* ;
 - un **groupe** « ATS – Utilisateurs » : seules les personnes de ce groupe pourront se connecter ;
 - deux **inscriptions d'applications** dans Entra ID (Entra ID = l'annuaire Microsoft qui gère les comptes et les autorisations) :
   - « ATS Unitech – Synchronisation » : utilisée par l'outil, sans personne derrière, pour SharePoint et la boîte ;
@@ -133,19 +133,25 @@ Installe d'abord **Microsoft Authenticator** sur ton téléphone (App Store ou G
 
 > **Coût** : 0 €. La connexion avec les comptes Microsoft est incluse dans Supabase Pro et dans ton abonnement Microsoft 365.
 
-### 3.1 Créer la boîte partagée de candidatures — ⏱ 5 min
-1. Va sur https://admin.microsoft.com (connecte-toi avec ton compte administrateur).
-2. Menu de gauche : **Équipes et groupes → Boîtes aux lettres partagées** *(si le menu est replié : **Afficher tout**)*.
-3. **+ Ajouter une boîte aux lettres partagée** :
-   - Nom : `Candidatures Unitech`
-   - Adresse e-mail : `candidatures` @ ton domaine (ex. `candidatures@unitechsolutions.fr`)
-   - **Enregistrer les modifications**.
-4. Sur l'écran suivant, clique sur **Ajouter des membres à cette boîte** → coche ton nom (et les recruteurs qui liront la boîte dans Outlook) → **Ajouter**.
+### 3.1 Vérifier la boîte `recrutement@unitechsolutions.fr` — ⏱ 10 min
+On utilise ton adresse existante **`recrutement@unitechsolutions.fr`** : pas de nouvelle boîte à créer. Il faut seulement savoir **de quel type** elle est, car cela change la suite.
 
-✅ **Vérification** : dans Outlook sur le web (https://outlook.office.com), la boîte « Candidatures Unitech » apparaît dans la colonne de gauche après quelques minutes (sinon : clic droit sur **Dossiers → Ajouter un dossier partagé**).
-- [ ] Boîte partagée créée — adresse notée : `________________`
+1. Va sur https://admin.exchange.microsoft.com (centre d'administration Exchange) → menu de gauche **Destinataires → Boîtes aux lettres**.
+2. Dans la recherche, tape `recrutement`. Regarde la colonne **Type de destinataire** :
 
-*Une adresse existante (ex. `recrutement@…`) peut servir à la place, à condition qu'elle ne reçoive **que** des candidatures : l'outil lira tout ce qui y arrive. N'annonce la nouvelle adresse sur tes offres qu'à l'étape 11.*
+| Ce que tu vois | Ce que c'est | Que faire |
+|---|---|---|
+| **SharedMailbox** (boîte partagée) | Le cas idéal | Rien. Passe au 3.2. |
+| **UserMailbox** (boîte utilisateur) | Un compte avec sa propre licence | Ça fonctionne tel quel. *Option d'économie (facultative)* : la convertir en boîte partagée libère une licence Microsoft 365 (plusieurs euros par mois). Ne le fais pas seule : dis-le-moi, je te guiderai, car la conversion change la façon de s'y connecter. |
+| Rien n'apparaît | L'adresse est probablement une **liste de distribution** ou un **alias** qui redirige vers d'autres boîtes : il n'y a pas de boîte à lire | Dis-le-moi : on créera une boîte partagée et on y rattachera l'adresse `recrutement@`. |
+
+3. Vérifie que tu y as accès : dans Outlook sur le web (https://outlook.office.com), la boîte apparaît dans la colonne de gauche (sinon clic droit sur **Dossiers → Ajouter un dossier partagé** → `recrutement@unitechsolutions.fr`).
+
+À savoir :
+- L'outil lira **tout** ce qui arrive dans cette boîte. Les emails qui ne sont pas des candidatures (publicités, notifications de jobboards, échanges divers) seront reconnus et classés à part, sans créer de fiche. Ce tri coûte moins d'un centime par email.
+- Les emails **déjà présents** dans la boîte ne seront pas traités automatiquement : l'outil partira de la date de mise en service (étape 11). Traiter l'historique reste possible ensuite, après une estimation du coût.
+
+- [ ] Type de la boîte relevé : `________________`
 
 ### 3.2 Créer le groupe « ATS – Utilisateurs » — ⏱ 5 min
 1. Toujours dans https://admin.microsoft.com : **Équipes et groupes → Équipes et groupes actifs** → onglet **Sécurité** → **+ Ajouter un groupe de sécurité**.
@@ -227,9 +233,9 @@ Installe d'abord **Microsoft Authenticator** sur ton téléphone (App Store ou G
 3. Copie-colle ensuite ces quatre commandes **après avoir remplacé** `ID-SYNCHRO`, `ID-OBJET-SYNCHRO` et l'adresse de la boîte :
    ```powershell
    New-ServicePrincipal -AppId ID-SYNCHRO -ObjectId ID-OBJET-SYNCHRO -DisplayName "ATS Unitech - Synchronisation"
-   New-ManagementScope -Name "ATS - Boite candidatures" -RecipientRestrictionFilter "PrimarySmtpAddress -eq 'candidatures@unitechsolutions.fr'"
+   New-ManagementScope -Name "ATS - Boite candidatures" -RecipientRestrictionFilter "PrimarySmtpAddress -eq 'recrutement@unitechsolutions.fr'"
    New-ManagementRoleAssignment -App ID-SYNCHRO -Role "Application Mail.Read" -CustomResourceScope "ATS - Boite candidatures"
-   Test-ServicePrincipalAuthorization -Identity ID-SYNCHRO -Resource candidatures@unitechsolutions.fr
+   Test-ServicePrincipalAuthorization -Identity ID-SYNCHRO -Resource recrutement@unitechsolutions.fr
    ```
 4. La dernière commande affiche un tableau : la colonne **InScope** doit valoir **True**.
 5. Contre-vérification : relance la dernière commande en remplaçant l'adresse par **ta propre adresse** : InScope doit valoir **False** (l'outil ne peut pas lire ta boîte).
@@ -266,7 +272,7 @@ ID Synchro        :
 ID Connexion      :
 Adresse du site   :
 ID Site           :
-Boîte candidatures:
+Boîte candidatures: recrutement@unitechsolutions.fr — type :
 Résultat InScope  : True (boîte candidatures) / False (ma boîte)
 Groupe assigné    : oui / non (utilisateurs un par un)
 ```
@@ -278,7 +284,7 @@ Mets dès maintenant dans ton agenda un rappel **un mois avant** l'expiration de
 
 ## Partie 4 — (fusionnée dans la partie 3.1)
 
-La boîte de candidatures est créée en 3.1.
+La boîte de candidatures est `recrutement@unitechsolutions.fr`, vérifiée en 3.1.
 
 ---
 
@@ -405,7 +411,7 @@ SHAREPOINT_SITE_URL=[URL du site]
 | Étape 6 | **Jalon B** : comparer les fiches Haiku / Sonnet, choisir le modèle, accepter ou non l'estimation de l'import complet. | 20 min |
 | Étape 7 | Saisir dans GitHub les secrets de l'import automatique : dépôt → **Settings → Secrets and variables → Actions → New repository secret** : `ANTHROPIC_API_KEY` (clé `ats-production`), `SUPABASE_SECRET_KEY`, `MS_CLIENT_SECRET`. Puis, après l'import, baisser la limite mensuelle Anthropic à 20 $. | 10 min |
 | Étape 9 | **Jalon C** : me fournir le texte de **trois missions passées** et le nom des consultants qui avaient été retenus ; vérifier le classement. | 30 min |
-| Étape 11 | Activer la **réponse automatique** de la boîte de candidatures avec la mention RGPD que nous aurons rédigée (Outlook → boîte partagée → Paramètres → Réponses automatiques), puis annoncer l'adresse sur les offres d'emploi. | 10 min |
+| Étape 11 | Activer (ou compléter, si elle existe déjà) la **réponse automatique** de `recrutement@` avec la mention RGPD que nous aurons rédigée (Outlook → la boîte → Paramètres → Réponses automatiques). | 10 min |
 | Étape 12 | **Jalon D** : revue sécurité et RGPD ; tester l'application avec un compte « recruteur » (un collègue volontaire ajouté au groupe « ATS – Utilisateurs »). | 45 min |
 | Étape 13 | Ajouter l'équipe au groupe « ATS – Utilisateurs » (partie 3.2) et l'inviter dans l'application ; participer au test de restauration de sauvegarde. | 30 min |
 | Tous les 24 mois | Renouveler les deux secrets client Microsoft avant leur expiration (procédure dans `GUIDE_EXPLOITATION.md`). Mets dès maintenant un rappel dans ton agenda **un mois avant** la date notée en partie 3. | 15 min |
