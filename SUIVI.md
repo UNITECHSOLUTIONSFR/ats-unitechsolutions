@@ -4,14 +4,14 @@ Dernière mise à jour : 6 novembre 2026
 
 ## Où on en est
 **Étape 0 — Cadrage** terminée : brief enregistré (`BRIEF.md`), règles du projet (`CLAUDE.md`), guide de préparation (`GUIDE_PREPARATION.md`).
-**En attente** : que tu suives `GUIDE_PREPARATION.md` (parties 1 à 6). Les trois questions ont reçu leur réponse ; la partie 3 du guide a été réécrite en pas-à-pas d'administration Microsoft 365. Ensuite je démarre l'étape 1.
+**En attente** : que tu suives `GUIDE_PREPARATION.md` (parties 1 à 5). Les trois questions ont reçu leur réponse ; la partie 3 du guide a été réécrite en pas-à-pas d'administration Microsoft 365. Ensuite je démarre l'étape 1.
 
 ## Plan des 13 étapes
 
 | # | Étape | Statut | Jalon |
 |---|---|---|---|
 | 0 | Cadrage (brief, règles, guide de préparation) | ✅ Terminé | |
-| 1 | Préparation des comptes (vérification du guide) | ⏳ En attente de toi | |
+| 1 | Préparation des comptes (vérification du guide) | 🔄 En cours | |
 | 2 | Squelette en ligne (Next.js + connexion + Vercel) | ⬜ À faire | |
 | 3 | Base de données (schéma, RLS, rôles, référentiel) | ⬜ À faire | |
 | 4 | Import du fichier Excel de suivi | ⬜ À faire | |
@@ -21,9 +21,14 @@ Dernière mise à jour : 6 novembre 2026
 | 8 | Interface principale + administration + export Excel | ⬜ À faire | |
 | 9 | Matching des missions + suivi des propositions | ⬜ À faire | **Jalon C** |
 | 10 | Synchronisation nocturne + rapport du matin | ⬜ À faire | |
-| 11 | Candidatures par email | ⬜ À faire | |
 | 12 | Sécurité et RGPD (revue complète) | ⬜ À faire | **Jalon D** |
 | 13 | Mise en service (guides, restauration, invitation) | ⬜ À faire | |
+| 11 → Phase 2 | Candidatures par email (`recrutement@`) — **reportée après la mise en service de la V1** | ⏸ Phase 2 | |
+
+## Changement de périmètre (6 novembre 2026, à la demande de l'utilisatrice)
+- **V1** = import du fichier Excel et des CV SharePoint, synchronisation de nuit, saisie manuelle d'une mission et matching avec les CV existants, interface, sécurité, mise en service.
+- **Phase 2** = liaison automatique avec `recrutement@unitechsolutions.fr` (ancienne étape 11).
+- Conséquences : l'application Microsoft n'a besoin que de la **lecture** sur SharePoint en V1 (droit d'écriture ajouté en phase 2) ; aucun réglage Exchange/PowerShell en V1 ; le code garde une fonction d'ingestion unique pour accueillir les emails ensuite.
 
 ## Journal des étapes
 ### Étape 0 — Cadrage (6 novembre 2026)
@@ -37,7 +42,7 @@ Dernière mise à jour : 6 novembre 2026
 3. Connexion des équipes avec **leurs comptes Microsoft 365** : oui (coût supplémentaire : 0 €).
 
 ## Questions en attente (à toi)
-Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties 1 à 6) puis écrire « Guide suivi ».
+Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties 1 à 5) puis écrire « Guide suivi ».
 
 ## Décisions à confirmer (appliquées par défaut, non bloquantes)
 | # | Décision recommandée | Pourquoi |
@@ -51,7 +56,7 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 | D7 | **Accès Microsoft à la boîte** : `Mail.Read` seul (lecture), via le contrôle d'accès Exchange « RBAC for Applications » limité à la boîte. | Moindre privilège ; l'état « traité » est gardé dans la base. |
 | D9 | **Dépôt des CV reçus par email** : dans le dossier métier correspondant au poste détecté, sinon dans un dossier `À classer`. | Respecte le rangement actuel par métier ; l'outil suit le fichier s'il est déplacé ensuite. |
 | D10 | **Connexion réservée au groupe « ATS – Utilisateurs »** dans Entra ID ; si l'option groupe n'est pas incluse dans l'abonnement, affectation personne par personne (pas d'option payante). | Retrait d'accès en un clic côté Microsoft, sans surcoût. |
-| D11 | **Historique de `recrutement@`** : seuls les emails reçus après la mise en service (étape 11) sont traités ; l'historique pourra l'être ensuite, après estimation. | Évite un traitement de masse non estimé ; les anciens CV sont déjà dans SharePoint. |
+| D11 | **Historique de `recrutement@`** : seuls les emails reçus après la mise en service de la phase 2 sont traités ; l'historique pourra l'être ensuite, après estimation. | Évite un traitement de masse non estimé ; les anciens CV sont déjà dans SharePoint. |
 | D8 | **Haiku et Sonnet 5.5** : thinking désactivé ou `effort: low` pour les extractions. | La réflexion est facturée comme sortie ; inutile pour de l'extraction. |
 
 ## Coûts IA réels

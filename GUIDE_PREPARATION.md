@@ -1,8 +1,8 @@
 # Guide de préparation — ATS Unitech Solution
 
-Ce document regroupe **tout ce que tu auras à faire toi-même** pendant le projet. Suis les parties 1 à 6 en une fois (environ **4 h 30 de ton temps**, réglages Microsoft 365 compris). Les actions qui ne peuvent être faites que plus tard sont regroupées dans la **partie 7**, avec l'étape concernée.
+Ce document regroupe **tout ce que tu auras à faire toi-même** pendant le projet. Suis les parties 1 à 5 en une fois (environ **3 h 30 de ton temps**, réglages Microsoft 365 compris). Les actions qui ne peuvent être faites que plus tard sont regroupées dans la **partie 6**, avec l'étape concernée.
 
-Quand tu as terminé les parties 1 à 6, écris-moi simplement « Guide suivi » : je vérifierai chaque point moi-même.
+Quand tu as terminé les parties 1 à 5, écris-moi simplement « Guide suivi » : je vérifierai chaque point moi-même.
 
 > **Trois règles d'or pour les secrets** (mots de passe, clés API, « secrets client » Microsoft)
 > 1. Ne les colle **jamais** dans la conversation avec moi, ni dans un email, ni dans Teams.
@@ -57,7 +57,7 @@ Le dépôt existe déjà : `unitechsolutionsfr/ats-unitechsolutions`.
 5. De retour sur Vercel, clique sur **Import** à côté de `ats-unitechsolutions`. Laisse tout par défaut et clique sur **Deploy**. ⚠️ Ce premier déploiement va **échouer** (le dépôt ne contient pas encore d'application) : c'est normal.
 6. Dans le projet : **Settings → Functions → Function Region** : choisis **Paris, France (cdg1)** → **Save**.
 7. Dans **Settings → Deployment Protection** : laisse **Vercel Authentication** activé sur **Standard Protection** (les aperçus des branches restent privés).
-8. Crée un jeton pour que je puisse configurer Vercel à ta place : clique sur ton avatar → **Account Settings → Tokens** → **Create**. Nom : `claude-code-ats`, Scope : **Unitech Solution**, Expiration : **1 year** → **Create**. Copie le jeton dans ton gestionnaire de mots de passe (il ne s'affiche qu'une fois). Tu le saisiras en partie 6.
+8. Crée un jeton pour que je puisse configurer Vercel à ta place : clique sur ton avatar → **Account Settings → Tokens** → **Create**. Nom : `claude-code-ats`, Scope : **Unitech Solution**, Expiration : **1 year** → **Create**. Copie le jeton dans ton gestionnaire de mots de passe (il ne s'affiche qu'une fois). Tu le saisiras en partie 5.
 
 ✅ **Vérification** : le projet `ats-unitechsolutions` apparaît sur le tableau de bord, l'équipe affiche « Pro ».
 - [ ] Vercel Pro souscrit
@@ -77,7 +77,7 @@ Le dépôt existe déjà : `unitechsolutionsfr/ats-unitechsolutions`.
    - Compute size : laisse **Micro** (inclus).
    - **Create new project** (2 minutes d'attente).
 5. Note l'**identifiant du projet** (Project ref) : c'est la suite de lettres dans l'adresse de la page, `supabase.com/dashboard/project/`**`abcdefghijklmnop`**. *(Non secret : tu peux me le donner.)*
-6. **Project Settings → API Keys** : tu y trouveras une **Publishable key** (`sb_publishable_…`, non secrète) et une **Secret key** (`sb_secret_…`, **secrète**). Si la secret key n'existe pas, clique sur **Create new API keys**. Ne copie rien pour l'instant : tu les saisiras en partie 6.
+6. **Project Settings → API Keys** : tu y trouveras une **Publishable key** (`sb_publishable_…`, non secrète) et une **Secret key** (`sb_secret_…`, **secrète**). Si la secret key n'existe pas, clique sur **Create new API keys**. Ne copie rien pour l'instant : tu les saisiras en partie 5.
 7. Crée un jeton personnel pour que je puisse créer les tables à distance : avatar en haut à droite → **Account preferences → Access Tokens** → **Generate new token**, nom `claude-code-ats`. Range-le dans ton gestionnaire de mots de passe.
 
 ✅ **Vérification** : le projet affiche « Healthy » et la région « eu-west-3 » (Paris) dans **Project Settings → General**.
@@ -118,42 +118,21 @@ Installe d'abord **Microsoft Authenticator** sur ton téléphone (App Store ou G
 
 ---
 
-## Partie 3 — Microsoft 365 : réglages d'administration (c'est toi qui as les droits d'administration) — ⏱ 1 h 30
+## Partie 3 — Microsoft 365 : réglages d'administration (c'est toi qui as les droits d'administration) — ⏱ 45 min
 
-**Pourquoi ?** L'application doit pouvoir lire les CV du site SharePoint, y déposer les CV reçus par email, lire la boîte de candidatures, et laisser tes équipes se connecter avec leur compte Microsoft. Pour la sécurité, on donne **le strict minimum** : un seul site SharePoint et une seule boîte, pas tout le tenant.
+**Pourquoi ?** Pour la V1, l'application doit pouvoir **lire** les CV du site SharePoint et laisser tes équipes se connecter avec leur compte Microsoft. La liaison avec la boîte `recrutement@` viendra en **phase 2** (partie 7). Pour la sécurité, on donne **le strict minimum** : un seul site SharePoint, en lecture seule, pas tout le tenant.
 
 **Ce que tu vas créer**
-- *(pas de nouvelle boîte : on utilise `recrutement@unitechsolutions.fr`, vérifiée en 3.1)* ;
 - un **groupe** « ATS – Utilisateurs » : seules les personnes de ce groupe pourront se connecter ;
 - deux **inscriptions d'applications** dans Entra ID (Entra ID = l'annuaire Microsoft qui gère les comptes et les autorisations) :
-  - « ATS Unitech – Synchronisation » : utilisée par l'outil, sans personne derrière, pour SharePoint et la boîte ;
+  - « ATS Unitech – Synchronisation » : utilisée par l'outil, sans personne derrière, pour lire SharePoint (et, en phase 2, la boîte de candidatures) ;
   - « ATS Unitech – Connexion » : utilisée pour la connexion de tes équipes.
 
-**Pré-requis** : la partie 1.3 (Supabase) est faite, car il te faut l'identifiant du projet Supabase pour le 3.6. Prépare un petit fichier texte (non secret) pour noter au fur et à mesure les **identifiants** demandés ; tu me le recopieras à la fin.
+**Pré-requis** : la partie 1.3 (Supabase) est faite, car il te faut l'identifiant du projet Supabase pour le 3.4. Prépare un petit fichier texte (non secret) pour noter au fur et à mesure les **identifiants** demandés ; tu me le recopieras à la fin.
 
 > **Coût** : 0 €. La connexion avec les comptes Microsoft est incluse dans Supabase Pro et dans ton abonnement Microsoft 365.
 
-### 3.1 Vérifier la boîte `recrutement@unitechsolutions.fr` — ⏱ 10 min
-On utilise ton adresse existante **`recrutement@unitechsolutions.fr`** : pas de nouvelle boîte à créer. Il faut seulement savoir **de quel type** elle est, car cela change la suite.
-
-1. Va sur https://admin.exchange.microsoft.com (centre d'administration Exchange) → menu de gauche **Destinataires → Boîtes aux lettres**.
-2. Dans la recherche, tape `recrutement`. Regarde la colonne **Type de destinataire** :
-
-| Ce que tu vois | Ce que c'est | Que faire |
-|---|---|---|
-| **SharedMailbox** (boîte partagée) | Le cas idéal | Rien. Passe au 3.2. |
-| **UserMailbox** (boîte utilisateur) | Un compte avec sa propre licence | Ça fonctionne tel quel. *Option d'économie (facultative)* : la convertir en boîte partagée libère une licence Microsoft 365 (plusieurs euros par mois). Ne le fais pas seule : dis-le-moi, je te guiderai, car la conversion change la façon de s'y connecter. |
-| Rien n'apparaît | L'adresse est probablement une **liste de distribution** ou un **alias** qui redirige vers d'autres boîtes : il n'y a pas de boîte à lire | Dis-le-moi : on créera une boîte partagée et on y rattachera l'adresse `recrutement@`. |
-
-3. Vérifie que tu y as accès : dans Outlook sur le web (https://outlook.office.com), la boîte apparaît dans la colonne de gauche (sinon clic droit sur **Dossiers → Ajouter un dossier partagé** → `recrutement@unitechsolutions.fr`).
-
-À savoir :
-- L'outil lira **tout** ce qui arrive dans cette boîte. Les emails qui ne sont pas des candidatures (publicités, notifications de jobboards, échanges divers) seront reconnus et classés à part, sans créer de fiche. Ce tri coûte moins d'un centime par email.
-- Les emails **déjà présents** dans la boîte ne seront pas traités automatiquement : l'outil partira de la date de mise en service (étape 11). Traiter l'historique reste possible ensuite, après une estimation du coût.
-
-- [ ] Type de la boîte relevé : `________________`
-
-### 3.2 Créer le groupe « ATS – Utilisateurs » — ⏱ 5 min
+### 3.1 Créer le groupe « ATS – Utilisateurs » — ⏱ 5 min
 1. Toujours dans https://admin.microsoft.com : **Équipes et groupes → Équipes et groupes actifs** → onglet **Sécurité** → **+ Ajouter un groupe de sécurité**.
 2. Nom : `ATS – Utilisateurs`, description : `Personnes autorisées à se connecter à l'ATS` → **Suivant** → **Créer le groupe**.
 3. Ouvre le groupe → onglet **Membres** → **Afficher tous les membres et les gérer → + Ajouter des membres** → ajoute-toi (seulement toi pour l'instant).
@@ -161,7 +140,7 @@ On utilise ton adresse existante **`recrutement@unitechsolutions.fr`** : pas de 
 ✅ **Vérification** : le groupe apparaît dans l'onglet **Sécurité** avec 1 membre.
 - [ ] Groupe créé, avec toi comme seul membre
 
-### 3.3 Application « ATS Unitech – Synchronisation » — ⏱ 15 min
+### 3.2 Application « ATS Unitech – Synchronisation » — ⏱ 15 min
 1. Va sur https://entra.microsoft.com → menu de gauche **Applications → Inscriptions d'applications** → **+ Nouvelle inscription**.
 2. Nom : `ATS Unitech – Synchronisation` ; Types de comptes : **Comptes dans cet annuaire d'organisation uniquement** ; URI de redirection : **laisser vide** → **S'inscrire**.
 3. Sur la page **Vue d'ensemble** qui s'affiche, note :
@@ -173,14 +152,14 @@ On utilise ton adresse existante **`recrutement@unitechsolutions.fr`** : pas de 
    - Clique sur **Accorder un consentement d'administrateur pour [ton entreprise]** → **Oui**.
    - ⚠️ N'ajoute **rien d'autre** (surtout pas Mail.Read, Sites.Read.All, Files.Read.All : ces droits s'appliqueraient à **tout** ton Microsoft 365).
 5. Menu de l'application : **Certificats & secrets → Secrets client → + Nouveau secret client** : description `ats-synchro`, expiration **24 mois** → **Ajouter**. Copie **immédiatement** la colonne **Valeur** (pas « ID du secret ») dans ton gestionnaire de mots de passe, avec la **date d'expiration**. Elle ne sera plus jamais affichée.
-6. Va dans **Applications → Applications d'entreprise** → recherche `ATS Unitech – Synchronisation` → ouvre-la → **Vue d'ensemble** : note l'**ID d'objet** → « ID Objet Synchro » *(attention : c'est celui de l'« application d'entreprise », différent de celui de la page de l'étape 3)*.
+6. Va dans **Applications → Applications d'entreprise** → recherche `ATS Unitech – Synchronisation` → ouvre-la → **Vue d'ensemble** : note l'**ID d'objet** → « ID Objet Synchro » *(attention : c'est celui de l'« application d'entreprise », différent de celui de la page de l'étape 3 ci-dessus)*.
 
 ✅ **Vérification** : dans **Autorisations de l'API**, une seule ligne **Sites.Selected — Application — Accordé pour…** avec une coche verte.
 - [ ] Application créée, Sites.Selected accordé
 - [ ] Secret `ats-synchro` rangé, date d'expiration notée
 - [ ] Notés : ID Synchro, ID Tenant, ID Objet Synchro
 
-### 3.4 Autoriser l'application sur **un seul** site SharePoint — ⏱ 15 min
+### 3.3 Autoriser l'application à **lire un seul** site SharePoint — ⏱ 15 min
 *On utilise **Graph Explorer**, un outil web officiel de Microsoft qui permet d'envoyer des commandes à Microsoft 365 depuis le navigateur.*
 
 1. Repère l'adresse du site qui contient les CV, par exemple `https://unitechsolutions.sharepoint.com/sites/Recrutement`. Il te faut deux morceaux : le **domaine** (`unitechsolutions.sharepoint.com`) et le **chemin** (`/sites/Recrutement`).
@@ -202,50 +181,20 @@ On utilise ton adresse existante **`recrutement@unitechsolutions.fr`** : pas de 
    - Dans **Corps de la demande**, colle (en remplaçant `ID-SYNCHRO`) :
      ```json
      {
-       "roles": ["write"],
+       "roles": ["read"],
        "grantedToIdentities": [
          { "application": { "id": "ID-SYNCHRO", "displayName": "ATS Unitech – Synchronisation" } }
        ]
      }
      ```
    - **Exécuter la requête**. Réponse attendue : **201 Created**.
-   *Le droit « write » sert uniquement à déposer les CV reçus par email (étape 11). L'outil ne supprimera jamais de fichier, et toute écriture sera un point d'arrêt où je te demande l'accord.*
-6. **Vérifier** : méthode **GET**, même adresse `…/sites/ID-SITE/permissions` → **Exécuter**. Tu dois voir une ligne avec `"roles": ["write"]` et le nom « ATS Unitech – Synchronisation ».
+   *Lecture seule : l'outil ne peut rien modifier ni supprimer dans SharePoint. Le droit d'écriture ne sera ajouté qu'en phase 2 (partie 7), pour déposer les CV reçus par email.*
+6. **Vérifier** : méthode **GET**, même adresse `…/sites/ID-SITE/permissions` → **Exécuter**. Tu dois voir une ligne avec `"roles": ["read"]` et le nom « ATS Unitech – Synchronisation ».
 7. *(Hygiène, recommandé)* Retire ensuite à Graph Explorer ce droit très large : https://entra.microsoft.com → **Applications d'entreprise** → `Graph Explorer` → **Autorisations** → **Vérifier les autorisations** / supprimer `Sites.FullControl.All`. Si l'écran te semble compliqué, laisse : je te réexpliquerai au jalon D.
 
-- [ ] Accès « write » donné au seul site — ID Site noté
+- [ ] Accès « read » donné au seul site — ID Site noté
 
-### 3.5 Limiter l'accès mail à la **seule** boîte de candidatures — ⏱ 20 min
-*Ce réglage ne se fait qu'en ligne de commande (PowerShell), une seule fois, depuis ton ordinateur. Ce n'est pas l'outil qui tourne chez toi : c'est juste un réglage d'administration ponctuel.*
-
-**Sur Windows** :
-1. Menu Démarrer → tape `PowerShell` → clic droit sur **Windows PowerShell** → **Exécuter en tant qu'administrateur** → **Oui**.
-2. Copie-colle ces lignes une par une (Entrée après chacune ; réponds **O** ou **T** — Oui/Oui pour tout — aux questions d'installation) :
-   ```powershell
-   Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
-   Install-Module ExchangeOnlineManagement -Scope CurrentUser
-   Connect-ExchangeOnline
-   ```
-   Une fenêtre de connexion Microsoft s'ouvre : connecte-toi avec ton compte administrateur.
-
-**Sur Mac** : installe d'abord PowerShell (https://aka.ms/powershell-release?tag=stable, fichier `.pkg`), ouvre l'application **Terminal**, tape `pwsh` puis Entrée, et continue avec les trois lignes ci-dessus (sans la première).
-
-3. Copie-colle ensuite ces quatre commandes **après avoir remplacé** `ID-SYNCHRO`, `ID-OBJET-SYNCHRO` et l'adresse de la boîte :
-   ```powershell
-   New-ServicePrincipal -AppId ID-SYNCHRO -ObjectId ID-OBJET-SYNCHRO -DisplayName "ATS Unitech - Synchronisation"
-   New-ManagementScope -Name "ATS - Boite candidatures" -RecipientRestrictionFilter "PrimarySmtpAddress -eq 'recrutement@unitechsolutions.fr'"
-   New-ManagementRoleAssignment -App ID-SYNCHRO -Role "Application Mail.Read" -CustomResourceScope "ATS - Boite candidatures"
-   Test-ServicePrincipalAuthorization -Identity ID-SYNCHRO -Resource recrutement@unitechsolutions.fr
-   ```
-4. La dernière commande affiche un tableau : la colonne **InScope** doit valoir **True**.
-5. Contre-vérification : relance la dernière commande en remplaçant l'adresse par **ta propre adresse** : InScope doit valoir **False** (l'outil ne peut pas lire ta boîte).
-6. Tape `Disconnect-ExchangeOnline` puis ferme la fenêtre.
-
-*Si une commande affiche un message en rouge, ne t'inquiète pas : copie le message (il ne contient aucun secret) et colle-le-moi dans la conversation.*
-- [ ] InScope = True pour la boîte de candidatures
-- [ ] InScope = False pour ta propre boîte
-
-### 3.6 Application « ATS Unitech – Connexion » — ⏱ 15 min
+### 3.4 Application « ATS Unitech – Connexion » — ⏱ 15 min
 1. https://entra.microsoft.com → **Applications → Inscriptions d'applications → + Nouvelle inscription**.
 2. Nom : `ATS Unitech – Connexion` ; **Comptes dans cet annuaire d'organisation uniquement** ; URI de redirection : plateforme **Web**, adresse :
    ```
@@ -265,43 +214,35 @@ On utilise ton adresse existante **`recrutement@unitechsolutions.fr`** : pas de 
 - [ ] Secret `ats-connexion` rangé, date d'expiration notée
 - [ ] ID Connexion noté
 
-### 3.7 Ce que tu me renvoies dans la conversation (rien de secret)
+### 3.5 Ce que tu me renvoies dans la conversation (rien de secret)
 ```
 ID Tenant         :
 ID Synchro        :
 ID Connexion      :
 Adresse du site   :
 ID Site           :
-Boîte candidatures: recrutement@unitechsolutions.fr — type :
-Résultat InScope  : True (boîte candidatures) / False (ma boîte)
 Groupe assigné    : oui / non (utilisateurs un par un)
 ```
-⚠️ **Jamais** les valeurs des secrets `ats-synchro` et `ats-connexion` : elles vont uniquement en partie 6.
+⚠️ **Jamais** les valeurs des secrets `ats-synchro` et `ats-connexion` : elles vont uniquement en partie 5.
 
 Mets dès maintenant dans ton agenda un rappel **un mois avant** l'expiration des deux secrets (24 mois).
 
 ---
 
-## Partie 4 — (fusionnée dans la partie 3.1)
+## Partie 4 — Les informations à me fournir — ⏱ 30 min
 
-La boîte de candidatures est `recrutement@unitechsolutions.fr`, vérifiée en 3.1.
+Ces informations ne sont pas secrètes ; donne-les-moi dans la conversation, **sauf le fichier Excel** (voir 4.3).
 
----
-
-## Partie 5 — Les informations à me fournir — ⏱ 30 min
-
-Ces informations ne sont pas secrètes ; donne-les-moi dans la conversation, **sauf le fichier Excel** (voir 5.3).
-
-### 5.1 Chemins des dossiers SharePoint
+### 4.1 Chemins des dossiers SharePoint
 Ouvre chaque dossier dans ton navigateur et copie l'adresse de la barre d'adresse :
 - [ ] le **dossier parent** qui contient les dossiers par métier ;
 - [ ] la **liste des dossiers métier** (ex. `Développeur`, `Chef de projet`, `Data`…) ;
 - [ ] dans un dossier métier : les Word et les PDF sont-ils **ensemble**, ou dans deux sous-dossiers (ex. `Word` / `PDF`) ? Donne l'adresse d'un exemple ;
 - [ ] y a-t-il des CV **hors** de ces dossiers métier (archives, anciens dossiers) ?
 
-Le dossier de dépôt des CV reçus par email est traité en 5.5.
+Le dossier de dépôt des CV reçus par email sera traité en phase 2 (partie 7.4).
 
-### 5.2 Dix vrais exemples de noms de fichiers
+### 4.2 Dix vrais exemples de noms de fichiers
 Copie **exactement** (espaces, virgules, tirets, majuscules) **10 noms de Word** et **les 10 PDF correspondants**. Choisis de préférence des cas difficiles :
 - [ ] un prénom composé (Jean-Marc) ;
 - [ ] un nom à particule (Le Goff, De La Tour, d'Artagnan) ;
@@ -312,26 +253,20 @@ Copie **exactement** (espaces, virgules, tirets, majuscules) **10 noms de Word**
 
 Je ne les mettrai pas tels quels dans GitHub : les tests automatiques utiliseront des noms inventés construits sur le même modèle.
 
-### 5.3 La copie du fichier Excel de suivi (.xlsx)
+### 4.3 La copie du fichier Excel de suivi (.xlsx)
 1. Ouvre le fichier Excel de suivi dans Excel Online → **Fichier → Créer une copie → Télécharger une copie**.
 2. Dépose ce fichier `.xlsx` dans un dossier `ATS-Import` **du site SharePoint autorisé** (partie 3). Je le lirai de là, sans jamais toucher au fichier d'origine.
    *Pourquoi pas dans la conversation ou dans GitHub ? Le fichier contient des données personnelles : il ne doit jamais entrer dans l'historique du code.*
    *(Cette action ne sera possible qu'une fois l'accès Microsoft en place ; je te le rappellerai à l'étape 4.)*
 - [ ] Copie déposée dans `ATS-Import`
 
-### 5.4 La liste des utilisateurs
+### 4.4 La liste des utilisateurs
 Pour chaque personne : **prénom, nom, adresse Microsoft 365, rôle** (*administrateur* : réglages, utilisateurs, exports, purge ; *recruteur* : consultation, création, modification, matching).
 - [ ] Liste envoyée
 
-### 5.5 Le dossier de dépôt des candidatures email
-Comme les CV sont rangés par métier, je propose : l'outil dépose chaque CV reçu par email dans le **dossier métier** correspondant au poste détecté, et dans un dossier **`À classer`** quand le métier n'est pas clair. Tu le déplaces ensuite à la main, et l'outil suit le fichier même déplacé.
-- [ ] Crée un dossier `À classer` à côté des dossiers métier (ou dis-moi si tu préfères un seul dossier pour toutes les candidatures email).
+## Partie 5 — Où saisir les secrets, et accès réseau de la session — ⏱ 30 min
 
----
-
-## Partie 6 — Où saisir les secrets, et accès réseau de la session — ⏱ 30 min
-
-### 6.1 Environnement cloud Claude Code (pour mes tests pendant la construction)
+### 5.1 Environnement cloud Claude Code (pour mes tests pendant la construction)
 ⚠️ **Toute personne qui peut modifier cet environnement peut voir ses réglages** : tu dois rester **la seule** à y avoir accès.
 
 Ouvre le menu de l'environnement cloud dans la barre de titre de la session (sur claude.ai/code) → **Edit**.
@@ -374,7 +309,7 @@ SHAREPOINT_SITE_URL=[URL du site]
 - [ ] 4 secrets réseau saisis
 - [ ] 5 variables d'environnement saisies
 
-### 6.2 Vercel (l'application en ligne)
+### 5.2 Vercel (l'application en ligne)
 **Projet `ats-unitechsolutions` → Settings → Environment Variables**. Pour chaque variable : saisis le nom et la valeur, coche **Production** et **Preview**, et active **Sensitive** pour les secrets (la valeur ne pourra plus être relue, même par toi).
 
 | Nom | Valeur | Sensitive |
@@ -391,7 +326,7 @@ SHAREPOINT_SITE_URL=[URL du site]
 *(Je pourrai ajouter moi-même les variables non secrètes grâce au jeton Vercel ; les secrets restent ta main.)*
 - [ ] Variables Vercel saisies
 
-### 6.3 Supabase (connexion avec les comptes Microsoft)
+### 5.3 Supabase (connexion avec les comptes Microsoft)
 **Authentication → Sign In / Providers → Azure** → **Enable** :
 - **Application (client) ID** : ID d'application « Connexion »
 - **Secret Value** : secret « ats-connexion »
@@ -401,17 +336,83 @@ SHAREPOINT_SITE_URL=[URL du site]
 
 ---
 
-## Partie 7 — Actions à faire plus tard (je te préviendrai)
+## Partie 6 — Actions à faire plus tard (je te préviendrai)
 
 | Étape | Action | Durée |
 |---|---|---|
 | Étape 2 | Te connecter à la page d'accueil en ligne avec ton compte Microsoft et me dire si cela fonctionne. | 2 min |
-| Étape 4 | Déposer la copie `.xlsx` du fichier de suivi dans `ATS-Import` (partie 5.3), si ce n'est pas déjà fait. Puis lire le rapport d'import de test. | 5 min |
+| Étape 4 | Déposer la copie `.xlsx` du fichier de suivi dans `ATS-Import` (partie 4.3), si ce n'est pas déjà fait. Puis lire le rapport d'import de test. | 5 min |
 | Étape 5 | **Jalon A** : valider les associations Word-PDF de l'échantillon. | 20 min |
 | Étape 6 | **Jalon B** : comparer les fiches Haiku / Sonnet, choisir le modèle, accepter ou non l'estimation de l'import complet. | 20 min |
 | Étape 7 | Saisir dans GitHub les secrets de l'import automatique : dépôt → **Settings → Secrets and variables → Actions → New repository secret** : `ANTHROPIC_API_KEY` (clé `ats-production`), `SUPABASE_SECRET_KEY`, `MS_CLIENT_SECRET`. Puis, après l'import, baisser la limite mensuelle Anthropic à 20 $. | 10 min |
 | Étape 9 | **Jalon C** : me fournir le texte de **trois missions passées** et le nom des consultants qui avaient été retenus ; vérifier le classement. | 30 min |
-| Étape 11 | Activer (ou compléter, si elle existe déjà) la **réponse automatique** de `recrutement@` avec la mention RGPD que nous aurons rédigée (Outlook → la boîte → Paramètres → Réponses automatiques). | 10 min |
 | Étape 12 | **Jalon D** : revue sécurité et RGPD ; tester l'application avec un compte « recruteur » (un collègue volontaire ajouté au groupe « ATS – Utilisateurs »). | 45 min |
-| Étape 13 | Ajouter l'équipe au groupe « ATS – Utilisateurs » (partie 3.2) et l'inviter dans l'application ; participer au test de restauration de sauvegarde. | 30 min |
+| Étape 13 | Ajouter l'équipe au groupe « ATS – Utilisateurs » (partie 3.1) et l'inviter dans l'application ; participer au test de restauration de sauvegarde. | 30 min |
 | Tous les 24 mois | Renouveler les deux secrets client Microsoft avant leur expiration (procédure dans `GUIDE_EXPLOITATION.md`). Mets dès maintenant un rappel dans ton agenda **un mois avant** la date notée en partie 3. | 15 min |
+
+---
+
+## Partie 7 — Phase 2 : candidatures par email (après la mise en service de la V1)
+
+*Décidé le 6 novembre 2026 : la V1 se termine d'abord (import des CV, synchronisation de nuit, saisie manuelle des missions et matching). La liaison avec `recrutement@unitechsolutions.fr` vient ensuite. Rien à faire dans cette partie pour l'instant : je te préviendrai.*
+
+### 7.1 Vérifier la boîte `recrutement@unitechsolutions.fr` — ⏱ 10 min
+On utilise ton adresse existante **`recrutement@unitechsolutions.fr`** : pas de nouvelle boîte à créer. Il faut seulement savoir **de quel type** elle est, car cela change la suite.
+
+1. Va sur https://admin.exchange.microsoft.com (centre d'administration Exchange) → menu de gauche **Destinataires → Boîtes aux lettres**.
+2. Dans la recherche, tape `recrutement`. Regarde la colonne **Type de destinataire** :
+
+| Ce que tu vois | Ce que c'est | Que faire |
+|---|---|---|
+| **SharedMailbox** (boîte partagée) | Le cas idéal | Rien. Passe au 7.2. |
+| **UserMailbox** (boîte utilisateur) | Un compte avec sa propre licence | Ça fonctionne tel quel. *Option d'économie (facultative)* : la convertir en boîte partagée libère une licence Microsoft 365 (plusieurs euros par mois). Ne le fais pas seule : dis-le-moi, je te guiderai, car la conversion change la façon de s'y connecter. |
+| Rien n'apparaît | L'adresse est probablement une **liste de distribution** ou un **alias** qui redirige vers d'autres boîtes : il n'y a pas de boîte à lire | Dis-le-moi : on créera une boîte partagée et on y rattachera l'adresse `recrutement@`. |
+
+3. Vérifie que tu y as accès : dans Outlook sur le web (https://outlook.office.com), la boîte apparaît dans la colonne de gauche (sinon clic droit sur **Dossiers → Ajouter un dossier partagé** → `recrutement@unitechsolutions.fr`).
+
+À savoir :
+- L'outil lira **tout** ce qui arrive dans cette boîte. Les emails qui ne sont pas des candidatures (publicités, notifications de jobboards, échanges divers) seront reconnus et classés à part, sans créer de fiche. Ce tri coûte moins d'un centime par email.
+- Les emails **déjà présents** dans la boîte ne seront pas traités automatiquement : l'outil partira de la date de mise en service (étape 11). Traiter l'historique reste possible ensuite, après une estimation du coût.
+
+- [ ] Type de la boîte relevé : `________________`
+
+### 7.2 Limiter l'accès mail à la **seule** boîte de candidatures — ⏱ 20 min
+*Ce réglage ne se fait qu'en ligne de commande (PowerShell), une seule fois, depuis ton ordinateur. Ce n'est pas l'outil qui tourne chez toi : c'est juste un réglage d'administration ponctuel.*
+
+**Sur Windows** :
+1. Menu Démarrer → tape `PowerShell` → clic droit sur **Windows PowerShell** → **Exécuter en tant qu'administrateur** → **Oui**.
+2. Copie-colle ces lignes une par une (Entrée après chacune ; réponds **O** ou **T** — Oui/Oui pour tout — aux questions d'installation) :
+   ```powershell
+   Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+   Install-Module ExchangeOnlineManagement -Scope CurrentUser
+   Connect-ExchangeOnline
+   ```
+   Une fenêtre de connexion Microsoft s'ouvre : connecte-toi avec ton compte administrateur.
+
+**Sur Mac** : installe d'abord PowerShell (https://aka.ms/powershell-release?tag=stable, fichier `.pkg`), ouvre l'application **Terminal**, tape `pwsh` puis Entrée, et continue avec les trois lignes ci-dessus (sans la première).
+
+3. Copie-colle ensuite ces quatre commandes **après avoir remplacé** `ID-SYNCHRO`, `ID-OBJET-SYNCHRO` et l'adresse de la boîte :
+   ```powershell
+   New-ServicePrincipal -AppId ID-SYNCHRO -ObjectId ID-OBJET-SYNCHRO -DisplayName "ATS Unitech - Synchronisation"
+   New-ManagementScope -Name "ATS - Boite candidatures" -RecipientRestrictionFilter "PrimarySmtpAddress -eq 'recrutement@unitechsolutions.fr'"
+   New-ManagementRoleAssignment -App ID-SYNCHRO -Role "Application Mail.Read" -CustomResourceScope "ATS - Boite candidatures"
+   Test-ServicePrincipalAuthorization -Identity ID-SYNCHRO -Resource recrutement@unitechsolutions.fr
+   ```
+4. La dernière commande affiche un tableau : la colonne **InScope** doit valoir **True**.
+5. Contre-vérification : relance la dernière commande en remplaçant l'adresse par **ta propre adresse** : InScope doit valoir **False** (l'outil ne peut pas lire ta boîte).
+6. Tape `Disconnect-ExchangeOnline` puis ferme la fenêtre.
+
+*Si une commande affiche un message en rouge, ne t'inquiète pas : copie le message (il ne contient aucun secret) et colle-le-moi dans la conversation.*
+- [ ] InScope = True pour la boîte de candidatures
+- [ ] InScope = False pour ta propre boîte
+
+### 7.3 Passer l'accès SharePoint de « read » à « write » — ⏱ 5 min
+Dans Graph Explorer (comme en 3.3), méthode **PATCH**, adresse `https://graph.microsoft.com/v1.0/sites/ID-SITE/permissions/ID-PERMISSION` (l'`id` affiché par la vérification du 3.3), corps `{"roles": ["write"]}`. Sert uniquement à déposer les CV reçus par email.
+- [ ] Accès passé en « write »
+
+### 7.4 Dossier de dépôt et réponse automatique — ⏱ 15 min
+Comme les CV sont rangés par métier, je propose : l'outil dépose chaque CV reçu par email dans le **dossier métier** correspondant au poste détecté, et dans un dossier **`À classer`** quand le métier n'est pas clair. Tu le déplaces ensuite à la main, et l'outil suit le fichier même déplacé.
+- [ ] Crée un dossier `À classer` à côté des dossiers métier (ou dis-moi si tu préfères un seul dossier pour toutes les candidatures email).
+
+---
+- [ ] Activer (ou compléter) la **réponse automatique** de `recrutement@` avec la mention RGPD que nous aurons rédigée (Outlook → la boîte → Paramètres → Réponses automatiques).
