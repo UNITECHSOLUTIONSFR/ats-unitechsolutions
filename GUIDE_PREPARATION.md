@@ -26,7 +26,7 @@ Quand tu as terminé les parties 1 à 5, écris-moi simplement « Guide suivi »
 | GitHub | Organisation gratuite, dépôt privé | 0 € (2 000 min/mois d'automatisations incluses, largement suffisant) |
 | Vercel | Pro, 1 siège | 20 $/mois |
 | Supabase | Pro, 1 projet | 25 $/mois (inclut la puissance de calcul du plus petit serveur, suffisant ici) |
-| API Anthropic | Paiement à l'usage (crédits prépayés) | Import initial estimé **2 à 5 $** avec Haiku 5.5 ; ensuite **1 à 3 $/mois** (estimation précise au jalon B) |
+| API Anthropic | Paiement à l'usage (crédits prépayés), **séparé de l'abonnement Claude** | Rien avant l'étape 6 ; import initial estimé **2 à 5 $** avec Haiku 5.5 ; ensuite **1 à 3 $/mois** (estimation précise au jalon B) |
 | Microsoft 365 | Existant ; boîte **partagée** de candidatures | 0 € (une boîte partagée ne demande pas de licence) |
 | **Total** | | **≈ 47 à 50 $/mois** |
 
@@ -89,7 +89,7 @@ Le dépôt existe déjà : `unitechsolutionsfr/ats-unitechsolutions`.
 *(Anthropic fournit l'IA Claude qui lit les CV et les missions.)*
 
 1. Va sur https://platform.claude.com et crée un compte avec ton adresse professionnelle ; organisation : **Unitech Solution**.
-2. **Settings → Billing** : ajoute ta carte, puis **Buy credits** : achète **15 $** de crédits. Laisse **Auto-reload** (rechargement automatique) **désactivé** : sans crédit, les appels s'arrêtent au lieu de facturer.
+2. **Pas d'achat de crédits pour l'instant.** Ton abonnement Claude (claude.ai) paie mon travail de construction, mais **pas** les appels que l'application fera elle-même à l'IA : ceux-là sont facturés à part, via cette console. Ils ne commencent qu'à l'étape 6 ; je te dirai alors d'acheter des crédits (voir partie 6). Les clés API se créent sans crédit.
 3. **Settings → Workspaces → Create workspace** : nom `ATS Unitech`. *(Un « workspace » est un compartiment qui regroupe les clés et les dépenses de ce projet.)*
 4. Ouvre le workspace `ATS Unitech` → **Limits** : fixe une **limite de dépense mensuelle** de **40 $** pendant la construction (import compris). Je te dirai de la baisser à 20 $ après l'import.
 5. **Settings → API Keys → Create Key**, dans le workspace `ATS Unitech` :
@@ -97,8 +97,8 @@ Le dépôt existe déjà : `unitechsolutionsfr/ats-unitechsolutions`.
    - une clé nommée `ats-claude-code` (pour mes tests dans la session).
    Chaque clé (`sk-ant-…`) ne s'affiche qu'une fois : range-les dans ton gestionnaire de mots de passe.
 
-✅ **Vérification** : le solde de crédits apparaît dans **Billing**, la limite mensuelle du workspace est affichée, deux clés sont listées.
-- [ ] Moyen de paiement et crédits
+✅ **Vérification** : le workspace `ATS Unitech` existe avec sa limite mensuelle, et deux clés sont listées.
+- [ ] Compte console créé (crédits : plus tard, étape 6)
 - [ ] Workspace `ATS Unitech` avec limite mensuelle
 - [ ] Deux clés API créées et rangées
 
@@ -343,7 +343,7 @@ SHAREPOINT_SITE_URL=[URL du site]
 | Étape 2 | Te connecter à la page d'accueil en ligne avec ton compte Microsoft et me dire si cela fonctionne. | 2 min |
 | Étape 4 | Déposer la copie `.xlsx` du fichier de suivi dans `ATS-Import` (partie 4.3), si ce n'est pas déjà fait. Puis lire le rapport d'import de test. | 5 min |
 | Étape 5 | **Jalon A** : valider les associations Word-PDF de l'échantillon. | 20 min |
-| Étape 6 | **Jalon B** : comparer les fiches Haiku / Sonnet, choisir le modèle, accepter ou non l'estimation de l'import complet. | 20 min |
+| Étape 6 | **Avant le test** : console Anthropic → **Settings → Billing** → ajoute ta carte → **Buy credits** : le montant minimum proposé suffit (le test des 20 CV coûte quelques centimes ; l'import complet avec Haiku environ 2 $). Laisse **Auto-reload** (rechargement automatique) **désactivé** : sans crédit, les appels s'arrêtent au lieu de facturer. Puis **Jalon B** : comparer les fiches Haiku / Sonnet, choisir le modèle, accepter ou non l'estimation de l'import complet. | 20 min |
 | Étape 7 | Saisir dans GitHub les secrets de l'import automatique : dépôt → **Settings → Secrets and variables → Actions → New repository secret** : `ANTHROPIC_API_KEY` (clé `ats-production`), `SUPABASE_SECRET_KEY`, `MS_CLIENT_SECRET`. Puis, après l'import, baisser la limite mensuelle Anthropic à 20 $. | 10 min |
 | Étape 9 | **Jalon C** : me fournir le texte de **trois missions passées** et le nom des consultants qui avaient été retenus ; vérifier le classement. | 30 min |
 | Étape 12 | **Jalon D** : revue sécurité et RGPD ; tester l'application avec un compte « recruteur » (un collègue volontaire ajouté au groupe « ATS – Utilisateurs »). | 45 min |
