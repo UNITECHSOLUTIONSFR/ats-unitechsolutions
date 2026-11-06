@@ -12,14 +12,14 @@ Dernière mise à jour : 6 novembre 2026
 |---|---|---|---|
 | 0 | Cadrage (brief, règles, guide de préparation) | ✅ Terminé | |
 | 1 | Préparation des comptes (vérification du guide) | 🔄 En cours | |
-| 2 | Squelette en ligne (Next.js + connexion + Vercel) | ⬜ À faire | |
-| 3 | Base de données (schéma, RLS, rôles, référentiel) | ⬜ À faire | |
-| 4 | Import du fichier Excel de suivi | ⬜ À faire | |
+| 2 | Squelette en ligne (Next.js + connexion + Vercel) | 🟡 Code prêt et testé ; mise en ligne dès que Vercel et Supabase sont prêts | |
+| 3 | Base de données (schéma, RLS, rôles, référentiel) | 🟡 Schéma écrit et testé sur base temporaire ; à créer dans Supabase | |
+| 4 | Import du fichier Excel de suivi | 🟡 Lecture + rapport prêts et testés ; attend la copie .xlsx | |
 | 5 | Connexion SharePoint + association Word-PDF sur 20 consultants | ⬜ À faire | **Jalon A** |
-| 6 | Structuration IA : comparatif Haiku / Sonnet + estimation | ⬜ À faire | **Jalon B** |
+| 6 | Structuration IA : comparatif Haiku / Sonnet + estimation | 🟡 Module IA prêt (sans appel réel) | **Jalon B** |
 | 7 | Import complet des ~2 000 CV (Batch API) | ⬜ À faire | |
 | 8 | Interface principale + administration + export Excel | ⬜ À faire | |
-| 9 | Matching des missions + suivi des propositions | ⬜ À faire | **Jalon C** |
+| 9 | Matching des missions + suivi des propositions | 🟡 Calcul du score prêt et testé ; écrans à faire | **Jalon C** |
 | 10 | Synchronisation nocturne + rapport du matin | ⬜ À faire | |
 | 12 | Sécurité et RGPD (revue complète) | ⬜ À faire | **Jalon D** |
 | 13 | Mise en service (guides, restauration, invitation) | ⬜ À faire | |
@@ -40,6 +40,11 @@ Dernière mise à jour : 6 novembre 2026
 - **Fait** : accès réseau de la session ouvert à 5 services (Anthropic, Supabase, Microsoft Graph, connexion Microsoft, Vercel).
 - **Testé** : les 5 services répondent depuis la session (refus « sans clé » attendu pour Anthropic, Supabase et Vercel).
 - **Reste** : les parties 1, 2, 3, 4 et 5 du guide par l'utilisatrice, puis vérification de chaque clé et de chaque compte.
+
+### Construction anticipée (6 novembre 2026, sans attendre les comptes)
+- **Fait** : application Next.js (connexion par lien magique, accueil protégé) ; schéma de base (17 tables, RLS partout, rôles, historique, journal) et référentiel de 97 compétences ; règles métier (téléphones, trigrammes, doublons) ; lecture du fichier Excel avec rapport ; module IA unique (`src/lib/ai`) ; calcul du score de matching explicable.
+- **Testé** : 70 tests automatiques, dont les règles d'accès sur une base Postgres temporaire ; compilation et pages vérifiées dans un navigateur.
+- **Ensuite** : écrans consultants et missions ; dès que les comptes sont prêts, mise en ligne, création de la base réelle, import Excel.
 
 ## Réponses reçues (6 novembre 2026)
 1. Boîte de candidatures : adresse existante **`recrutement@unitechsolutions.fr`** (type de boîte à relever en partie 3.1 du guide). L'utilisatrice **est l'administratrice Microsoft 365** → la partie 3 du guide est un pas-à-pas d'administration (plus de demande à un tiers).
@@ -62,6 +67,7 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 | D9 | **Dépôt des CV reçus par email** : dans le dossier métier correspondant au poste détecté, sinon dans un dossier `À classer`. | Respecte le rangement actuel par métier ; l'outil suit le fichier s'il est déplacé ensuite. |
 | D10 | **Connexion réservée au groupe « ATS – Utilisateurs »** dans Entra ID ; si l'option groupe n'est pas incluse dans l'abonnement, affectation personne par personne (pas d'option payante). | Retrait d'accès en un clic côté Microsoft, sans surcoût. |
 | D11 | **Historique de `recrutement@`** : seuls les emails reçus après la mise en service de la phase 2 sont traités ; l'historique pourra l'être ensuite, après estimation. | Évite un traitement de masse non estimé ; les anciens CV sont déjà dans SharePoint. |
+| D12 | **Connexion par lien magique** au démarrage (inscription libre désactivée : seuls les invités reçoivent le lien) ; pas de filtre sur le nom de domaine pour l'instant (décision de l'utilisatrice). Connexion Microsoft ajoutable plus tard. | Démarrer sans les réglages Entra 3.1 et 3.4. |
 | D8 | **Haiku et Sonnet 5.5** : thinking désactivé ou `effort: low` pour les extractions. | La réflexion est facturée comme sortie ; inutile pour de l'extraction. |
 
 ## Coûts IA réels
