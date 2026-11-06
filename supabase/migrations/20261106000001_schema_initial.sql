@@ -416,6 +416,10 @@ begin
   end loop;
 end $$;
 
+-- Les exigences d'une mission peuvent être retirées par tout utilisateur actif (ajustement du besoin).
+create policy mission_competences_retrait on mission_competences for delete to authenticated
+  using (est_utilisateur_actif());
+
 -- Historique des propositions : lecture seule (écrit par le déclencheur).
 create policy propositions_historique_lecture on propositions_historique for select to authenticated
   using (est_utilisateur_actif());

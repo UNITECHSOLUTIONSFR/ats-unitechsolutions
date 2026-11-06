@@ -18,8 +18,8 @@ Dernière mise à jour : 6 novembre 2026
 | 5 | Connexion SharePoint + association Word-PDF sur 20 consultants | ⬜ À faire | **Jalon A** |
 | 6 | Structuration IA : comparatif Haiku / Sonnet + estimation | 🟡 Module IA prêt (sans appel réel) | **Jalon B** |
 | 7 | Import complet des ~2 000 CV (Batch API) | ⬜ À faire | |
-| 8 | Interface principale + administration + export Excel | ⬜ À faire | |
-| 9 | Matching des missions + suivi des propositions | 🟡 Calcul du score prêt et testé ; écrans à faire | **Jalon C** |
+| 8 | Interface principale + administration + export Excel | 🟡 Tableau de bord, liste/recherche et fiche consultant prêts ; administration et export à faire | |
+| 9 | Matching des missions + suivi des propositions | 🟡 Écrans prêts (saisie, exigences ajustables, classement, suivi) ; test réel dès que Supabase est prêt | **Jalon C** |
 | 10 | Synchronisation nocturne + rapport du matin | ⬜ À faire | |
 | 12 | Sécurité et RGPD (revue complète) | ⬜ À faire | **Jalon D** |
 | 13 | Mise en service (guides, restauration, invitation) | ⬜ À faire | |
@@ -45,6 +45,11 @@ Dernière mise à jour : 6 novembre 2026
 - **Fait** : application Next.js (connexion par lien magique, accueil protégé) ; schéma de base (17 tables, RLS partout, rôles, historique, journal) et référentiel de 97 compétences ; règles métier (téléphones, trigrammes, doublons) ; lecture du fichier Excel avec rapport ; module IA unique (`src/lib/ai`) ; calcul du score de matching explicable.
 - **Testé** : 70 tests automatiques, dont les règles d'accès sur une base Postgres temporaire ; compilation et pages vérifiées dans un navigateur.
 - **Ensuite** : écrans consultants et missions ; dès que les comptes sont prêts, mise en ligne, création de la base réelle, import Excel.
+
+### Écrans (6 novembre 2026)
+- **Fait** : tableau de bord ; consultants (recherche, fiche modifiable avec historique et journal, liens SharePoint, alerte disponibilité > 3 mois) ; missions (saisie du besoin, extraction IA, exigences ajustables, classement explicable, suivi des propositions, statut de mission).
+- **Testé** : 72 tests (dont la sélection des candidats et la recherche sur base temporaire avec RLS) ; compilation et affichage des pages sans base. Test de bout en bout impossible avant la création de Supabase (pas de Docker dans la session).
+- **Ensuite** : administration (utilisateurs, coûts, pondérations, export Excel) ; mise en ligne dès que les comptes sont prêts.
 
 ## Réponses reçues (6 novembre 2026)
 1. Boîte de candidatures : adresse existante **`recrutement@unitechsolutions.fr`** (type de boîte à relever en partie 3.1 du guide). L'utilisatrice **est l'administratrice Microsoft 365** → la partie 3 du guide est un pas-à-pas d'administration (plus de demande à un tiers).

@@ -147,3 +147,36 @@ describe("règles d'accès", () => {
     expect(h.map((x) => x.nouveau_statut).sort()).toEqual(["appele", "envoye_client", "propose"]);
   });
 });
+
+describe("fonctions de matching", () => {
+  it("candidats d'une mission : compétence commune requise, inactifs exclus, RLS appliquée", async () => {
+    const ids = await db.query(`select id, nom_canonique from competences where nom_canonique in ('Java','React','Python')`);
+    const comp = Object.fromEntries(ids.rows.map((r) => [r.nom_canonique, r.id]));
+    const ins = await db.query(`insert into consultants (prenom, nom, trigramme, statut, telephone_e164) values
+      ('Ana','Java','AJA','consultant','+33600000001'),('Bob','React','BRE','candidat',null),('Cid','Inactif','CIN','inactif',null)
+      returning id, nom`);
+    const c = Object.fromEntries(ins.rows.map((r) => [r.nom, r.id]));
+    await db.query(`insert into consultant_competences (consultant_id, competence_id, annees) values ($1,$2,6),($3,$4,2),($5,$2,9)`,
+      [c.Java, comp.Java, c.React, comp.React, c.Inactif]);
+    await db.query(`insert into documents (consultant_id, type, sharepoint_drive_id, sharepoint_item_id, nom_fichier, url_web)
+      values ($1,'pdf_anonyme','d','i1','Unitech Solution, AJA, Dev.pdf','https://sp/aja.pdf')`, [c.Java]);
+    const m = await db.query(`insert into missions (intitule, texte_besoin) values ('Dev Java','…') returning id`);
+    await db.query(`insert into mission_competences (mission_id, competence_id, obligatoire, importance) values ($1,$2,true,3),($1,$3,false,1)`,
+      [m.rows[0].id, comp.Java, comp.Python]);
+
+    const r = await commeUtilisateur<Record<string, unknown>>(RECRUTEUR, "select * from candidats_mission($1)", [m.rows[0].id]);
+    expect(r.map((x) => x.nom)).toEqual(["Java"]);
+    expect(r[0].pdf_anonyme_url).toBe("https://sp/aja.pdf");
+    expect(r[0].competences).toEqual([{ competence_id: comp.Java, annees: 6 }]);
+    expect(await commeUtilisateur(INCONNU, "select * from candidats_mission($1)", [m.rows[0].id])).toEqual([]);
+    await expect(commeUtilisateur(null, "select * from candidats_mission($1)", [m.rows[0].id])).rejects.toThrow();
+  });
+
+  it("recherche de consultants par nom, trigramme ou poste", async () => {
+    await db.query(`insert into consultants (prenom, nom, trigramme, intitule_poste) values ('Nina','Rechercheuse','NRE','Data engineer')`);
+    for (const q of ["rechercheuse", "NRE", "data engineer"]) {
+      const r = await commeUtilisateur<{ nom: string }>(RECRUTEUR, "select nom from rechercher_consultants($1)", [q]);
+      expect(r.map((x) => x.nom)).toContain("Rechercheuse");
+    }
+  });
+});
