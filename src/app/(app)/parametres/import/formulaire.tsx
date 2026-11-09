@@ -6,7 +6,7 @@ import { traiterFichierExcel, type EtatImport } from "@/lib/import/actions";
 const CHAMPS: Record<string, string> = {
   prenom: "Prénom", nom: "Nom", nom_complet: "Nom complet", email: "Email", telephone: "Téléphone",
   trigramme: "Trigramme", disponibilite: "Disponibilité", intitule_poste: "Intitulé de poste",
-  localisation: "Localisation", notes: "Notes", statut: "Statut",
+  localisation: "Localisation", notes: "Notes", statut: "Statut", date_maj: "Date de mise à jour",
 };
 
 export default function FormulaireImport() {

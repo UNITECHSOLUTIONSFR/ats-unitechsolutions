@@ -55,7 +55,8 @@ export async function ecrireFiches(supabase: SupabaseClient, fiches: FicheImport
       intitule_poste: f.intitule_poste,
       disponibilite: f.disponibilite,
       disponible_le: f.disponible_le,
-      disponibilite_maj_le: f.disponibilite || f.disponible_le ? maintenant : null,
+      // Date de mise à jour de l'Excel si elle existe (sert à l'alerte « disponibilité de plus de 3 mois »)
+      disponibilite_maj_le: f.disponibilite || f.disponible_le ? (f.date_maj ?? maintenant) : null,
       localisation: f.localisation,
       notes: f.notes,
       statut: statutDepuisTexte(f.statut_texte),

@@ -20,11 +20,12 @@ export type ChampFiche =
   | "intitule_poste"
   | "localisation"
   | "notes"
-  | "statut";
+  | "statut"
+  | "date_maj";
 
 /** Intitulés de colonnes reconnus automatiquement (comparés sans accents ni majuscules). */
 const SYNONYMES_COLONNES: Record<ChampFiche, string[]> = {
-  prenom: ["prenom", "first name", "firstname"],
+  prenom: ["prenom", "prenoms", "first name", "firstname"],
   nom: ["nom", "nom de famille", "last name", "lastname"],
   nom_complet: ["nom complet", "nom prenom", "prenom nom", "consultant", "candidat", "nom et prenom"],
   email: ["email", "e-mail", "mail", "adresse mail", "adresse email", "courriel"],
@@ -35,6 +36,7 @@ const SYNONYMES_COLONNES: Record<ChampFiche, string[]> = {
   localisation: ["localisation", "ville", "lieu", "region", "mobilite"],
   notes: ["notes", "commentaire", "commentaires", "remarque", "remarques", "observations"],
   statut: ["statut", "etat"],
+  date_maj: ["date de mise a jour", "mise a jour", "date maj", "derniere mise a jour"],
 };
 
 const cle = (s: string) => sansAccents(s).toLowerCase().replace(/[_]+/g, " ").replace(/\s+/g, " ").trim();
@@ -104,6 +106,7 @@ export interface FicheImport {
   localisation: string | null;
   notes: string | null;
   statut_texte: string | null;
+  date_maj: string | null; // AAAA-MM-JJ, date de mise à jour de la ligne dans l'Excel
 }
 
 export interface RapportImport {
@@ -202,6 +205,7 @@ export function preparerImport(
       localisation: texte(lire(l, "localisation")),
       notes: texte(lire(l, "notes")),
       statut_texte: texte(lire(l, "statut")),
+      date_maj: (() => { const v = lire(l, "date_maj"); return v instanceof Date ? v.toISOString().slice(0, 10) : null; })(),
     });
   });
 
