@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import ExcelJS from "exceljs";
-import { analyserCaseEmail, corrigerOngletPrincipal, detecterColonnes, lireClasseur, preparerImport } from "@/lib/import/excel";
+import { analyserCaseEmail, fusionnerOnglets, corrigerOngletPrincipal, detecterColonnes, lireClasseur, preparerImport } from "@/lib/import/excel";
 
 async function classeurDeTest(): Promise<ArrayBuffer> {
   const wb = new ExcelJS.Workbook();
@@ -83,5 +83,18 @@ describe("import Excel", () => {
     expect(o.lignes[0]).toEqual(["A", "a@x.fr", null, null, null]);
     expect(o.lignes[1]).toEqual(["B", "b@x.fr", null, "c@y.fr", null]);
     expect(o.lignes[2]).toEqual(["C", null, "lien", null, "à rappeler"]);
+  });
+
+  it("fusionne les onglets métier dans la colonne Domaine, sans rien perdre", () => {
+    const E = ["Prénoms", "Nom", "Email", "Téléphone"];
+    const { onglet, lignesAjoutees, lignesRetrouvees } = fusionnerOnglets([
+      { nom: "Principal", entetes: E, numeros: [2, 3], lignes: [["Jean", "Dupont", "j@x.fr", "0611111111"], ["Ana", "Roux", null, "0622222222"]] },
+      { nom: "Dev", entetes: E, numeros: [2, 3], lignes: [["Jean", "Dupont", "j@x.fr", null], ["Zoé", "Neuve", "z@x.fr", null]] },
+      { nom: "Data", entetes: [...E, "Autre"], numeros: [2], lignes: [["ana", "ROUX", null, "06 22 22 22 22", "x"]] },
+    ]);
+    expect(onglet.entetes).toEqual([...E, "Domaine"]);
+    expect(onglet.lignes.map((l) => [l[1], l[4]])).toEqual([["Dupont", "Dev"], ["Roux", "Data"], ["Neuve", "Dev"]]);
+    expect([lignesAjoutees, lignesRetrouvees]).toEqual([1, 2]);
+    expect(onglet.numeros).toEqual([2, 3, 4]);
   });
 });

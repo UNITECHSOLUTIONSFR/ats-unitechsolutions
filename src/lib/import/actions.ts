@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { exigerAdmin } from "@/lib/acces-admin";
-import { corrigerOngletPrincipal, detecterColonnes, lireOnglets, preparerImport, type OngletLu, type RapportImport } from "./excel";
+import { corrigerOngletPrincipal, detecterColonnes, fusionnerOnglets, lireOnglets, preparerImport, type OngletLu, type RapportImport } from "./excel";
 import { ecrireFiches, type BilanEcriture } from "./ecriture";
 import { ecrireTableau, type BilanTableau } from "@/lib/tableau/ecriture";
 
@@ -37,7 +37,8 @@ export async function traiterFichierExcel(_etat: EtatImport, formData: FormData)
   }
   if (!onglets.length) return { etape: "erreur", message: "Le fichier ne contient aucun onglet." };
   // Nettoyage des cases email de l'onglet principal (Â → @, 2e adresse, LinkedIn, commentaire) avant tout import.
-  onglets = [corrigerOngletPrincipal(onglets[0]), ...onglets.slice(1)];
+  // Onglets métier = copies de l'onglet principal : fusionnés dans la colonne « Domaine », un seul onglet est gardé.
+  onglets = [corrigerOngletPrincipal(fusionnerOnglets(onglets).onglet)];
   // Le 1er onglet alimente les fiches consultants ; tous les onglets sont recopiés à l'identique dans le tableau de suivi.
   const { entetes, lignes } = onglets[0];
   const resumeOnglets = onglets.map((o) => ({ nom: o.nom, lignes: o.lignes.length, colonnes: o.entetes.length }));

@@ -157,6 +157,70 @@ export function corrigerOngletPrincipal(o: OngletLu): OngletLu {
   return { ...o, entetes, lignes: lignes.map((l) => Array.from({ length: entetes.length }, (_, i) => l[i] ?? null)) };
 }
 
+/** Colonne ajoutée à l'onglet principal : les onglets « métier » de l'Excel d'où vient la ligne. */
+export const COLONNE_DOMAINE = "Domaine";
+
+/**
+ * Les onglets secondaires de l'Excel ne sont que des copies de l'onglet principal découpées par métier.
+ * On ne garde que l'onglet principal : chaque ligne reçoit dans « Domaine » le nom des onglets où elle figurait,
+ * et une ligne présente seulement dans un onglet secondaire est ajoutée (rien n'est perdu).
+ * Rapprochement : prénom + nom + email, sinon prénom + nom + téléphone, sinon prénom + nom (toutes les lignes de ce nom).
+ */
+export function fusionnerOnglets(onglets: OngletLu[]): { onglet: OngletLu; lignesAjoutees: number; lignesRetrouvees: number } {
+  const [principal, ...autres] = onglets;
+  const entetes = [...principal.entetes];
+  let iDomaine = entetes.findIndex((e) => cle(e) === cle(COLONNE_DOMAINE));
+  if (iDomaine < 0 && autres.length) { iDomaine = entetes.length; entetes.push(COLONNE_DOMAINE); }
+  const lignes = principal.lignes.map((l) => Array.from({ length: entetes.length }, (_, i) => l[i] ?? null));
+  const numeros = [...principal.numeros];
+  if (!autres.length) return { onglet: { ...principal, entetes, lignes, numeros }, lignesAjoutees: 0, lignesRetrouvees: 0 };
+
+  const norme = (v: Cellule | undefined) => (v === null || v === undefined ? "" : sansAccents(String(v)).toLowerCase().replace(/\s+/g, " ").trim());
+  const cles = (l: Cellule[], col: CorrespondanceColonnes): { forte: string[]; nom: string } => {
+    const nom = `${norme(l[col.prenom ?? -1])}|${norme(l[col.nom ?? -1])}`;
+    if (nom === "|") return { forte: [], nom: "" };
+    const email = norme(l[col.email ?? -1]).replace(/\s/g, "");
+    const tel = norme(l[col.telephone ?? -1]).replace(/\D/g, "").slice(-9);
+    return { forte: [email && `${nom}|e|${email}`, tel && `${nom}|t|${tel}`].filter(Boolean) as string[], nom };
+  };
+  const index = new Map<string, number[]>();
+  const indexer = (i: number, k: { forte: string[]; nom: string }) => {
+    for (const c of [...k.forte, k.nom ? `${k.nom}|n` : ""].filter(Boolean)) index.set(c, [...(index.get(c) ?? []), i]);
+  };
+  const colP = detecterColonnes(entetes).correspondance;
+  lignes.forEach((l, i) => indexer(i, cles(l, colP)));
+
+  let lignesAjoutees = 0, lignesRetrouvees = 0;
+  let prochain = Math.max(1, ...numeros) + 1;
+  for (const o of autres) {
+    const colO = detecterColonnes(o.entetes).correspondance;
+    const parEntete = new Map(o.entetes.map((e, j) => [cle(e), j]));
+    for (const l of o.lignes) {
+      if (l.every((c) => valeurAffichee(c) === null)) continue;
+      const k = cles(l, colO);
+      const unique = (c: string) => { const r = index.get(c); return r && r.length === 1 ? r[0] : undefined; };
+      // Email ou téléphone identiques : la ligne correspondante ; sinon toutes les lignes du même prénom + nom
+      // (une personne présente plusieurs fois dans l'onglet principal reste une seule personne).
+      const forte = k.forte.map(unique).find((x) => x !== undefined);
+      const cibles = forte !== undefined ? [forte] : k.nom ? index.get(`${k.nom}|n`) ?? [] : [];
+      let i: number | undefined = cibles[0];
+      if (i === undefined) {
+        const nouvelle = entetes.map((e) => { const j = parEntete.get(cle(e)); return j === undefined ? null : l[j] ?? null; });
+        nouvelle[iDomaine] = null;
+        i = lignes.push(nouvelle) - 1;
+        numeros.push(prochain++);
+        indexer(i, k);
+        lignesAjoutees++;
+      } else lignesRetrouvees++;
+      for (const c of cibles.length ? cibles : [i]) {
+        const actuels = String(lignes[c][iDomaine] ?? "").split(" ; ").filter(Boolean);
+        if (!actuels.includes(o.nom)) lignes[c][iDomaine] = [...actuels, o.nom].join(" ; ");
+      }
+    }
+  }
+  return { onglet: { ...principal, entetes, lignes, numeros }, lignesAjoutees, lignesRetrouvees };
+}
+
 export async function lireOnglets(contenu: ArrayBuffer | Uint8Array): Promise<OngletLu[]> {
   const classeur = new ExcelJS.Workbook();
   await classeur.xlsx.load(contenu as ArrayBuffer);

@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { exigerUtilisateur } from "@/lib/acces";
-import { champsParEntete } from "@/lib/import/excel";
+import { COLONNE_DOMAINE, champsParEntete } from "@/lib/import/excel";
 import type { LigneTableau } from "@/lib/tableau/modele";
 import TableauExcel from "./tableau-excel";
 
-export default async function TableauDeSuivi({ searchParams }: { searchParams: Promise<{ onglet?: string }> }) {
+export default async function TableauDeSuivi({ searchParams }: { searchParams: Promise<{ domaine?: string }> }) {
   const { utilisateur, supabase } = await exigerUtilisateur();
-  const { onglet: choisi } = await searchParams;
-  const { data: onglets } = await supabase.from("tableau_onglets").select("id, nom, entetes, principal").order("position");
+  const { domaine } = await searchParams;
+  // Un seul onglet (le principal) ; les vues par domaine sont calculées depuis la colonne « Domaine ».
+  const { data: onglets } = await supabase.from("tableau_onglets").select("id, nom, entetes, principal").order("principal", { ascending: false }).order("position");
 
   if (!onglets?.length) {
     return (
@@ -29,7 +30,7 @@ export default async function TableauDeSuivi({ searchParams }: { searchParams: P
     );
   }
 
-  const onglet = onglets.find((o) => o.id === choisi) ?? onglets[0];
+  const onglet = onglets[0];
   const lignes: LigneTableau[] = [];
   for (let debut = 0; ; debut += 1000) {
     const { data, error } = await supabase
@@ -42,6 +43,9 @@ export default async function TableauDeSuivi({ searchParams }: { searchParams: P
     lignes.push(...(data ?? []));
     if (!data || data.length < 1000) break;
   }
+
+  const domaines = [...new Set(lignes.flatMap((l) => (l.valeurs[COLONNE_DOMAINE] ?? "").split(" ; ").filter(Boolean)))].sort((a, b) => a.localeCompare(b, "fr"));
+  const affichees = domaine ? lignes.filter((l) => (l.valeurs[COLONNE_DOMAINE] ?? "").split(" ; ").includes(domaine)) : lignes;
 
   // Liens SharePoint (Word Unitech, PDF anonymisé le plus récent) des fiches reliées.
   const documents: Record<string, { word?: string; pdf?: string }> = {};
@@ -63,12 +67,13 @@ export default async function TableauDeSuivi({ searchParams }: { searchParams: P
 
   return (
     <TableauExcel
-      key={onglet.id}
-      onglets={onglets.map((o) => ({ id: o.id, nom: o.nom }))}
+      key={domaine ?? "tous"}
+      vues={[{ cle: "", nom: "Tous" }, ...domaines.map((d) => ({ cle: d, nom: d }))]}
+      vueActive={domaine ?? ""}
       ongletId={onglet.id}
       entetes={onglet.entetes}
       champs={onglet.principal ? champsParEntete(onglet.entetes, onglet.entetes) : {}}
-      lignes={lignes}
+      lignes={affichees}
       estAdmin={utilisateur.role === "admin"}
       documents={documents}
     />

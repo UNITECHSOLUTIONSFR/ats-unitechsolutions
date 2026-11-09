@@ -13,7 +13,7 @@ export default async function Accueil() {
     compter("consultants"),
     compter("missions", ["statut", "ouverte"]),
     compter("alertes", ["statut", "ouverte"]),
-    compter("tableau_lignes"),
+    compter("documents", ["type", "word_nominatif"]),
   ]);
   const prenom = (utilisateur.nomAffiche ?? "").split(" ")[0];
 
@@ -35,7 +35,7 @@ export default async function Accueil() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Tuile titre="Consultants" valeur={consultants} lien="/consultants" Icone={IconePersonnes} teinte="from-marque-500 to-marque-700" />
-        <Tuile titre="Lignes du tableau de suivi" valeur={lignes} lien="/tableau" Icone={IconeTableau} teinte="from-sky-500 to-cyan-600" />
+        <Tuile titre="CV Unitech reliés (SharePoint)" valeur={lignes} lien="/cv" Icone={IconeTableau} teinte="from-sky-500 to-cyan-600" />
         <Tuile titre="Missions ouvertes" valeur={missions} lien="/missions" Icone={IconeMallette} teinte="from-violet-500 to-fuchsia-600" />
         <Tuile titre="Cas à vérifier" valeur={alertes} Icone={IconeAlerte} teinte="from-amber-400 to-orange-500" />
       </div>

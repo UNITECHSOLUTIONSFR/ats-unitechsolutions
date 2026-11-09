@@ -13,7 +13,9 @@ import { IconeCopier, IconeCrayon, IconeExport, IconeFiche, IconeFiltre, IconeRe
 const PAR_PAGE = 100;
 
 interface Props {
-  onglets: { id: string; nom: string }[];
+  /** Vues par domaine (colonne « Domaine »), affichées comme des onglets. */
+  vues: { cle: string; nom: string }[];
+  vueActive: string;
   ongletId: string;
   entetes: string[];
   champs: Record<string, ChampFiche>;
@@ -23,7 +25,7 @@ interface Props {
   documents: Record<string, { word?: string; pdf?: string }>;
 }
 
-export default function TableauExcel({ onglets, ongletId, entetes, champs, lignes: initiales, estAdmin, documents }: Props) {
+export default function TableauExcel({ vues, vueActive, ongletId, entetes, champs, lignes: initiales, estAdmin, documents }: Props) {
   const [lignes, setLignes] = useState(initiales);
   const [filtres, setFiltres] = useState<Filtres>({});
   const [recherche, setRecherche] = useState("");
@@ -123,12 +125,12 @@ export default function TableauExcel({ onglets, ongletId, entetes, champs, ligne
         </div>
       </div>
 
-      {/* Onglets, comme dans Excel */}
+      {/* Vues par domaine, comme les onglets de l'Excel, mais calculées (toujours à jour) */}
       <div className="flex gap-1 overflow-x-auto border-b border-zinc-200">
-        {onglets.map((o) => (
-          <Link key={o.id} href={`/tableau?onglet=${o.id}`}
+        {vues.map((o) => (
+          <Link key={o.cle} href={o.cle ? `/tableau?domaine=${encodeURIComponent(o.cle)}` : "/tableau"}
             className={`whitespace-nowrap rounded-t-lg px-4 py-2 text-sm font-medium transition ${
-              o.id === ongletId ? "bg-white text-marque-700 shadow-[inset_0_-2px_0] shadow-marque-600" : "text-zinc-500 hover:bg-white/60 hover:text-zinc-800"
+              o.cle === vueActive ? "bg-white text-marque-700 shadow-[inset_0_-2px_0] shadow-marque-600" : "text-zinc-500 hover:bg-white/60 hover:text-zinc-800"
             }`}>
             {o.nom}
           </Link>
