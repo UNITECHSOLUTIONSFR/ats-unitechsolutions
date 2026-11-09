@@ -21,7 +21,11 @@ export type ChampFiche =
   | "localisation"
   | "notes"
   | "statut"
-  | "date_maj";
+  | "date_maj"
+  | "experience"
+  | "tjm_salaire"
+  | "linkedin"
+  | "cv_lien";
 
 /** Intitulés de colonnes reconnus automatiquement (comparés sans accents ni majuscules). */
 const SYNONYMES_COLONNES: Record<ChampFiche, string[]> = {
@@ -37,6 +41,10 @@ const SYNONYMES_COLONNES: Record<ChampFiche, string[]> = {
   notes: ["notes", "commentaire", "commentaires", "remarque", "remarques", "observations"],
   statut: ["statut", "etat"],
   date_maj: ["date de mise a jour", "mise a jour", "date maj", "derniere mise a jour"],
+  experience: ["experience", "experiences", "annees d'experience", "annees experience", "exp", "exp."],
+  tjm_salaire: ["tjm / salaire", "tjm/salaire", "tjm", "salaire", "pretentions", "tjm salaire"],
+  linkedin: ["linkedin", "profil linkedin", "lien linkedin"],
+  cv_lien: ["cv", "lien cv", "lien du cv"],
 };
 
 const cle = (s: string) => sansAccents(s).toLowerCase().replace(/[_]+/g, " ").replace(/\s+/g, " ").trim();
@@ -107,12 +115,18 @@ export interface FicheImport {
   notes: string | null;
   statut_texte: string | null;
   date_maj: string | null; // AAAA-MM-JJ, date de mise à jour de la ligne dans l'Excel
+  experience: string | null;
+  tjm_salaire: string | null;
+  linkedin: string | null;
+  cv_lien: string | null;
+  /** Toutes les lignes Excel d'origine de cette personne (plusieurs si doublons fusionnés), toutes colonnes. */
+  donnees_excel: { ligne: number; valeurs: Record<string, string> }[];
 }
 
 export interface RapportImport {
   lignesLues: number;
   fichesRetenues: number;
-  rejets: { ligne: number; raison: string }[];
+  rejets: { ligne: number; raison: string; valeurs: Record<string, string> }[];
   telephonesCorriges: { ligne: number; avant: string; apres: string }[];
   telephonesInvalides: { ligne: number; valeur: string }[];
   emailsInvalides: { ligne: number; valeur: string }[];
@@ -171,8 +185,13 @@ export function preparerImport(
     let nom = texte(lire(l, "nom")) ?? "";
     const complet = texte(lire(l, "nom_complet"));
     if (!prenom && !nom && complet) ({ prenom, nom } = separerNomComplet(complet));
+    const valeurs: Record<string, string> = {};
+    entetes.forEach((e, j) => {
+      const t = texte(l[j]);
+      if (t !== null) valeurs[e || `Colonne ${j + 1}`] = t;
+    });
     if (!nom) {
-      rapport.rejets.push({ ligne, raison: "nom manquant" });
+      rapport.rejets.push({ ligne, raison: "nom manquant", valeurs });
       return;
     }
 
@@ -205,6 +224,11 @@ export function preparerImport(
       localisation: texte(lire(l, "localisation")),
       notes: texte(lire(l, "notes")),
       statut_texte: texte(lire(l, "statut")),
+      experience: texte(lire(l, "experience")),
+      tjm_salaire: texte(lire(l, "tjm_salaire")),
+      linkedin: texte(lire(l, "linkedin")),
+      cv_lien: texte(lire(l, "cv_lien")),
+      donnees_excel: [{ ligne, valeurs }],
       date_maj: (() => { const v = lire(l, "date_maj"); return v instanceof Date ? v.toISOString().slice(0, 10) : null; })(),
     });
   });
@@ -242,6 +266,10 @@ export function preparerImport(
 function fusionner(cible: FicheImport, source: FicheImport) {
   for (const k of Object.keys(source) as (keyof FicheImport)[]) {
     if (k === "ligne") continue;
+    if (k === "donnees_excel") {
+      cible.donnees_excel.push(...source.donnees_excel);
+      continue;
+    }
     if ((cible[k] === null || cible[k] === "") && source[k] !== null && source[k] !== "") {
       (cible as unknown as Record<string, unknown>)[k] = source[k];
     }

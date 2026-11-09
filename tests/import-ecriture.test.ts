@@ -31,7 +31,8 @@ function baseSimulee(initial: Record<string, Record<string, unknown>[]>) {
 
 const fiche = (f: Partial<FicheImport>): FicheImport => ({
   ligne: 2, prenom: "Jean", nom: "Dupont", trigramme: "JDU", email: null, telephone_e164: null, telephone_brut: null,
-  intitule_poste: null, disponibilite: null, disponible_le: null, localisation: null, notes: null, statut_texte: null, date_maj: null, ...f,
+  intitule_poste: null, disponibilite: null, disponible_le: null, localisation: null, notes: null, statut_texte: null, date_maj: null,
+  experience: null, tjm_salaire: null, linkedin: null, cv_lien: null, donnees_excel: [{ ligne: 2, valeurs: { Nom: "Dupont" } }], ...f,
 });
 
 describe("écriture de l'import", () => {

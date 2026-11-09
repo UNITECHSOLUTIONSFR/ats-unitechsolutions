@@ -56,6 +56,26 @@ export default async function FicheConsultant({ params }: { params: Promise<{ id
             </div>
           </div>
 
+          <div className="rounded-xl bg-white p-5 text-sm shadow-sm ring-1 ring-zinc-200">
+            <h2 className="font-semibold">Informations du fichier de suivi</h2>
+            <ul className="mt-2 space-y-1">
+              {c.experience && <li><span className="text-zinc-500">Expérience : </span>{c.experience}</li>}
+              {c.tjm_salaire && <li><span className="text-zinc-500">TJM / Salaire : </span>{c.tjm_salaire}</li>}
+              {c.linkedin && <li><span className="text-zinc-500">LinkedIn : </span><Lien valeur={c.linkedin} /></li>}
+              {c.cv_lien && <li><span className="text-zinc-500">CV : </span><Lien valeur={c.cv_lien} /></li>}
+            </ul>
+            {(c.donnees_excel ?? []).map((d: { ligne: number; valeurs: Record<string, string> }) => (
+              <details key={d.ligne} className="mt-2">
+                <summary className="cursor-pointer text-zinc-500">Ligne {d.ligne} du fichier Excel (toutes les colonnes)</summary>
+                <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
+                  {Object.entries(d.valeurs).map(([k, v]) => (
+                    <div key={k} className="contents"><dt className="text-zinc-500">{k}</dt><dd className="break-all">{v}</dd></div>
+                  ))}
+                </dl>
+              </details>
+            ))}
+          </div>
+
           <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
             <h2 className="font-semibold">Documents (SharePoint)</h2>
             {!pdf && <p className="mt-2 text-sm text-amber-700">PDF anonymisé manquant</p>}
@@ -131,4 +151,10 @@ function etatDisponibilite(maj: string | null) {
   const majDispo = maj ? new Date(maj) : null;
   const dispoAncienne = !majDispo || Date.now() - majDispo.getTime() > 90 * 86_400_000;
   return { majDispo, dispoAncienne };
+}
+
+function Lien({ valeur }: { valeur: string }) {
+  return /^https?:\/\//.test(valeur)
+    ? <a href={valeur} target="_blank" rel="noreferrer" className="break-all text-blue-700 hover:underline">{valeur}</a>
+    : <span className="break-all">{valeur}</span>;
 }

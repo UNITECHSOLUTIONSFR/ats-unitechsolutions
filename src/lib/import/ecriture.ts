@@ -60,6 +60,10 @@ export async function ecrireFiches(supabase: SupabaseClient, fiches: FicheImport
       localisation: f.localisation,
       notes: f.notes,
       statut: statutDepuisTexte(f.statut_texte),
+      experience: f.experience,
+      tjm_salaire: f.tjm_salaire,
+      linkedin: f.linkedin,
+      cv_lien: f.cv_lien,
     };
     const existant = (f.email && parEmail.get(f.email)) || (f.telephone_e164 && parTel.get(f.telephone_e164)) || null;
 
@@ -73,6 +77,10 @@ export async function ecrireFiches(supabase: SupabaseClient, fiches: FicheImport
           modifications[k] = { avant: existant[k] ?? null, apres: v };
         }
       }
+      // Les lignes Excel d'origine sont toujours ajoutées (jamais de doublon de ligne en cas de réimport).
+      const dejaVues = new Set(((existant.donnees_excel as { ligne: number }[] | undefined) ?? []).map((d) => JSON.stringify(d)));
+      const nouvelles = f.donnees_excel.filter((d) => !dejaVues.has(JSON.stringify(d)));
+      if (nouvelles.length) maj.donnees_excel = [...((existant.donnees_excel as unknown[]) ?? []), ...nouvelles];
       if (Object.keys(maj).length) {
         const { error } = await supabase.from("consultants").update(maj).eq("id", existant.id);
         if (error) bilan.erreurs.push(`Ligne ${f.ligne} : ${error.message}`);
@@ -87,7 +95,7 @@ export async function ecrireFiches(supabase: SupabaseClient, fiches: FicheImport
     }
 
     const homonymes = parNom.get(normaliserNomPersonne(f.prenom, f.nom));
-    aCreer.push({ ...valeurs, source: "import_excel", _ligne: f.ligne, _homonymes: homonymes ?? null });
+    aCreer.push({ ...valeurs, donnees_excel: f.donnees_excel, source: "import_excel", _ligne: f.ligne, _homonymes: homonymes ?? null });
   }
 
   for (let i = 0; i < aCreer.length; i += 500) {

@@ -6,7 +6,7 @@ import { traiterFichierExcel, type EtatImport } from "@/lib/import/actions";
 const CHAMPS: Record<string, string> = {
   prenom: "Prénom", nom: "Nom", nom_complet: "Nom complet", email: "Email", telephone: "Téléphone",
   trigramme: "Trigramme", disponibilite: "Disponibilité", intitule_poste: "Intitulé de poste",
-  localisation: "Localisation", notes: "Notes", statut: "Statut", date_maj: "Date de mise à jour",
+  localisation: "Localisation", notes: "Notes", statut: "Statut", date_maj: "Date de mise à jour", experience: "Expérience", tjm_salaire: "TJM / Salaire", linkedin: "LinkedIn", cv_lien: "CV",
 };
 
 export default function FormulaireImport() {
@@ -60,7 +60,7 @@ export default function FormulaireImport() {
             <li>Lignes rejetées : <b>{r.rejets.length}</b></li>
             <li>Trigrammes différents de la règle : <b>{r.trigrammesDifferents.length}</b> (on garde celui de l&apos;Excel)</li>
           </ul>
-          <Detail titre="Lignes rejetées" lignes={r.rejets.map((x) => `Ligne ${x.ligne} : ${x.raison}`)} />
+          <Detail titre="Lignes rejetées (conservées dans le rapport)" lignes={r.rejets.map((x) => `Ligne ${x.ligne} : ${x.raison} — ${Object.entries(x.valeurs).map(([k, v]) => `${k}: ${v}`).join(" · ") || "ligne vide"}`)} />
           <Detail titre="Téléphones non reconnus" lignes={r.telephonesInvalides.map((x) => `Ligne ${x.ligne} : ${x.valeur}`)} />
           <Detail titre="Emails invalides" lignes={r.emailsInvalides.map((x) => `Ligne ${x.ligne} : ${x.valeur}`)} />
           <Detail titre="Doublons possibles" lignes={r.doublonsPossibles.map((x) => `Lignes ${x.lignes.join(", ")} : ${x.nom}`)} />

@@ -30,7 +30,7 @@ describe("import Excel", () => {
 
     expect(rapport.lignesLues).toBe(7);
     expect(rapport.fichesRetenues).toBe(5);
-    expect(rapport.rejets).toEqual([{ ligne: 5, raison: "nom manquant" }]);
+    expect(rapport.rejets).toEqual([{ ligne: 5, raison: "nom manquant", valeurs: { "Prénom": "Sans", "Téléphone": "0611111111" } }]);
     expect(rapport.telephonesCorriges).toEqual([{ ligne: 2, avant: "612345678", apres: "+33612345678" }]);
     expect(rapport.telephonesInvalides).toEqual([{ ligne: 6, valeur: "+44 20 7946 0958" }]);
     expect(rapport.emailsInvalides).toEqual([{ ligne: 6, valeur: "pas-un-email" }]);
@@ -46,6 +46,9 @@ describe("import Excel", () => {
     const john = fiches.find((f) => f.nom === "Smith")!;
     expect(john).toMatchObject({ trigramme: "JSX", telephone_e164: null, telephone_brut: "+44 20 7946 0958", email: null });
     expect(fiches.find((f) => f.nom === "Le Goff")!.trigramme).toBe("YLE");
+    // Rien n'est perdu : colonne inconnue et lignes fusionnées conservées
+    expect(jean.donnees_excel.map((d) => d.ligne)).toEqual([2, 4]);
+    expect(jean.donnees_excel[0].valeurs["Colonne perso"]).toBe("x");
   });
 
   it("sépare une colonne « NOM Prénom »", () => {
@@ -54,5 +57,10 @@ describe("import Excel", () => {
       ["Jean-Marc", "DUPONT", "JDU"],
       ["Marie", "Curie", "MCU"],
     ]);
+  });
+
+  it("reconnaît « Prénoms », TJM, LinkedIn, Expérience, CV", () => {
+    const { correspondance } = detecterColonnes(["Nom", "Prénoms", "TJM / Salaire", "Linkedin", "Expérience", "CV", "Date de mise à jour"]);
+    expect(correspondance).toMatchObject({ nom: 0, prenom: 1, tjm_salaire: 2, linkedin: 3, experience: 4, cv_lien: 5, date_maj: 6 });
   });
 });
