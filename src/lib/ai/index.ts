@@ -159,3 +159,36 @@ export function requeteLotProfilCV(identifiant: string, texteCV: string, modele:
     params: parametresExtraction(modele, CONSIGNES_PROFIL_CV, SchemaProfilCV, texteCV, MAX_TOKENS.ficheCV),
   };
 }
+
+/** Envoie un lot de CV à structurer (Batch API, 50 % moins cher). Renvoie l'identifiant du lot. */
+export async function envoyerLotProfilsCV(cv: { id: string; texte: string }[]): Promise<string> {
+  const lot = await anthropic().messages.batches.create({ requests: cv.map((c) => requeteLotProfilCV(c.id, c.texte)) });
+  return lot.id;
+}
+
+export interface ResultatLotCV {
+  id: string;
+  profil: ProfilCV | null; // null : réponse invalide ou erreur
+  usage: UsageIA | null;
+}
+
+/** État d'un lot ; quand il est terminé, renvoie la fiche structurée de chaque CV. */
+export async function lireLotProfilsCV(idLot: string): Promise<{ termine: boolean; enCours: number; resultats: ResultatLotCV[] }> {
+  const lot = await anthropic().messages.batches.retrieve(idLot);
+  if (lot.processing_status !== "ended") return { termine: false, enCours: lot.request_counts.processing, resultats: [] };
+  const resultats: ResultatLotCV[] = [];
+  for await (const r of await anthropic().messages.batches.results(idLot)) {
+    if (r.result.type !== "succeeded") {
+      resultats.push({ id: r.custom_id, profil: null, usage: null });
+      continue;
+    }
+    const message = r.result.message;
+    const profil = lireJSON(message, SchemaProfilCV);
+    resultats.push({
+      id: r.custom_id,
+      profil: profil && ficheCVValide(profil) ? borner(profil) : null,
+      usage: usageDepuisReponse(message.usage, MODELES.ficheCV, "fiche_cv", "batch"),
+    });
+  }
+  return { termine: true, enCours: 0, resultats };
+}

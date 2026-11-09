@@ -5,9 +5,7 @@ import { revalidatePath } from "next/cache";
 import { exigerUtilisateur } from "@/lib/acces";
 import { extraireExigencesMission, ErreurIA, type UsageIA } from "@/lib/ai";
 import { enregistrerUsages } from "@/lib/ai/journal";
-import { indexerReferentiel, resoudreCompetence, type CompetenceReferentiel } from "@/lib/matching/referentiel";
-import { normaliserCompetence } from "@/lib/metier/texte";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { resoudreCompetences } from "@/lib/matching/competences";
 
 export interface EtatFormulaireMission {
   erreur?: string;
@@ -15,29 +13,6 @@ export interface EtatFormulaireMission {
 
 const STATUTS_PROPOSITION = ["propose", "appele", "envoye_client", "retenu", "refuse"] as const;
 const STATUTS_MISSION = ["ouverte", "pourvue", "fermee"] as const;
-
-/** Rattache chaque compétence extraite au référentiel ; les nouvelles sont ajoutées automatiquement. */
-async function resoudreCompetences(supabase: SupabaseClient, noms: string[]): Promise<Map<string, string>> {
-  const { data } = await supabase.from("competences").select("id, nom_canonique, synonymes");
-  const index = indexerReferentiel((data ?? []) as CompetenceReferentiel[]);
-  const resultat = new Map<string, string>(); // nom extrait -> id
-  for (const nom of noms) {
-    const trouvee = resoudreCompetence(nom, index);
-    if (trouvee) {
-      resultat.set(nom, trouvee.id);
-      continue;
-    }
-    const { data: nouvelle, error } = await supabase
-      .from("competences")
-      .insert({ nom_canonique: nom.trim(), synonymes: [normaliserCompetence(nom)], creee_automatiquement: true })
-      .select("id, nom_canonique, synonymes")
-      .single();
-    if (error || !nouvelle) continue;
-    index.set(normaliserCompetence(nom), nouvelle as CompetenceReferentiel);
-    resultat.set(nom, nouvelle.id);
-  }
-  return resultat;
-}
 
 /** Enregistre un besoin client collé dans l'application, en extrait les exigences, puis ouvre le classement. */
 export async function creerMission(_etat: EtatFormulaireMission, formData: FormData): Promise<EtatFormulaireMission> {
