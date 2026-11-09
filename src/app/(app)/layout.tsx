@@ -29,6 +29,7 @@ export default async function LayoutApplication({ children }: { children: React.
           <Link href="/" className="font-semibold">ATS Unitech</Link>
           <Link href="/missions" className="hover:underline">Missions</Link>
           <Link href="/consultants" className="hover:underline">Consultants</Link>
+          {utilisateur.role === "admin" && <Link href="/parametres" className="hover:underline">Paramètres</Link>}
           <span className="ml-auto text-zinc-500">
             {utilisateur.nomAffiche ?? utilisateur.email} · {utilisateur.role === "admin" ? "administrateur" : "recruteur"}
           </span>
