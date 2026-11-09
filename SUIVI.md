@@ -59,6 +59,8 @@ Dernière mise à jour : 9 novembre 2026
 ### Étape 5 — Connexion SharePoint (9 novembre 2026, en cours)
 - **Fait** : module `src/lib/sharepoint` en lecture seule (jeton Microsoft, parcours des dossiers métier, delta, téléchargement en mémoire, empreinte SHA-256, extraction locale .docx avec mammoth et .pdf avec unpdf, deux bibliothèques gratuites) ; analyseur des noms de fichiers (provisoire) ; association Word ↔ PDF (trigramme, puis similarité de texte locale, puis fonction ; un PDF ne va jamais à deux Word).
 - **Testé** : 24 nouveaux tests (99 au total, tous verts) avec des fichiers Word/PDF générés et un Microsoft Graph simulé.
+- **Ajouté ensuite** : scripts `scripts/inventaire-sharepoint.ts` et `scripts/echantillon-association.ts` (prêts, pas encore lancés) ; migration `20261109000007_association_documents.sql` (méthode/similarité d'association, table `sharepoint_etat` pour le lien delta) — **déjà appliquée dans Supabase**.
+- **Contrôle 17 h 45** : nouveau jeton toujours **sans aucun rôle** ; lecture du site refusée (Graph 401 « generalException »). Le consentement n'est pas encore effectif côté Microsoft.
 - **Bloqué** : le jeton Microsoft ne contient aucune permission → `Sites.Selected` (type « Application ») doit recevoir le **consentement administrateur** dans Entra. Ensuite : inventaire réel, calibrage de l'analyseur sur les vrais noms, échantillon de 20, jalon A.
 
 ### Tableau de suivi et nouvelle présentation (9 novembre 2026, demande de l'utilisatrice)
