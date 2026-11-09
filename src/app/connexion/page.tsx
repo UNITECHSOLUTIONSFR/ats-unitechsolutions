@@ -10,7 +10,7 @@ export default function PageConnexion() {
   async function envoyer(e: React.FormEvent) {
     e.preventDefault();
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const cle = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    const cle = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     if (!url || !cle) {
       setEtat("erreur");
       return;
