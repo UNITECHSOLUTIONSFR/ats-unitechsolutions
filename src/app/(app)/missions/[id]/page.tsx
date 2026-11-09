@@ -34,7 +34,6 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <Link href="/missions" className="text-sm text-zinc-500 hover:underline">← Missions</Link>
           <h1 className="titre-page">{mission.intitule}</h1>
           <p className="text-zinc-600">
             {[mission.client, mission.localisation, mission.date_debut && `début ${new Date(mission.date_debut).toLocaleDateString("fr-FR")}`,

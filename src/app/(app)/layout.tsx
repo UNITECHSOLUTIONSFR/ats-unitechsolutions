@@ -1,4 +1,5 @@
 import MenuLateral from "./menu-lateral";
+import BoutonRetour from "./bouton-retour";
 import { configSupabase } from "@/lib/supabase/config";
 import { utilisateurConnecte } from "@/lib/supabase/serveur";
 
@@ -25,7 +26,7 @@ export default async function LayoutApplication({ children }: { children: React.
   return (
     <div className="flex min-h-screen flex-col lg:flex-row">
       <MenuLateral nom={utilisateur.nomAffiche ?? utilisateur.email.split("@")[0]} email={utilisateur.email} estAdmin={utilisateur.role === "admin"} />
-      <main className="min-w-0 flex-1 px-4 py-6 sm:px-8 lg:py-8">{children}</main>
+      <main className="min-w-0 flex-1 px-4 py-6 sm:px-8 lg:py-8"><BoutonRetour />{children}</main>
     </div>
   );
 }

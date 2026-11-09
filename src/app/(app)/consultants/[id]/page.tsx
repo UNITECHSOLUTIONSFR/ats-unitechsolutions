@@ -28,7 +28,6 @@ export default async function FicheConsultant({ params }: { params: Promise<{ id
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/consultants" className="text-sm text-zinc-500 hover:underline">← Consultants</Link>
         <h1 className="titre-page">{c.prenom} {c.nom} <span className="font-mono text-lg text-zinc-500">{c.trigramme}</span></h1>
         <p className="text-zinc-600">{c.intitule_poste ?? "—"} · {c.statut}</p>
       </div>
