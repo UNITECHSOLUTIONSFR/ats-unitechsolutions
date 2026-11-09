@@ -19,9 +19,11 @@ interface Props {
   champs: Record<string, ChampFiche>;
   lignes: LigneTableau[];
   estAdmin: boolean;
+  /** Liens SharePoint par fiche consultant : Word Unitech et PDF anonymisé. */
+  documents: Record<string, { word?: string; pdf?: string }>;
 }
 
-export default function TableauExcel({ onglets, ongletId, entetes, champs, lignes: initiales, estAdmin }: Props) {
+export default function TableauExcel({ onglets, ongletId, entetes, champs, lignes: initiales, estAdmin, documents }: Props) {
   const [lignes, setLignes] = useState(initiales);
   const [filtres, setFiltres] = useState<Filtres>({});
   const [recherche, setRecherche] = useState("");
@@ -190,6 +192,14 @@ export default function TableauExcel({ onglets, ongletId, entetes, champs, ligne
                           <IconeFiche className="h-4 w-4" />
                         </Link>
                       ) : <span className="w-4" />}
+                      {l.consultant_id && documents[l.consultant_id]?.word && (
+                        <a href={documents[l.consultant_id].word} target="_blank" rel="noreferrer" title="CV Word Unitech (SharePoint)"
+                          className="rounded bg-blue-50 px-1 text-[10px] font-semibold text-blue-700 hover:bg-blue-100">W</a>
+                      )}
+                      {l.consultant_id && documents[l.consultant_id]?.pdf && (
+                        <a href={documents[l.consultant_id].pdf} target="_blank" rel="noreferrer" title="PDF anonymisé (SharePoint)"
+                          className="rounded bg-red-50 px-1 text-[10px] font-semibold text-red-700 hover:bg-red-100">PDF</a>
+                      )}
                     </div>
                   </td>
                   {entetes.map((e) => {

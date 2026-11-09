@@ -43,6 +43,24 @@ export default async function TableauDeSuivi({ searchParams }: { searchParams: P
     if (!data || data.length < 1000) break;
   }
 
+  // Liens SharePoint (Word Unitech, PDF anonymisé le plus récent) des fiches reliées.
+  const documents: Record<string, { word?: string; pdf?: string }> = {};
+  for (let debut = 0; ; debut += 1000) {
+    const { data } = await supabase
+      .from("documents")
+      .select("consultant_id, type, url_web, modifie_sharepoint_le")
+      .not("consultant_id", "is", null)
+      .eq("supprime_sharepoint", false)
+      .order("modifie_sharepoint_le", { ascending: false })
+      .range(debut, debut + 999);
+    for (const d of data ?? []) {
+      const e = (documents[d.consultant_id] ??= {});
+      if (d.type === "word_nominatif" && !e.word) e.word = d.url_web ?? undefined;
+      if (d.type === "pdf_anonyme" && !e.pdf) e.pdf = d.url_web ?? undefined;
+    }
+    if (!data || data.length < 1000) break;
+  }
+
   return (
     <TableauExcel
       key={onglet.id}
@@ -52,6 +70,7 @@ export default async function TableauDeSuivi({ searchParams }: { searchParams: P
       champs={onglet.principal ? champsParEntete(onglet.entetes, onglet.entetes) : {}}
       lignes={lignes}
       estAdmin={utilisateur.role === "admin"}
+      documents={documents}
     />
   );
 }

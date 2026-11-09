@@ -9,6 +9,7 @@ const LIENS = [
   { href: "/", libelle: "Tableau de bord", Icone: IconeAccueil },
   { href: "/tableau", libelle: "Tableau de suivi", Icone: IconeTableau },
   { href: "/consultants", libelle: "Consultants", Icone: IconePersonnes },
+  { href: "/cv", libelle: "CV SharePoint", Icone: IconeTableau },
   { href: "/missions", libelle: "Missions", Icone: IconeMallette },
 ];
 

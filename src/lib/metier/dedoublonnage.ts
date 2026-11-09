@@ -4,7 +4,8 @@ import { normaliserNomPersonne } from "./texte";
 export function normaliserEmail(valeur: unknown): string | null {
   if (valeur === null || valeur === undefined) return null;
   const s = String(valeur).toLowerCase().replace(/\s+/g, "").replace(/^mailto:/, "");
-  return /^[^@]+@[^@]+\.[^@]+$/.test(s) ? s : null;
+  // Une seule adresse, sans caractère parasite (« ; », « / », « Â »…) : sinon la case est analysée à part.
+  return /^[a-z0-9._%+'-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/.test(s) ? s : null;
 }
 
 export interface FicheComparable {

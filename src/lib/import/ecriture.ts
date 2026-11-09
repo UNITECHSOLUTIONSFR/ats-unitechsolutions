@@ -57,6 +57,8 @@ export async function ecrireFiches(supabase: SupabaseClient, fiches: FicheImport
       tjm_salaire: f.tjm_salaire,
       linkedin: f.linkedin,
       cv_lien: f.cv_lien,
+      email_2: f.email_2,
+      commentaire_email: f.commentaire_email,
     };
     const existant = (f.email && parEmail.get(f.email)) || (f.telephone_e164 && parTel.get(f.telephone_e164)) || null;
 
@@ -87,7 +89,7 @@ export async function ecrireFiches(supabase: SupabaseClient, fiches: FicheImport
       continue;
     }
 
-    const homonymes = parNom.get(normaliserNomPersonne(f.prenom, f.nom));
+    const homonymes = f.nom ? parNom.get(normaliserNomPersonne(f.prenom, f.nom)) : undefined;
     aCreer.push({ ...valeurs, donnees_excel: f.donnees_excel, source: "import_excel", _ligne: f.ligne, _homonymes: homonymes ?? null });
   }
 
@@ -106,6 +108,9 @@ export async function ecrireFiches(supabase: SupabaseClient, fiches: FicheImport
       const source = lot[j];
       if (source._homonymes) {
         alertes.push({ type: "doublon_possible", consultant_id: cree.id, details: { ligne_excel: source._ligne, fiches_existantes: source._homonymes } });
+      }
+      if (!source.nom) {
+        alertes.push({ type: "nom_manquant", consultant_id: cree.id, details: { ligne_excel: source._ligne } });
       }
       if (source.telephone_brut) {
         alertes.push({ type: "telephone_invalide", consultant_id: cree.id, details: { ligne_excel: source._ligne, valeur: source.telephone_brut } });

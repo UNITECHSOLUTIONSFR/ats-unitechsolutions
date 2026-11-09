@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import ExcelJS from "exceljs";
-import { detecterColonnes, lireClasseur, preparerImport } from "@/lib/import/excel";
+import { analyserCaseEmail, corrigerOngletPrincipal, detecterColonnes, lireClasseur, preparerImport } from "@/lib/import/excel";
 
 async function classeurDeTest(): Promise<ArrayBuffer> {
   const wb = new ExcelJS.Workbook();
@@ -29,8 +29,8 @@ describe("import Excel", () => {
     const { fiches, rapport } = preparerImport(entetes, lignes);
 
     expect(rapport.lignesLues).toBe(7);
-    expect(rapport.fichesRetenues).toBe(5);
-    expect(rapport.rejets).toEqual([{ ligne: 5, raison: "nom manquant", valeurs: { "Prénom": "Sans", "Téléphone": "0611111111" } }]);
+    expect(rapport.fichesRetenues).toBe(6);
+    expect(rapport.rejets).toEqual([{ ligne: 5, raison: "nom manquant (importée avec alerte)", valeurs: { "Prénom": "Sans", "Téléphone": "0611111111" } }]);
     expect(rapport.telephonesCorriges).toEqual([{ ligne: 2, avant: "612345678", apres: "+33612345678" }]);
     expect(rapport.telephonesInvalides).toEqual([{ ligne: 6, valeur: "+44 20 7946 0958" }]);
     expect(rapport.emailsInvalides).toEqual([{ ligne: 6, valeur: "pas-un-email" }]);
@@ -62,5 +62,26 @@ describe("import Excel", () => {
   it("reconnaît « Prénoms », TJM, LinkedIn, Expérience, CV", () => {
     const { correspondance } = detecterColonnes(["Nom", "Prénoms", "TJM / Salaire", "Linkedin", "Expérience", "CV", "Date de mise à jour"]);
     expect(correspondance).toMatchObject({ nom: 0, prenom: 1, tjm_salaire: 2, linkedin: 3, experience: 4, cv_lien: 5, date_maj: 6 });
+  });
+
+  it.each([
+    ["jean.dupontÂgmail.com", { email: "jean.dupont@gmail.com", email2: null, linkedin: null, commentaire: null }],
+    ["a@x.fr / b@y.fr", { email: "a@x.fr", email2: "b@y.fr", linkedin: null, commentaire: null }],
+    ["a@x.fr linkedin.com/in/jdupont", { email: "a@x.fr", email2: null, linkedin: "linkedin.com/in/jdupont", commentaire: null }],
+    ["Voir LinkedIn", { email: null, email2: null, linkedin: "Voir LinkedIn", commentaire: null }],
+    ["pas de mail, rappeler", { email: null, email2: null, linkedin: null, commentaire: "pas de mail, rappeler" }],
+  ])("case email « %s »", (brut, attendu) => {
+    expect(analyserCaseEmail(brut)).toEqual(attendu);
+  });
+
+  it("corrige l'onglet principal et ajoute les colonnes nécessaires", () => {
+    const o = corrigerOngletPrincipal({
+      nom: "Suivi", entetes: ["Nom", "Email", "Linkedin"], numeros: [2, 3, 4],
+      lignes: [["A", "a@x.fr", null], ["B", "bÂx.fr ; c@y.fr", null], ["C", "à rappeler", "lien"]],
+    });
+    expect(o.entetes).toEqual(["Nom", "Email", "Linkedin", "Email 2", "Commentaire email"]);
+    expect(o.lignes[0]).toEqual(["A", "a@x.fr", null, null, null]);
+    expect(o.lignes[1]).toEqual(["B", "b@x.fr", null, "c@y.fr", null]);
+    expect(o.lignes[2]).toEqual(["C", null, "lien", null, "à rappeler"]);
   });
 });

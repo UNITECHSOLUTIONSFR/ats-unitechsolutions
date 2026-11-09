@@ -59,6 +59,8 @@ export default async function FicheConsultant({ params }: { params: Promise<{ id
           <div className="carte p-5 text-sm">
             <h2 className="font-semibold">Informations du fichier de suivi</h2>
             <ul className="mt-2 space-y-1">
+              {c.email_2 && <li><span className="text-zinc-500">Email 2 : </span>{c.email_2}</li>}
+              {c.commentaire_email && <li><span className="text-zinc-500">Commentaire email : </span>{c.commentaire_email}</li>}
               {c.experience && <li><span className="text-zinc-500">Expérience : </span>{c.experience}</li>}
               {c.tjm_salaire && <li><span className="text-zinc-500">TJM / Salaire : </span>{c.tjm_salaire}</li>}
               {c.linkedin && <li><span className="text-zinc-500">LinkedIn : </span><Lien valeur={c.linkedin} /></li>}

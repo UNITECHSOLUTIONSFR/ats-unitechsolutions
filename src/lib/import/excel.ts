@@ -25,7 +25,9 @@ export type ChampFiche =
   | "experience"
   | "tjm_salaire"
   | "linkedin"
-  | "cv_lien";
+  | "cv_lien"
+  | "email_2"
+  | "commentaire_email";
 
 /** Intitulés de colonnes reconnus automatiquement (comparés sans accents ni majuscules). */
 const SYNONYMES_COLONNES: Record<ChampFiche, string[]> = {
@@ -45,6 +47,8 @@ const SYNONYMES_COLONNES: Record<ChampFiche, string[]> = {
   tjm_salaire: ["tjm / salaire", "tjm/salaire", "tjm", "salaire", "pretentions", "tjm salaire"],
   linkedin: ["linkedin", "profil linkedin", "lien linkedin"],
   cv_lien: ["cv", "lien cv", "lien du cv"],
+  email_2: ["email 2", "email2", "deuxieme email", "autre email"],
+  commentaire_email: ["commentaire email"],
 };
 
 const cle = (s: string) => sansAccents(s).toLowerCase().replace(/[_]+/g, " ").replace(/\s+/g, " ").trim();
@@ -88,6 +92,71 @@ export interface OngletLu {
 }
 
 /** Lit TOUS les onglets d'un classeur : dans chacun, la première ligne non vide sert d'en-têtes. */
+/** Colonnes ajoutées au tableau quand la case email contenait plusieurs informations. */
+export const COLONNE_EMAIL_2 = "Email 2";
+export const COLONNE_COMMENTAIRE_EMAIL = "Commentaire email";
+
+const MOTIF_EMAIL = /[^\s@,;:<>()"'\[\]]+@[^\s@,;:<>()"'\[\]]+\.[a-z]{2,}/gi;
+
+/**
+ * Nettoie une case « Email » (consigne de l'utilisatrice) :
+ * « Â » mis pour « @ » corrigé ; deux adresses séparées ; mention LinkedIn déplacée ; reste en commentaire libre.
+ */
+export function analyserCaseEmail(brut: string): { email: string | null; email2: string | null; linkedin: string | null; commentaire: string | null } {
+  const corrige = brut.replace(/\s*Â\s*/g, "@");
+  const emails = [...corrige.matchAll(MOTIF_EMAIL)].map((m) => m[0].replace(/[.]+$/, "").toLowerCase());
+  let reste = corrige;
+  for (const e of corrige.matchAll(MOTIF_EMAIL)) reste = reste.replace(e[0], " ");
+  reste = reste.replace(/^[\s,;:/|\-]+|[\s,;:/|\-]+$/g, "").replace(/\s{2,}/g, " ").trim();
+  let linkedin: string | null = null;
+  const url = reste.match(/(https?:\/\/)?([a-z]{2,3}\.)?linkedin\.com\/\S+/i);
+  if (url) {
+    linkedin = url[0];
+    reste = reste.replace(url[0], "").trim();
+  } else if (/linked\s*-?\s*in/i.test(reste)) {
+    linkedin = reste;
+    reste = "";
+  }
+  reste = reste.replace(/^[\s,;:/|\-]+|[\s,;:/|\-]+$/g, "").trim();
+  return { email: emails[0] ?? null, email2: emails[1] ?? null, linkedin, commentaire: reste || null };
+}
+
+/**
+ * Applique le nettoyage des emails à l'onglet principal, AVANT l'import des fiches et du tableau
+ * (les deux voient donc les mêmes valeurs). Ajoute les colonnes « Email 2 » et « Commentaire email » si besoin.
+ */
+export function corrigerOngletPrincipal(o: OngletLu): OngletLu {
+  const { correspondance } = detecterColonnes(o.entetes);
+  const iEmail = correspondance.email;
+  if (iEmail === undefined) return o;
+  const iLinkedin = correspondance.linkedin;
+  const entetes = [...o.entetes];
+  let iEmail2 = entetes.findIndex((e) => cle(e) === cle(COLONNE_EMAIL_2));
+  let iCommentaire = entetes.findIndex((e) => cle(e) === cle(COLONNE_COMMENTAIRE_EMAIL));
+  const lignes = o.lignes.map((l) => {
+    const v = l[iEmail];
+    if (typeof v !== "string" || normaliserEmail(v)) return l;
+    const a = analyserCaseEmail(v);
+    // Rien d'identifiable : tout part en commentaire et la case email est vidée.
+    const n = [...l];
+    n[iEmail] = a.email;
+    if (a.email2) {
+      if (iEmail2 < 0) { iEmail2 = entetes.length; entetes.push(COLONNE_EMAIL_2); }
+      n[iEmail2] = a.email2;
+    }
+    if (a.linkedin) {
+      if (iLinkedin !== undefined && !String(n[iLinkedin] ?? "").trim()) n[iLinkedin] = a.linkedin;
+      else a.commentaire = [a.commentaire, a.linkedin].filter(Boolean).join(" ");
+    }
+    if (a.commentaire) {
+      if (iCommentaire < 0) { iCommentaire = entetes.length; entetes.push(COLONNE_COMMENTAIRE_EMAIL); }
+      n[iCommentaire] = a.commentaire;
+    }
+    return n;
+  });
+  return { ...o, entetes, lignes: lignes.map((l) => Array.from({ length: entetes.length }, (_, i) => l[i] ?? null)) };
+}
+
 export async function lireOnglets(contenu: ArrayBuffer | Uint8Array): Promise<OngletLu[]> {
   const classeur = new ExcelJS.Workbook();
   await classeur.xlsx.load(contenu as ArrayBuffer);
@@ -174,6 +243,8 @@ export interface FicheImport {
   tjm_salaire: string | null;
   linkedin: string | null;
   cv_lien: string | null;
+  email_2: string | null;
+  commentaire_email: string | null;
   /** Toutes les lignes Excel d'origine de cette personne (plusieurs si doublons fusionnés), toutes colonnes. */
   donnees_excel: { ligne: number; valeurs: Record<string, string> }[];
 }
@@ -246,8 +317,8 @@ export function preparerImport(
       if (t !== null) valeurs[e || `Colonne ${j + 1}`] = t;
     });
     if (!nom) {
-      rapport.rejets.push({ ligne, raison: "nom manquant", valeurs });
-      return;
+      // Consigne : on importe quand même, avec une alerte « nom manquant » (voir ecriture.ts).
+      rapport.rejets.push({ ligne, raison: "nom manquant (importée avec alerte)", valeurs });
     }
 
     const emailBrut = texte(lire(l, "email"));
@@ -283,6 +354,8 @@ export function preparerImport(
       tjm_salaire: texte(lire(l, "tjm_salaire")),
       linkedin: texte(lire(l, "linkedin")),
       cv_lien: texte(lire(l, "cv_lien")),
+      email_2: normaliserEmail(texte(lire(l, "email_2"))),
+      commentaire_email: texte(lire(l, "commentaire_email")),
       donnees_excel: [{ ligne, valeurs }],
       date_maj: (() => { const v = lire(l, "date_maj"); return v instanceof Date ? v.toISOString().slice(0, 10) : null; })(),
     });
