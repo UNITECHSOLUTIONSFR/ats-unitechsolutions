@@ -180,3 +180,37 @@ describe("fonctions de matching", () => {
     }
   });
 });
+
+describe("tableau de suivi", () => {
+  it("un recruteur lit et modifie les lignes (une ou plusieurs à la fois), sans pouvoir supprimer ni changer les onglets", async () => {
+    const [o] = await commeUtilisateur<{ id: string }>(ADMIN,
+      `insert into tableau_onglets (nom, position, entetes, principal) values ('Suivi', 0, '{Nom,Prénoms,Statut}', true) returning id`);
+    const lignes = await commeUtilisateur<{ id: string }>(ADMIN,
+      `insert into tableau_lignes (onglet_id, position, valeurs) values
+        ($1, 2, '{"Nom":"Dupont","Statut":"Dispo"}'), ($1, 3, '{"Nom":"Martin"}') returning id`, [o.id]);
+    const ids = lignes.map((l) => l.id);
+
+    const [{ n }] = await commeUtilisateur<{ n: number }>(RECRUTEUR, `select tableau_modifier($1::uuid[], 'Statut', ' En mission ') as n`, [ids]);
+    expect(n).toBe(2);
+    const lus = await commeUtilisateur<{ valeurs: Record<string, string> }>(RECRUTEUR, `select valeurs from tableau_lignes where onglet_id=$1 order by position`, [o.id]);
+    expect(lus.map((l) => l.valeurs.Statut)).toEqual(["En mission", "En mission"]);
+
+    await commeUtilisateur(RECRUTEUR, `select tableau_modifier($1::uuid[], 'Statut', '')`, [[ids[0]]]);
+    const [vide] = await commeUtilisateur<{ valeurs: Record<string, string> }>(RECRUTEUR, `select valeurs from tableau_lignes where id=$1`, [ids[0]]);
+    expect(vide.valeurs).toEqual({ Nom: "Dupont" });
+
+    expect(await commeUtilisateur(RECRUTEUR, `delete from tableau_lignes where id=$1 returning id`, [ids[0]])).toEqual([]);
+    expect(await commeUtilisateur(RECRUTEUR, `update tableau_onglets set nom='X' where id=$1 returning id`, [o.id])).toEqual([]);
+    await expect(commeUtilisateur(RECRUTEUR, `insert into tableau_onglets (nom, position) values ('Pirate', 9)`)).rejects.toThrow();
+    expect(await commeUtilisateur(INCONNU, `select * from tableau_lignes`)).toEqual([]);
+    await expect(commeUtilisateur(null, `select * from tableau_lignes`)).rejects.toThrow(/permission denied/);
+  });
+
+  it("l'effacement d'un consultant retire aussi sa ligne du tableau", async () => {
+    const [c] = await commeUtilisateur<{ id: string }>(ADMIN, `insert into consultants (prenom, nom, trigramme) values ('Zoé','Blanc','ZBL') returning id`);
+    const [o] = await commeUtilisateur<{ id: string }>(ADMIN, `insert into tableau_onglets (nom, position) values ('Effacement', 5) returning id`);
+    await commeUtilisateur(ADMIN, `insert into tableau_lignes (onglet_id, position, consultant_id) values ($1, 2, $2)`, [o.id, c.id]);
+    await commeUtilisateur(ADMIN, `delete from consultants where id=$1`, [c.id]);
+    expect(await commeUtilisateur(ADMIN, `select * from tableau_lignes where onglet_id=$1`, [o.id])).toEqual([]);
+  });
+});

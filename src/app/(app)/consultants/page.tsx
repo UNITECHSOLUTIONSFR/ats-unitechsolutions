@@ -16,30 +16,31 @@ export default async function Consultants({ searchParams }: { searchParams: Prom
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Consultants</h1>
+      <h1 className="titre-page">Consultants</h1>
       <form className="flex gap-2">
         <input name="q" defaultValue={q} placeholder="Nom, trigramme, poste, compétence, mot du CV…"
-          className="w-full max-w-xl rounded-lg border border-zinc-300 px-3 py-2" />
-        <button className="rounded-lg bg-zinc-900 px-4 py-2 font-medium text-white">Rechercher</button>
+          className="w-full max-w-xl champ" />
+        <button className="bouton-primaire">Rechercher</button>
       </form>
       {error && <p className="text-sm text-red-700">Recherche impossible pour le moment.</p>}
-      <div className="overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-zinc-200">
+      <div className="overflow-x-auto carte">
         <table className="w-full text-sm">
           <thead className="bg-zinc-50 text-left text-zinc-500">
-            <tr><th className="p-3">Trigramme</th><th className="p-3">Nom</th><th className="p-3">Poste</th><th className="p-3">Disponibilité</th><th className="p-3">Téléphone</th><th className="p-3">Statut</th></tr>
+            <tr><th className="p-3">Trigramme</th><th className="p-3">Prénom</th><th className="p-3">Nom</th><th className="p-3">Poste</th><th className="p-3">Disponibilité</th><th className="p-3">Téléphone</th><th className="p-3">Statut</th></tr>
           </thead>
           <tbody>
             {lignes.map((c: Record<string, string | null>) => (
               <tr key={c.id!} className="border-t border-zinc-100 hover:bg-zinc-50">
                 <td className="p-3 font-mono">{c.trigramme}</td>
-                <td className="p-3"><Link href={`/consultants/${c.id}`} className="font-medium hover:underline">{c.prenom} {c.nom}</Link></td>
+                <td className="p-3"><Link href={`/consultants/${c.id}`} className="font-medium text-marque-700 hover:underline">{c.prenom}</Link></td>
+                <td className="p-3"><Link href={`/consultants/${c.id}`} className="font-medium text-marque-700 hover:underline">{c.nom}</Link></td>
                 <td className="p-3">{c.intitule_poste ?? "—"}</td>
                 <td className="p-3">{c.disponible_le ? new Date(c.disponible_le).toLocaleDateString("fr-FR") : c.disponibilite ?? "—"}</td>
                 <td className="whitespace-nowrap p-3">{formaterTelephone(c.telephone_e164) || c.telephone_brut || "—"}</td>
-                <td className="p-3">{c.statut}</td>
+                <td className="p-3"><span className="pastille">{c.statut}</span></td>
               </tr>
             ))}
-            {!lignes.length && <tr><td colSpan={6} className="p-6 text-center text-zinc-500">Aucun consultant trouvé.</td></tr>}
+            {!lignes.length && <tr><td colSpan={7} className="p-6 text-center text-zinc-500">Aucun consultant trouvé.</td></tr>}
           </tbody>
         </table>
       </div>

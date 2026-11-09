@@ -1,6 +1,6 @@
 # SUIVI.md — Avancement du projet ATS Unitech Solution
 
-Dernière mise à jour : 6 novembre 2026
+Dernière mise à jour : 9 novembre 2026
 
 ## Où on en est
 **Étape 0 — Cadrage** terminée : brief enregistré (`BRIEF.md`), règles du projet (`CLAUDE.md`), guide de préparation (`GUIDE_PREPARATION.md`).
@@ -56,6 +56,11 @@ Dernière mise à jour : 6 novembre 2026
 - **Testé** : contrôle des tables et de la RLS directement dans Supabase ; construction Vercel réussie (erreur de dossier de sortie corrigée).
 - **Ensuite** : liaison Supabase ↔ Vercel par l'utilisatrice, puis premier test de connexion en ligne.
 
+### Tableau de suivi et nouvelle présentation (9 novembre 2026, demande de l'utilisatrice)
+- **Fait** : page « Tableau de suivi » = copie fidèle de l'Excel (tous les onglets, mêmes en-têtes, même ordre, prénom et nom séparés) ; filtres par colonne façon Excel, tri, recherche, modification d'une cellule (double-clic) ou d'une colonne sur plusieurs lignes, copie des emails/téléphones, export Excel (admins) ; les modifications de l'onglet principal mettent à jour la fiche consultant (historique + journal). Nouvelle présentation : menu à gauche, couleurs de marque, tableau de bord refait. Tables `tableau_onglets` / `tableau_lignes` créées dans Supabase (RLS).
+- **Testé** : 83 tests (dont RLS des nouvelles tables, lecture multi-onglets, filtres, tri, mise à jour des fiches) ; compilation ; écrans vérifiés dans un navigateur.
+- **Ensuite** : l'utilisatrice réimporte son fichier Excel (Paramètres → Import) pour charger tous les onglets ; couleurs exactes d'Unitech à fournir.
+
 ## Réponses reçues (6 novembre 2026)
 1. Boîte de candidatures : adresse existante **`recrutement@unitechsolutions.fr`** (type de boîte à relever en partie 3.1 du guide). L'utilisatrice **est l'administratrice Microsoft 365** → la partie 3 du guide est un pas-à-pas d'administration (plus de demande à un tiers).
 2. CV SharePoint rangés **par métier** (un dossier par métier).
@@ -79,6 +84,9 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 | D11 | **Historique de `recrutement@`** : seuls les emails reçus après la mise en service de la phase 2 sont traités ; l'historique pourra l'être ensuite, après estimation. | Évite un traitement de masse non estimé ; les anciens CV sont déjà dans SharePoint. |
 | D12 | **Connexion par lien magique** au démarrage (inscription libre désactivée : seuls les invités reçoivent le lien) ; pas de filtre sur le nom de domaine pour l'instant (décision de l'utilisatrice). Connexion Microsoft ajoutable plus tard. | Démarrer sans les réglages Entra 3.1 et 3.4. |
 | D13 | **Supabase reste à Londres** (`eu-west-2`) au lieu de Paris : la région ne peut pas être changée sans recréer le projet ; le Royaume-Uni bénéficie d'une décision d'adéquation RGPD. À mentionner dans le registre des traitements. | Décidé par l'utilisatrice le 9/11/2026. |
+| D14 | **Tableau de suivi** : seul le 1er onglet crée/alimente les fiches consultants ; les autres onglets sont recopiés tels quels. Réimporter le fichier **remplace** le tableau (pas les fiches). | À confirmer selon le contenu des autres onglets. |
+| D15 | **Couleurs** : bleu provisoire, modifiable en un seul endroit (`src/app/globals.css`, famille « marque »). | En attente des codes couleur / logo d'Unitech. |
+| D16 | **Traitements en masse** : modifier une colonne, copier emails/téléphones, exporter la sélection (export réservé aux admins, règle du brief). | Autres traitements à préciser par l'utilisatrice. |
 | D8 | **Haiku et Sonnet 5.5** : thinking désactivé ou `effort: low` pour les extractions. | La réflexion est facturée comme sortie ; inutile pour de l'extraction. |
 
 ## Coûts IA réels

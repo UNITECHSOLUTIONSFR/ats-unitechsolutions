@@ -28,7 +28,7 @@ export default function PageConnexion() {
 
   return (
     <main className="flex flex-1 items-center justify-center p-6">
-      <div className="w-full max-w-sm rounded-xl bg-white p-8 shadow-sm ring-1 ring-zinc-200">
+      <div className="w-full max-w-sm carte p-8">
         <h1 className="text-xl font-semibold">ATS Unitech Solution</h1>
         <p className="mt-1 text-sm text-zinc-600">Connexion réservée aux personnes invitées.</p>
 
@@ -49,13 +49,13 @@ export default function PageConnexion() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-900"
+              className="w-full champ"
               placeholder="prenom.nom@unitechsolutions.fr"
             />
             <button
               type="submit"
               disabled={etat === "envoi"}
-              className="w-full rounded-lg bg-zinc-900 px-3 py-2 font-medium text-white disabled:opacity-50"
+              className="bouton-primaire w-full justify-center"
             >
               {etat === "envoi" ? "Envoi…" : "Recevoir un lien de connexion"}
             </button>

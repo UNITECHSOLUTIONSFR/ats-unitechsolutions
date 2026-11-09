@@ -49,6 +49,14 @@ const SYNONYMES_COLONNES: Record<ChampFiche, string[]> = {
 
 const cle = (s: string) => sansAccents(s).toLowerCase().replace(/[_]+/g, " ").replace(/\s+/g, " ").trim();
 
+/** Pour l'onglet principal : quel champ de la fiche consultant correspond à chaque en-tête affiché. */
+export function champsParEntete(entetesOriginaux: string[], entetesAffiches: string[]): Record<string, ChampFiche> {
+  const { correspondance } = detecterColonnes(entetesOriginaux);
+  const r: Record<string, ChampFiche> = {};
+  for (const [champ, i] of Object.entries(correspondance)) r[entetesAffiches[i as number]] = champ as ChampFiche;
+  return r;
+}
+
 export type CorrespondanceColonnes = Partial<Record<ChampFiche, number>>; // champ -> index de colonne
 
 export function detecterColonnes(entetes: string[]): {
@@ -71,20 +79,67 @@ export function detecterColonnes(entetes: string[]): {
 
 export type Cellule = string | number | Date | null;
 
-/** Lit la première feuille d'un classeur : la première ligne non vide sert d'en-têtes. */
-export async function lireClasseur(contenu: ArrayBuffer | Uint8Array): Promise<{ entetes: string[]; lignes: Cellule[][] }> {
+export interface OngletLu {
+  nom: string;
+  entetes: string[];
+  lignes: Cellule[][];
+  /** Numéro de ligne Excel de chaque ligne de données. */
+  numeros: number[];
+}
+
+/** Lit TOUS les onglets d'un classeur : dans chacun, la première ligne non vide sert d'en-têtes. */
+export async function lireOnglets(contenu: ArrayBuffer | Uint8Array): Promise<OngletLu[]> {
   const classeur = new ExcelJS.Workbook();
   await classeur.xlsx.load(contenu as ArrayBuffer);
-  const feuille = classeur.worksheets[0];
-  if (!feuille) return { entetes: [], lignes: [] };
-  const toutes: Cellule[][] = [];
-  feuille.eachRow({ includeEmpty: false }, (ligne) => {
-    const valeurs: Cellule[] = [];
-    for (let c = 1; c <= feuille.columnCount; c++) valeurs.push(valeurCellule(ligne.getCell(c).value));
-    toutes.push(valeurs);
+  return classeur.worksheets.map((feuille) => {
+    const toutes: { numero: number; valeurs: Cellule[] }[] = [];
+    feuille.eachRow({ includeEmpty: false }, (ligne, numero) => {
+      const valeurs: Cellule[] = [];
+      for (let c = 1; c <= feuille.columnCount; c++) valeurs.push(valeurCellule(ligne.getCell(c).value));
+      toutes.push({ numero, valeurs });
+    });
+    const [tete, ...corps] = toutes;
+    let entetes = (tete?.valeurs ?? []).map((e) => (e === null ? "" : String(e)));
+    // On retire les colonnes de fin sans en-tête et sans aucune valeur.
+    let fin = entetes.length;
+    while (fin > 0 && !entetes[fin - 1].trim() && corps.every((l) => l.valeurs[fin - 1] === null)) fin--;
+    entetes = entetes.slice(0, fin);
+    return {
+      nom: feuille.name,
+      entetes,
+      lignes: corps.map((l) => l.valeurs.slice(0, fin)),
+      numeros: corps.map((l) => l.numero),
+    };
   });
-  const [entetes = [], ...lignes] = toutes;
-  return { entetes: entetes.map((e) => (e === null ? "" : String(e))), lignes };
+}
+
+/** Lit la première feuille d'un classeur : la première ligne non vide sert d'en-têtes. */
+export async function lireClasseur(contenu: ArrayBuffer | Uint8Array): Promise<{ entetes: string[]; lignes: Cellule[][] }> {
+  const [premier] = await lireOnglets(contenu);
+  return premier ? { entetes: premier.entetes, lignes: premier.lignes } : { entetes: [], lignes: [] };
+}
+
+/** En-têtes uniques et jamais vides (« Colonne 5 » si vide, « Nom (2) » si répété). */
+export function entetesUniques(entetes: string[]): string[] {
+  const vus = new Map<string, number>();
+  return entetes.map((e, j) => {
+    const base = e.trim() || `Colonne ${j + 1}`;
+    const n = (vus.get(base) ?? 0) + 1;
+    vus.set(base, n);
+    return n === 1 ? base : `${base} (${n})`;
+  });
+}
+
+/** Valeur telle qu'affichée dans l'Excel (dates au format JJ/MM/AAAA). */
+export function valeurAffichee(v: Cellule | undefined): string | null {
+  if (v === null || v === undefined) return null;
+  if (v instanceof Date) {
+    const j = String(v.getUTCDate()).padStart(2, "0");
+    const m = String(v.getUTCMonth() + 1).padStart(2, "0");
+    return `${j}/${m}/${v.getUTCFullYear()}`;
+  }
+  const s = String(v).trim();
+  return s === "" ? null : s;
 }
 
 function valeurCellule(v: ExcelJS.CellValue): Cellule {

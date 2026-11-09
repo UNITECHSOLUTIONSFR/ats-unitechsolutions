@@ -13,18 +13,18 @@ export default async function Missions({ searchParams }: { searchParams: Promise
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold">Missions</h1>
-        <Link href="/missions/nouvelle" className="rounded-lg bg-zinc-900 px-4 py-2 font-medium text-white">+ Nouvelle mission</Link>
+        <h1 className="titre-page">Missions</h1>
+        <Link href="/missions/nouvelle" className="bouton-primaire">+ Nouvelle mission</Link>
       </div>
       <div className="flex gap-2 text-sm">
         {["ouverte", "pourvue", "fermee", "toutes"].map((s) => (
           <Link key={s} href={`/missions?statut=${s}`}
-            className={`rounded-full px-3 py-1 ring-1 ring-zinc-300 ${s === statut ? "bg-zinc-900 text-white" : "bg-white"}`}>
+            className={`rounded-full px-3 py-1 ring-1 ring-zinc-300 ${s === statut ? "bg-marque-600 text-white ring-marque-600" : "bg-white"}`}>
             {LIBELLES[s] ?? "Toutes"}
           </Link>
         ))}
       </div>
-      <div className="overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-zinc-200">
+      <div className="overflow-x-auto carte">
         <table className="w-full text-sm">
           <thead className="bg-zinc-50 text-left text-zinc-500">
             <tr><th className="p-3">Intitulé</th><th className="p-3">Client</th><th className="p-3">Statut</th><th className="p-3">Suivis</th><th className="p-3">Créée le</th></tr>

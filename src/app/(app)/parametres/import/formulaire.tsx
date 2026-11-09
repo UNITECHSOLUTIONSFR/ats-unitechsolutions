@@ -25,7 +25,7 @@ export default function FormulaireImport() {
   const r = etat.rapport;
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3 rounded-xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
+      <div className="flex flex-wrap items-center gap-3 carte p-5">
         <input
           type="file"
           accept=".xlsx"
@@ -33,7 +33,7 @@ export default function FormulaireImport() {
           className="text-sm"
         />
         <button type="button" disabled={!nom || enCours} onClick={() => envoyer(false)}
-          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+          className="bouton-primaire">
           {enCours ? "Analyse…" : "1. Analyser le fichier"}
         </button>
       </div>
@@ -41,12 +41,18 @@ export default function FormulaireImport() {
       {etat.etape === "erreur" && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{etat.message}</p>}
 
       {r && (
-        <div className="space-y-3 rounded-xl bg-white p-5 text-sm shadow-sm ring-1 ring-zinc-200">
+        <div className="space-y-3 carte p-5 text-sm">
           <h2 className="font-semibold">Rapport — {etat.nomFichier}</h2>
           {etat.colonnes && (
             <p className="text-zinc-600">
               Colonnes reconnues : {etat.colonnes.map((c) => `${c.colonne} → ${CHAMPS[c.champ] ?? c.champ}`).join(" · ")}
               {r.colonnesNonReconnues.length > 0 && <> — ignorées : {r.colonnesNonReconnues.join(", ")}</>}
+            </p>
+          )}
+          {etat.onglets && (
+            <p className="text-zinc-600">
+              Onglets recopiés à l&apos;identique dans le tableau de suivi : {etat.onglets.map((o) => `${o.nom} (${o.lignes} lignes, ${o.colonnes} colonnes)`).join(" · ")}.
+              Les fiches consultants sont créées à partir du 1er onglet. <b>Le tableau de suivi actuel est remplacé.</b>
             </p>
           )}
           <ul className="grid gap-1 sm:grid-cols-2">
@@ -78,7 +84,9 @@ export default function FormulaireImport() {
       {etat.etape === "termine" && etat.bilan && (
         <p className="rounded-lg bg-green-50 p-3 text-sm text-green-800">
           Import terminé : {etat.bilan.crees} fiches créées, {etat.bilan.misAJour} complétées, {etat.bilan.alertes} cas à vérifier.
+          {etat.bilanTableau && ` Tableau de suivi : ${etat.bilanTableau.onglets} onglet(s), ${etat.bilanTableau.lignes} lignes (${etat.bilanTableau.lignesReliees} reliées à une fiche).`}
           {etat.bilan.erreurs.length > 0 && ` ${etat.bilan.erreurs.length} erreur(s) : ${etat.bilan.erreurs.slice(0, 3).join(" ; ")}`}
+          {(etat.bilanTableau?.erreurs.length ?? 0) > 0 && ` Tableau : ${etat.bilanTableau!.erreurs.slice(0, 3).join(" ; ")}`}
         </p>
       )}
     </div>

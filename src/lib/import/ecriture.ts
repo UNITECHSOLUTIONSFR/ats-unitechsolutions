@@ -2,20 +2,13 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FicheImport } from "./excel";
 import { normaliserNomPersonne } from "@/lib/metier/texte";
+import { statutDepuisTexte } from "@/lib/tableau/modele";
 
 export interface BilanEcriture {
   crees: number;
   misAJour: number;
   alertes: number;
   erreurs: string[];
-}
-
-function statutDepuisTexte(t: string | null): "candidat" | "consultant" | "en_mission" | "inactif" {
-  const s = (t ?? "").toLowerCase();
-  if (/mission/.test(s)) return "en_mission";
-  if (/inactif|parti|archiv/.test(s)) return "inactif";
-  if (/consultant|salari|interne|cdi/.test(s)) return "consultant";
-  return "candidat";
 }
 
 /**

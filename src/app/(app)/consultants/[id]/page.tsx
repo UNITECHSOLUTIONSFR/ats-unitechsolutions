@@ -29,13 +29,13 @@ export default async function FicheConsultant({ params }: { params: Promise<{ id
     <div className="space-y-6">
       <div>
         <Link href="/consultants" className="text-sm text-zinc-500 hover:underline">← Consultants</Link>
-        <h1 className="text-2xl font-semibold">{c.prenom} {c.nom} <span className="font-mono text-lg text-zinc-500">{c.trigramme}</span></h1>
+        <h1 className="titre-page">{c.prenom} {c.nom} <span className="font-mono text-lg text-zinc-500">{c.trigramme}</span></h1>
         <p className="text-zinc-600">{c.intitule_poste ?? "—"} · {c.statut}</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <section className="space-y-4 lg:col-span-2">
-          <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
+          <div className="carte p-5">
             <h2 className="font-semibold">Profil</h2>
             {profil ? (
               <div className="mt-2 space-y-2 text-sm">
@@ -56,7 +56,7 @@ export default async function FicheConsultant({ params }: { params: Promise<{ id
             </div>
           </div>
 
-          <div className="rounded-xl bg-white p-5 text-sm shadow-sm ring-1 ring-zinc-200">
+          <div className="carte p-5 text-sm">
             <h2 className="font-semibold">Informations du fichier de suivi</h2>
             <ul className="mt-2 space-y-1">
               {c.experience && <li><span className="text-zinc-500">Expérience : </span>{c.experience}</li>}
@@ -76,7 +76,7 @@ export default async function FicheConsultant({ params }: { params: Promise<{ id
             ))}
           </div>
 
-          <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
+          <div className="carte p-5">
             <h2 className="font-semibold">Documents (SharePoint)</h2>
             {!pdf && <p className="mt-2 text-sm text-amber-700">PDF anonymisé manquant</p>}
             <ul className="mt-2 space-y-1 text-sm">
@@ -89,7 +89,7 @@ export default async function FicheConsultant({ params }: { params: Promise<{ id
             </ul>
           </div>
 
-          <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
+          <div className="carte p-5">
             <h2 className="font-semibold">Propositions</h2>
             <ul className="mt-2 space-y-1 text-sm">
               {(propositions ?? []).map((p, i) => {
@@ -106,7 +106,7 @@ export default async function FicheConsultant({ params }: { params: Promise<{ id
           </div>
         </section>
 
-        <form action={modifierConsultant} className="space-y-3 rounded-xl bg-white p-5 text-sm shadow-sm ring-1 ring-zinc-200">
+        <form action={modifierConsultant} className="space-y-3 carte p-5 text-sm">
           <h2 className="font-semibold">Coordonnées et suivi</h2>
           <input type="hidden" name="id" value={c.id} />
           <Champ nom="telephone" libelle="Téléphone" valeur={formaterTelephone(c.telephone_e164) || c.telephone_brut} />
@@ -130,7 +130,7 @@ export default async function FicheConsultant({ params }: { params: Promise<{ id
             <span className="text-zinc-600">Notes</span>
             <textarea name="notes" defaultValue={c.notes ?? ""} rows={4} className="mt-1 w-full rounded-lg border border-zinc-300 px-2 py-1.5" />
           </label>
-          <button className="w-full rounded-lg bg-zinc-900 px-3 py-2 font-medium text-white">Enregistrer</button>
+          <button className="bouton-primaire w-full justify-center">Enregistrer</button>
         </form>
       </div>
     </div>

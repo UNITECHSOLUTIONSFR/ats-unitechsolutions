@@ -1,4 +1,4 @@
-import Link from "next/link";
+import MenuLateral from "./menu-lateral";
 import { configSupabase } from "@/lib/supabase/config";
 import { utilisateurConnecte } from "@/lib/supabase/serveur";
 
@@ -23,20 +23,9 @@ export default async function LayoutApplication({ children }: { children: React.
   }
 
   return (
-    <div className="flex min-h-full flex-col">
-      <header className="border-b border-zinc-200 bg-white">
-        <nav className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 text-sm">
-          <Link href="/" className="font-semibold">ATS Unitech</Link>
-          <Link href="/missions" className="hover:underline">Missions</Link>
-          <Link href="/consultants" className="hover:underline">Consultants</Link>
-          {utilisateur.role === "admin" && <Link href="/parametres" className="hover:underline">Paramètres</Link>}
-          <span className="ml-auto text-zinc-500">
-            {utilisateur.nomAffiche ?? utilisateur.email} · {utilisateur.role === "admin" ? "administrateur" : "recruteur"}
-          </span>
-          <BoutonDeconnexion />
-        </nav>
-      </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
+    <div className="flex min-h-screen flex-col lg:flex-row">
+      <MenuLateral nom={utilisateur.nomAffiche ?? utilisateur.email.split("@")[0]} email={utilisateur.email} estAdmin={utilisateur.role === "admin"} />
+      <main className="min-w-0 flex-1 px-4 py-6 sm:px-8 lg:py-8">{children}</main>
     </div>
   );
 }
@@ -44,7 +33,7 @@ export default async function LayoutApplication({ children }: { children: React.
 function Message({ titre, children }: { titre: string; children: React.ReactNode }) {
   return (
     <main className="flex flex-1 items-center justify-center p-6">
-      <div className="w-full max-w-xl rounded-xl bg-white p-8 shadow-sm ring-1 ring-zinc-200">
+      <div className="w-full max-w-xl carte p-8">
         <h1 className="text-xl font-semibold">{titre}</h1>
         <div className="mt-2 text-zinc-600">{children}</div>
       </div>
@@ -55,7 +44,7 @@ function Message({ titre, children }: { titre: string; children: React.ReactNode
 function BoutonDeconnexion() {
   return (
     <form action="/auth/deconnexion" method="post">
-      <button className="rounded-lg border border-zinc-300 px-3 py-1 text-sm hover:bg-zinc-50">Se déconnecter</button>
+      <button className="bouton-secondaire mt-4">Se déconnecter</button>
     </form>
   );
 }

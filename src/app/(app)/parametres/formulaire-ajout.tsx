@@ -9,11 +9,11 @@ export default function FormulaireAjout() {
     <form action={action} className="mt-3 flex flex-wrap items-end gap-3 text-sm">
       <label className="flex flex-col">
         <span className="text-zinc-600">Email professionnel</span>
-        <input name="email" type="email" required className="mt-1 w-72 rounded-lg border border-zinc-300 px-3 py-1.5" />
+        <input name="email" type="email" required className="mt-1 w-72 champ" />
       </label>
       <label className="flex flex-col">
         <span className="text-zinc-600">Nom affiché</span>
-        <input name="nom_affiche" className="mt-1 w-48 rounded-lg border border-zinc-300 px-3 py-1.5" />
+        <input name="nom_affiche" className="mt-1 w-48 champ" />
       </label>
       <label className="flex flex-col">
         <span className="text-zinc-600">Rôle</span>
@@ -22,7 +22,7 @@ export default function FormulaireAjout() {
           <option value="admin">Administrateur</option>
         </select>
       </label>
-      <button disabled={enCours} className="rounded-lg bg-zinc-900 px-4 py-1.5 font-medium text-white disabled:opacity-50">
+      <button disabled={enCours} className="bouton-primaire">
         {enCours ? "Ajout…" : "Donner l'accès"}
       </button>
       {etat.message && <p className="w-full text-green-700">{etat.message}</p>}

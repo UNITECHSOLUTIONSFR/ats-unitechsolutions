@@ -55,6 +55,8 @@
 - **Association Word ↔ PDF** : trigramme (+ fonction) → candidat unique = association ; plusieurs = similarité de texte locale (seuil calibré) ; aucun net = alerte + arbitrage en un clic. Association stockée par identifiants SharePoint.
 - **Emails** : pièce jointe = document nominatif ; PDF anonymisé manuel en V1 (« PDF anonymisé manquant ») ; fichiers renommés selon la convention et déposés dans SharePoint ; non-candidatures classées à part ; on garde expéditeur/date/objet/ID, pas le contenu.
 - **Matching** : filtres éliminatoires puis score /100 explicable, pondérations réglables (compétences pondérées, années, séniorité, disponibilité, proximité sémantique). Référentiel de compétences avec synonymes. Suivi : proposé → appelé → envoyé au client → retenu / refusé, avec historique. Nouvelle fiche = comparée aux missions ouvertes (seuil réglable).
+- **Tableau de suivi** : copie fidèle de l'Excel (tous les onglets, en-têtes et ordre d'origine, tables `tableau_onglets`/`tableau_lignes`) ; le 1er onglet est relié aux fiches et ses modifications mettent la fiche à jour. Ne jamais fusionner prénom et nom à l'affichage.
+- **Interface** : menu latéral à gauche, charte « marque » dans `src/app/globals.css` (classes `carte`, `champ`, `bouton-primaire`, `bouton-secondaire`, `pastille`).
 - **Disponibilité** : date de mise à jour affichée ; alerte si > 3 mois.
 
 ## 6. Sécurité et RGPD (dès la V1)

@@ -1,12 +1,41 @@
 @import "tailwindcss";
 
+/*
+ * Charte de l'application. Pour passer aux couleurs exactes d'Unitech Solution,
+ * il suffit de changer la famille « marque » ci-dessous (du plus clair au plus foncé).
+ */
+@theme {
+  --color-marque-50: #eef4ff;
+  --color-marque-100: #dbe6ff;
+  --color-marque-200: #bfd3ff;
+  --color-marque-300: #93b4fd;
+  --color-marque-400: #608bfa;
+  --color-marque-500: #3b66f5;
+  --color-marque-600: #2547ea;
+  --color-marque-700: #1d36d7;
+  --color-marque-800: #1e2fae;
+  --color-marque-900: #1e2d89;
+  --color-nuit: #0b1330;
+  --color-nuit-clair: #16204a;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
 :root {
-  --background: #f7f7f8;
-  --foreground: #18181b;
+  --background: #f5f7fb;
+  --foreground: #0f172a;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-family: var(--font-sans);
+}
+
+@layer components {
+  .titre-page { @apply text-2xl font-semibold tracking-tight text-zinc-900; }
+  .carte { @apply rounded-2xl bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_4px_16px_rgba(15,23,42,0.04)] ring-1 ring-zinc-200/70; }
+  .champ { @apply rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none transition placeholder:text-zinc-400 focus:border-marque-500 focus:ring-4 focus:ring-marque-100; }
+  .bouton-primaire { @apply inline-flex items-center gap-1.5 rounded-lg bg-marque-600 px-4 py-2 text-sm font-medium text-white shadow-sm shadow-marque-600/20 transition hover:bg-marque-700 disabled:cursor-not-allowed disabled:opacity-50; }
+  .bouton-secondaire { @apply inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 ring-1 ring-zinc-300 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40; }
+  .pastille { @apply inline-flex items-center rounded-full bg-marque-50 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-marque-700 ring-1 ring-marque-200; }
 }

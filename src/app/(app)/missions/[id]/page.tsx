@@ -35,7 +35,7 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <Link href="/missions" className="text-sm text-zinc-500 hover:underline">← Missions</Link>
-          <h1 className="text-2xl font-semibold">{mission.intitule}</h1>
+          <h1 className="titre-page">{mission.intitule}</h1>
           <p className="text-zinc-600">
             {[mission.client, mission.localisation, mission.date_debut && `début ${new Date(mission.date_debut).toLocaleDateString("fr-FR")}`,
               mission.annees_min && `${mission.annees_min} ans min.`, mission.seniorite].filter(Boolean).join(" · ")}
@@ -46,11 +46,11 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
           <select name="statut" defaultValue={mission.statut} className="rounded-lg border border-zinc-300 px-2 py-1">
             <option value="ouverte">Ouverte</option><option value="pourvue">Pourvue</option><option value="fermee">Fermée</option>
           </select>
-          <button className="rounded-lg border border-zinc-300 px-3 py-1 hover:bg-zinc-50">Enregistrer</button>
+          <button className="bouton-secondaire">Enregistrer</button>
         </form>
       </div>
 
-      <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
+      <section className="carte p-5">
         <h2 className="font-semibold">Exigences extraites</h2>
         <p className="text-sm text-zinc-500">Ajustez-les si besoin : le classement se recalcule aussitôt.</p>
         <ul className="mt-3 divide-y divide-zinc-100">
@@ -87,7 +87,7 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Consultants classés ({classement.length})</h2>
         <p className="text-sm text-zinc-500">Le score est une aide à la décision, jamais un refus automatique.</p>
-        <div className="overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-zinc-200">
+        <div className="overflow-x-auto carte">
           <table className="w-full text-sm">
             <thead className="bg-zinc-50 text-left text-zinc-500">
               <tr>

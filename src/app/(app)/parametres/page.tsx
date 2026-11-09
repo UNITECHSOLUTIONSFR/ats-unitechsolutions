@@ -12,7 +12,7 @@ export default async function Utilisateurs() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
+      <section className="carte p-5">
         <h2 className="font-semibold">Donner un accès</h2>
         <p className="text-sm text-zinc-500">
           <b>Administrateur</b> : tout, plus les paramètres, les utilisateurs, les imports et les suppressions.{" "}
@@ -21,7 +21,7 @@ export default async function Utilisateurs() {
         <FormulaireAjout />
       </section>
 
-      <section className="overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-zinc-200">
+      <section className="overflow-x-auto carte">
         <table className="w-full text-sm">
           <thead className="bg-zinc-50 text-left text-zinc-500">
             <tr><th className="p-3">Personne</th><th className="p-3">Rôle</th><th className="p-3">Accès</th><th className="p-3"></th></tr>
