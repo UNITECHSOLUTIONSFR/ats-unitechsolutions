@@ -67,7 +67,7 @@ export async function traiterFichierExcel(_etat: EtatImport, formData: FormData)
     }
     revalidatePath("/");
     revalidatePath("/consultants");
-    revalidatePath("/tableau");
+    revalidatePath("/consultants");
     return { etape: "termine", nomFichier: fichier.name, rapport, bilan, bilanTableau, onglets: resumeOnglets };
   } catch (e) {
     if (execution) await supabase.from("executions").update({ fin: new Date().toISOString(), statut: "echec" }).eq("id", execution.id);

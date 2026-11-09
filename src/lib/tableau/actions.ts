@@ -68,6 +68,6 @@ export async function modifierCellules(ids: string[], colonne: string, valeur: s
     }
   }
 
-  revalidatePath("/tableau");
+  revalidatePath("/consultants");
   return { ok: true, message: `${n ?? ids.length} ligne(s) modifiée(s).`, lignes: n ?? ids.length };
 }

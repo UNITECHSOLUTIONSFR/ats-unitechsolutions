@@ -8,6 +8,8 @@ import {
   type Filtres, type LigneTableau, type Tri,
 } from "@/lib/tableau/modele";
 import { modifierCellules } from "@/lib/tableau/actions";
+import { classePastille } from "@/lib/statuts";
+import PanneauFiche from "./panneau-fiche";
 import { IconeCopier, IconeCrayon, IconeExport, IconeFiche, IconeFiltre, IconeRecherche } from "../icones";
 
 const PAR_PAGE = 100;
@@ -37,6 +39,8 @@ export default function TableauExcel({ vues, vueActive, ongletId, entetes, champ
   const [masse, setMasse] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; texte: string } | null>(null);
   const [enCours, demarrer] = useTransition();
+  const [ficheOuverte, setFicheOuverte] = useState<string | null>(null);
+  const fermerFiche = useCallback(() => setFicheOuverte(null), []);
 
   const affiche = useCallback((c: string, v: string | undefined) => valeurEcran(champs[c], v), [champs]);
   const visibles = useMemo(() => filtrerEtTrier(lignes, filtres, recherche, tri, affiche), [lignes, filtres, recherche, tri, affiche]);
@@ -102,9 +106,10 @@ export default function TableauExcel({ vues, vueActive, ongletId, entetes, champ
 
   return (
     <div className="flex h-full flex-col gap-4">
+      {ficheOuverte && <PanneauFiche id={ficheOuverte} onFermer={fermerFiche} />}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="titre-page">Tableau de suivi</h1>
+          <h1 className="titre-page">Consultants</h1>
           <p className="text-sm text-zinc-500">
             {visibles.length.toLocaleString("fr-FR")} ligne(s){nbFiltres > 0 && ` sur ${lignes.length.toLocaleString("fr-FR")}`} ·
             double-cliquez sur une cellule pour la modifier
@@ -128,7 +133,7 @@ export default function TableauExcel({ vues, vueActive, ongletId, entetes, champ
       {/* Vues par domaine, comme les onglets de l'Excel, mais calculées (toujours à jour) */}
       <div className="flex gap-1 overflow-x-auto border-b border-zinc-200">
         {vues.map((o) => (
-          <Link key={o.cle} href={o.cle ? `/tableau?domaine=${encodeURIComponent(o.cle)}` : "/tableau"}
+          <Link key={o.cle} href={o.cle ? `/consultants?domaine=${encodeURIComponent(o.cle)}` : "/consultants"}
             className={`whitespace-nowrap rounded-t-lg px-4 py-2 text-sm font-medium transition ${
               o.cle === vueActive ? "bg-white text-marque-700 shadow-[inset_0_-2px_0] shadow-marque-600" : "text-zinc-500 hover:bg-white/60 hover:text-zinc-800"
             }`}>
@@ -184,23 +189,28 @@ export default function TableauExcel({ vues, vueActive, ongletId, entetes, champ
             {affichees.map((l) => {
               const cochee = selection.has(l.id);
               return (
-                <tr key={l.id} className={`group ${cochee ? "bg-marque-50/70" : "hover:bg-zinc-50"}`}>
-                  <td className={`sticky left-0 z-10 border-b border-zinc-100 px-3 py-2 ${cochee ? "bg-marque-50" : "bg-white group-hover:bg-zinc-50"}`}>
+                <tr key={l.id}
+                  onClick={(ev) => {
+                    // Clic sur la ligne : fiche dans le panneau de droite (sauf case à cocher, lien ou cellule en édition).
+                    if (l.consultant_id && !(ev.target as HTMLElement).closest("input, a, button")) setFicheOuverte(l.consultant_id);
+                  }}
+                  className={`group cursor-pointer ${cochee ? "bg-marque-50" : "odd:bg-white even:bg-zinc-50 hover:bg-marque-50/50"}`}>
+                  <td className={`sticky left-0 z-10 border-b border-zinc-100 px-3 py-2 ${cochee ? "bg-marque-50" : "bg-inherit"}`}>
                     <div className="flex items-center gap-2">
                       <input type="checkbox" checked={cochee} onChange={() => basculer(l.id)} className="accent-marque-600" aria-label={`Ligne ${l.position}`} />
                       <span className="w-9 text-right text-xs tabular-nums text-zinc-400">{l.position}</span>
                       {l.consultant_id ? (
-                        <Link href={`/consultants/${l.consultant_id}`} title="Ouvrir la fiche" className="text-zinc-400 hover:text-marque-600">
+                        <button type="button" onClick={() => setFicheOuverte(l.consultant_id)} title="Ouvrir la fiche" className="text-zinc-400 hover:text-marque-600">
                           <IconeFiche className="h-4 w-4" />
-                        </Link>
+                        </button>
                       ) : <span className="w-4" />}
                       {l.consultant_id && documents[l.consultant_id]?.word && (
                         <a href={documents[l.consultant_id].word} target="_blank" rel="noreferrer" title="CV Word Unitech (SharePoint)"
-                          className="rounded bg-blue-50 px-1 text-[10px] font-semibold text-blue-700 hover:bg-blue-100">W</a>
+                          className="rounded px-1 text-xs font-semibold text-marque-700 ring-1 ring-marque-200 hover:bg-marque-50">W</a>
                       )}
                       {l.consultant_id && documents[l.consultant_id]?.pdf && (
                         <a href={documents[l.consultant_id].pdf} target="_blank" rel="noreferrer" title="PDF anonymisé (SharePoint)"
-                          className="rounded bg-red-50 px-1 text-[10px] font-semibold text-red-700 hover:bg-red-100">PDF</a>
+                          className="rounded px-1 text-xs font-semibold text-marque-700 ring-1 ring-marque-200 hover:bg-marque-50">PDF</a>
                       )}
                     </div>
                   </td>
@@ -282,7 +292,7 @@ function Cellule({ valeur, champ }: { valeur: string; champ?: ChampFiche }) {
   if (/^https?:\/\//i.test(valeur)) {
     return <a href={valeur} target="_blank" rel="noreferrer" className="block truncate text-marque-700 hover:underline" title={valeur}>{valeur.replace(/^https?:\/\/(www\.)?/i, "")}</a>;
   }
-  if (champ === "statut") return <span className="pastille">{valeur}</span>;
+  if (champ === "statut" || champ === "disponibilite") return <span className={classePastille(valeur)}>{valeur}</span>;
   return <span className={`block ${valeur.length > 60 ? "line-clamp-2" : "whitespace-nowrap"}`} title={valeur.length > 60 ? valeur : undefined}>{valeur}</span>;
 }
 

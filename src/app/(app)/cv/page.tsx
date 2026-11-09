@@ -73,9 +73,9 @@ export default async function PageCV({ searchParams }: { searchParams: Promise<{
                     </Link>
                   ) : <span className="pastille">fiche non trouvée</span>}
                 </td>
-                <td className="p-3">{w.url_web ? <a href={w.url_web} target="_blank" rel="noreferrer" className="text-blue-700 hover:underline">{w.nom_fichier}</a> : w.nom_fichier}</td>
+                <td className="p-3">{w.url_web ? <a href={w.url_web} target="_blank" rel="noreferrer" className="text-marque-700 hover:underline">{w.nom_fichier}</a> : w.nom_fichier}</td>
                 <td className="p-3">
-                  {pdf ? <a href={pdf.url_web ?? "#"} target="_blank" rel="noreferrer" className="text-red-700 hover:underline">{pdf.nom_fichier}</a> : <span className="text-amber-700">PDF anonymisé manquant</span>}
+                  {pdf ? <a href={pdf.url_web ?? "#"} target="_blank" rel="noreferrer" className="text-marque-700 hover:underline">{pdf.nom_fichier}</a> : <span className="text-amber-700">PDF anonymisé manquant</span>}
                   {(w.association_details?.versions_pdf ?? 1) > 1 && <div className="text-xs text-zinc-500">{w.association_details!.versions_pdf} versions — la plus récente affichée</div>}
                 </td>
               </tr>

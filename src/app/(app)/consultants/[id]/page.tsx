@@ -84,7 +84,7 @@ export default async function FicheConsultant({ params }: { params: Promise<{ id
               {(documents ?? []).map((d) => (
                 <li key={d.id}>
                   <span className="text-zinc-500">{TYPES_DOC[d.type]} : </span>
-                  {d.url_web ? <a href={d.url_web} target="_blank" rel="noreferrer" className="text-blue-700 hover:underline">{d.nom_fichier}</a> : d.nom_fichier}
+                  {d.url_web ? <a href={d.url_web} target="_blank" rel="noreferrer" className="text-marque-700 hover:underline">{d.nom_fichier}</a> : d.nom_fichier}
                 </li>
               ))}
             </ul>
@@ -156,6 +156,6 @@ function etatDisponibilite(maj: string | null) {
 
 function Lien({ valeur }: { valeur: string }) {
   return /^https?:\/\//.test(valeur)
-    ? <a href={valeur} target="_blank" rel="noreferrer" className="break-all text-blue-700 hover:underline">{valeur}</a>
+    ? <a href={valeur} target="_blank" rel="noreferrer" className="break-all text-marque-700 hover:underline">{valeur}</a>
     : <span className="break-all">{valeur}</span>;
 }

@@ -107,7 +107,7 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
                   <td className="w-80 p-3">
                     <div className="flex items-center gap-2">
                       <div className="h-2 w-24 rounded bg-zinc-100">
-                        <div className="h-2 rounded bg-emerald-500" style={{ width: `${c.resultat.score}%` }} />
+                        <div className="h-2 rounded bg-marque-600" style={{ width: `${c.resultat.score}%` }} />
                       </div>
                       <span className="font-semibold">{Math.round(c.resultat.score)}</span>
                     </div>
@@ -128,7 +128,7 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
                   </td>
                   <td className="p-3">
                     {c.pdf_anonyme_url
-                      ? <a href={c.pdf_anonyme_url} target="_blank" rel="noreferrer" className="text-blue-700 hover:underline">PDF anonymisé</a>
+                      ? <a href={c.pdf_anonyme_url} target="_blank" rel="noreferrer" className="text-marque-700 hover:underline">PDF anonymisé</a>
                       : <span className="text-xs text-amber-700">PDF anonymisé manquant</span>}
                   </td>
                   <td className="p-3">

@@ -15,27 +15,32 @@
   --color-marque-700: #1d36d7;
   --color-marque-800: #1e2fae;
   --color-marque-900: #1e2d89;
-  --color-nuit: #0b1330;
-  --color-nuit-clair: #16204a;
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 }
 
 :root {
-  --background: #f5f7fb;
-  --foreground: #0f172a;
+  --background: #ffffff;
+  --foreground: #3f3f46;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+  font-size: 0.875rem; /* taille unique du texte ; les titres utilisent .titre-page */
 }
 
 @layer components {
-  .titre-page { @apply text-2xl font-semibold tracking-tight text-zinc-900; }
-  .carte { @apply rounded-2xl bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_4px_16px_rgba(15,23,42,0.04)] ring-1 ring-zinc-200/70; }
-  .champ { @apply rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none transition placeholder:text-zinc-400 focus:border-marque-500 focus:ring-4 focus:ring-marque-100; }
-  .bouton-primaire { @apply inline-flex items-center gap-1.5 rounded-lg bg-marque-600 px-4 py-2 text-sm font-medium text-white shadow-sm shadow-marque-600/20 transition hover:bg-marque-700 disabled:cursor-not-allowed disabled:opacity-50; }
-  .bouton-secondaire { @apply inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 ring-1 ring-zinc-300 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40; }
-  .pastille { @apply inline-flex items-center rounded-full bg-marque-50 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-marque-700 ring-1 ring-marque-200; }
+  /* Deux tailles seulement : le texte (0,875 rem) et les titres. */
+  .titre-page { @apply text-xl font-semibold text-zinc-900; }
+  .carte { @apply rounded-xl bg-white ring-1 ring-zinc-200; }
+  .champ { @apply rounded-lg border border-zinc-300 bg-white px-3 py-2 outline-none placeholder:text-zinc-400 focus:border-marque-600 focus:ring-2 focus:ring-marque-100; }
+  .bouton-primaire { @apply inline-flex items-center gap-1.5 rounded-lg bg-marque-600 px-4 py-2 font-medium text-white hover:bg-marque-700 disabled:cursor-not-allowed disabled:opacity-50; }
+  .bouton-secondaire { @apply inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 font-medium text-zinc-700 ring-1 ring-zinc-300 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40; }
+  /* Statuts : toujours la même couleur pour le même sens. */
+  .pastille { @apply inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ring-1 bg-zinc-100 text-zinc-600 ring-zinc-200; }
+  .pastille-vert { @apply bg-green-50 text-green-700 ring-green-200; }
+  .pastille-orange { @apply bg-amber-50 text-amber-700 ring-amber-200; }
+  .pastille-rouge { @apply bg-red-50 text-red-700 ring-red-200; }
+  .pastille-gris { @apply bg-zinc-100 text-zinc-600 ring-zinc-200; }
 }
