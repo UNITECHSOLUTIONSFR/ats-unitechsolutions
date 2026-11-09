@@ -68,6 +68,11 @@ Dernière mise à jour : 9 novembre 2026
 - **Testé** : 83 tests (dont RLS des nouvelles tables, lecture multi-onglets, filtres, tri, mise à jour des fiches) ; compilation ; écrans vérifiés dans un navigateur.
 - **Ensuite** : l'utilisatrice réimporte son fichier Excel (Paramètres → Import) pour charger tous les onglets ; couleurs exactes d'Unitech à fournir.
 
+### Étape 5 — inventaire et association (9 novembre 2026)
+- **Fait** : lecture SharePoint opérationnelle (1 920 fichiers, 80 dossiers métier). Convention réelle : « UNITECH SOLUTIONS - CV Prénom Nom - Métier.docx » (Word Unitech nominatif) et « UNITECH SOLUTIONS - CV TRI - Métier.pdf » (PDF anonymisé) ; 430 PDF hors convention = CV d'origine des consultants. 501 Word associés à leur PDF anonymisé (même dossier, même trigramme ; 91 avec plusieurs versions PDF, la plus récente en premier) ; 383 reliés à une fiche consultant par le nom.
+- **Testé** : lecture seule, enregistrement en base contrôlé (501 Word, 511 PDF).
+- **Reste** : 129 Word sans PDF trouvé, 118 Word sans fiche consultant, documents hors convention — à traiter plus tard (décision de l'utilisatrice).
+
 ## Réponses reçues (6 novembre 2026)
 1. Boîte de candidatures : adresse existante **`recrutement@unitechsolutions.fr`** (type de boîte à relever en partie 3.1 du guide). L'utilisatrice **est l'administratrice Microsoft 365** → la partie 3 du guide est un pas-à-pas d'administration (plus de demande à un tiers).
 2. CV SharePoint rangés **par métier** (un dossier par métier).
