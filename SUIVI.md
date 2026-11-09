@@ -79,6 +79,7 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 ## Décisions à confirmer (appliquées par défaut, non bloquantes)
 | # | Décision recommandée | Pourquoi |
 |---|---|---|
+| D20 | **Un seul onglet à terme** : le tableau de suivi (copie de l'Excel) devient la vue principale ; un clic sur une ligne ouvre la fiche complète (compétences, documents, propositions, historique). L'onglet Consultants disparaît. **À faire après le test des CV SharePoint** (décision de l'utilisatrice du 9/11/2026). | Supprimer le doublon entre les deux vues. |
 | D1 | **Tâches planifiées** : Vercel Cron (inclus dans Vercel Pro) pour la relève des emails (toutes les 15 min) et la synchronisation de nuit ; GitHub Actions déclenché à la main pour l'import initial. | Aucun coût en plus ; Vercel Pro limite une exécution à quelques minutes, suffisant pour des lots incrémentaux ; l'import initial (long) tourne jusqu'à 6 h dans GitHub Actions, gratuit pour ce volume. |
 | D2 | **Import « de test » de l'étape 4** dans une base Postgres temporaire de la session, puis dans un schéma séparé du projet Supabase, plutôt qu'un 2e projet Supabase. | Un 2e projet Supabase Pro coûte environ 10 $/mois de plus. |
 | D3 | **Réponse automatique** de la boîte de candidatures faite par Exchange (réponses automatiques de la boîte partagée), pas par l'application. | Évite de donner à l'application le droit d'envoyer des emails (`Mail.Send`) ; plus simple et plus sûr. |
