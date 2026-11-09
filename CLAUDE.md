@@ -32,7 +32,7 @@
 | Code | GitHub, dépôt privé `unitechsolutionsfr/ats-unitechsolutions` |
 | Interface | Next.js (TypeScript) sur Vercel (https://ats-unitechsolutions.vercel.app), région Paris `cdg1` |
 | Base | Supabase Pro, projet `ats-unitech` (réf. `vobarkpycakqoivzlvck`), région **Londres `eu-west-2`** (décision du 9/11/2026 ; Royaume-Uni = adéquation RGPD) : Postgres, Auth, plein texte, pgvector |
-| Fichiers | SharePoint (inchangé) via Microsoft Graph, application Entra ID |
+| Fichiers | SharePoint (inchangé) via Microsoft Graph. Site `https://unitechsolutions578.sharepoint.com/sites/Recrutement2` (ID Graph `unitechsolutions578.sharepoint.com,756ac4dc-8c49-4a55-b473-7d4a3a0136a4,8cb5cc74-d24f-4e43-8117-e5405752db48`), bibliothèque « Documents partagés », dossier des CV `General/0 - Recrutement/Consultant/CV Consultants` (un sous-dossier par métier). Application Entra « ATS Unitech – Synchronisation » : client `598431b6-1f0a-4744-ac75-391f3cf3b369`, tenant `8198d0ba-4442-4cab-9367-0177ac7c53e8`, accès `Sites.Selected` en lecture sur ce seul site. |
 | IA | API Anthropic, uniquement pour structurer CV et missions |
 
 - **Sources de vérité** : Supabase = fiches ; SharePoint = fichiers (la base stocke identifiant SharePoint, texte extrait, empreinte SHA-256, jamais le fichier) ; l'Excel n'est lu **qu'une fois** depuis une copie .xlsx, jamais modifié. Export Excel = bouton réservé aux admins.
