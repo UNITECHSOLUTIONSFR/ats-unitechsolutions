@@ -68,4 +68,13 @@ describe("écriture de l'import", () => {
     expect(bilan.crees).toBe(0);
     expect(tables.consultants).toHaveLength(1);
   });
+
+  it("réimporter une personne sans email ni téléphone ne crée pas de doublon", async () => {
+    const { client, tables } = baseSimulee({});
+    const fiches = [fiche({ ligne: 7, donnees_excel: [{ ligne: 7, valeurs: { Nom: "Sans", "Prénoms": "Contact" } }] })];
+    await ecrireFiches(client, fiches, "admin");
+    const bilan = await ecrireFiches(client, fiches, "admin");
+    expect(bilan.crees).toBe(0);
+    expect(tables.consultants).toHaveLength(1);
+  });
 });

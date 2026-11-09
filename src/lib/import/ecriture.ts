@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FicheImport } from "./excel";
 import { normaliserNomPersonne } from "@/lib/metier/texte";
-import { statutDepuisTexte } from "@/lib/tableau/modele";
+import { cleStable, statutDepuisTexte } from "@/lib/tableau/modele";
 
 export interface BilanEcriture {
   crees: number;
@@ -12,7 +12,8 @@ export interface BilanEcriture {
 }
 
 /**
- * Écrit les fiches dans la base. Dédoublonnage avec l'existant : email, puis téléphone.
+ * Écrit les fiches dans la base. Dédoublonnage avec l'existant : même ligne d'origine du fichier
+ * (réimport du même fichier, y compris sans email ni téléphone), puis email, puis téléphone.
  * Un doublon met à jour les champs vides et garde l'historique ; un même nom avec des coordonnées
  * différentes crée une alerte « doublon possible ». Jamais de seconde fiche pour la même personne.
  */
@@ -27,6 +28,12 @@ export async function ecrireFiches(supabase: SupabaseClient, fiches: FicheImport
   }
   const parEmail = new Map(existants.filter((e) => e.email).map((e) => [e.email!, e]));
   const parTel = new Map(existants.filter((e) => e.telephone_e164).map((e) => [e.telephone_e164!, e]));
+  const parLigne = new Map<string, (typeof existants)[number]>();
+  for (const e of existants) {
+    for (const d of (e.donnees_excel as { ligne: number; valeurs: Record<string, string> }[] | undefined) ?? []) {
+      parLigne.set(cleStable(d.ligne, d.valeurs), e);
+    }
+  }
   const parNom = new Map<string, string[]>();
   for (const e of existants) {
     const n = normaliserNomPersonne(e.prenom, e.nom);
@@ -60,7 +67,11 @@ export async function ecrireFiches(supabase: SupabaseClient, fiches: FicheImport
       email_2: f.email_2,
       commentaire_email: f.commentaire_email,
     };
-    const existant = (f.email && parEmail.get(f.email)) || (f.telephone_e164 && parTel.get(f.telephone_e164)) || null;
+    const existant =
+      f.donnees_excel.map((d) => parLigne.get(cleStable(d.ligne, d.valeurs))).find(Boolean) ||
+      (f.email && parEmail.get(f.email)) ||
+      (f.telephone_e164 && parTel.get(f.telephone_e164)) ||
+      null;
 
     if (existant) {
       const modifications: Record<string, { avant: unknown; apres: unknown }> = {};
