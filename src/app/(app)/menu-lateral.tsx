@@ -62,10 +62,11 @@ export default function MenuLateral({ nom, email, estAdmin }: { nom: string; ema
 export function Logo() {
   return (
     <div className="flex items-center gap-2.5">
-      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-marque-600 font-bold text-white">U</span>
+      {/* eslint-disable-next-line @next/next/no-img-element -- petit logo statique */}
+      <img src="/logo-unitech-symbole.png" alt="" className="h-9 w-9 object-contain" />
       <div className="leading-tight">
-        <div className="font-semibold text-zinc-900">Unitech Solution</div>
-        <div className="text-xs text-zinc-500">Recrutement</div>
+        <div className="font-semibold tracking-wide text-marque-600">UNITECH</div>
+        <div className="text-xs tracking-[0.3em] text-marque-600">Solutions</div>
       </div>
     </div>
   );

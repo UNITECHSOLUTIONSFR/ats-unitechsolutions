@@ -29,7 +29,9 @@ export default function PageConnexion() {
   return (
     <main className="flex flex-1 items-center justify-center p-6">
       <div className="w-full max-w-sm carte p-8">
-        <h1 className="text-xl font-semibold">ATS Unitech Solution</h1>
+        {/* eslint-disable-next-line @next/next/no-img-element -- logo statique */}
+        <img src="/logo-unitech.png" alt="Unitech Solutions" className="mx-auto mb-4 h-28 object-contain" />
+        <h1 className="text-center text-xl font-semibold text-marque-600">Outil de recrutement</h1>
         <p className="mt-1 text-sm text-zinc-600">Connexion réservée aux personnes invitées.</p>
 
         {etat === "envoye" ? (
