@@ -30,8 +30,8 @@
 | Brique | Outil |
 |---|---|
 | Code | GitHub, dépôt privé `unitechsolutionsfr/ats-unitechsolutions` |
-| Interface | Next.js (TypeScript) sur Vercel, région Paris `cdg1` |
-| Base | Supabase Pro, région UE (Paris `eu-west-3`, sinon Francfort) : Postgres, Auth, plein texte, pgvector |
+| Interface | Next.js (TypeScript) sur Vercel (https://ats-unitechsolutions.vercel.app), région Paris `cdg1` |
+| Base | Supabase Pro, projet `ats-unitech` (réf. `vobarkpycakqoivzlvck`), région **Londres `eu-west-2`** (décision du 9/11/2026 ; Royaume-Uni = adéquation RGPD) : Postgres, Auth, plein texte, pgvector |
 | Fichiers | SharePoint (inchangé) via Microsoft Graph, application Entra ID |
 | IA | API Anthropic, uniquement pour structurer CV et missions |
 
