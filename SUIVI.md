@@ -1,6 +1,6 @@
 # SUIVI.md — Avancement du projet ATS Unitech Solution
 
-Dernière mise à jour : 6 novembre 2026
+Dernière mise à jour : 9 novembre 2026
 
 ## Où on en est
 **Étape 0 — Cadrage** terminée : brief enregistré (`BRIEF.md`), règles du projet (`CLAUDE.md`), guide de préparation (`GUIDE_PREPARATION.md`).
@@ -15,7 +15,7 @@ Dernière mise à jour : 6 novembre 2026
 | 2 | Squelette en ligne (Next.js + connexion + Vercel) | 🟡 Code prêt et testé ; mise en ligne dès que Vercel et Supabase sont prêts | |
 | 3 | Base de données (schéma, RLS, rôles, référentiel) | 🟡 Schéma écrit et testé sur base temporaire ; à créer dans Supabase | |
 | 4 | Import du fichier Excel de suivi | 🟡 Lecture + rapport prêts et testés ; attend la copie .xlsx | |
-| 5 | Connexion SharePoint + association Word-PDF sur 20 consultants | ⬜ À faire | **Jalon A** |
+| 5 | Connexion SharePoint + association Word-PDF sur 20 consultants | 🔄 En cours : module prêt et testé ; lecture réelle bloquée (permission Microsoft à consentir) | **Jalon A** |
 | 6 | Structuration IA : comparatif Haiku / Sonnet + estimation | 🟡 Module IA prêt (sans appel réel) | **Jalon B** |
 | 7 | Import complet des ~2 000 CV (Batch API) | ⬜ À faire | |
 | 8 | Interface principale + administration + export Excel | 🟡 Tableau de bord, liste/recherche et fiche consultant prêts ; administration et export à faire | |
@@ -56,6 +56,11 @@ Dernière mise à jour : 6 novembre 2026
 - **Testé** : contrôle des tables et de la RLS directement dans Supabase ; construction Vercel réussie (erreur de dossier de sortie corrigée).
 - **Ensuite** : liaison Supabase ↔ Vercel par l'utilisatrice, puis premier test de connexion en ligne.
 
+### Étape 5 — Connexion SharePoint (9 novembre 2026, en cours)
+- **Fait** : module `src/lib/sharepoint` en lecture seule (jeton Microsoft, parcours des dossiers métier, delta, téléchargement en mémoire, empreinte SHA-256, extraction locale .docx avec mammoth et .pdf avec unpdf, deux bibliothèques gratuites) ; analyseur des noms de fichiers (provisoire) ; association Word ↔ PDF (trigramme, puis similarité de texte locale, puis fonction ; un PDF ne va jamais à deux Word).
+- **Testé** : 24 nouveaux tests (99 au total, tous verts) avec des fichiers Word/PDF générés et un Microsoft Graph simulé.
+- **Bloqué** : le jeton Microsoft ne contient aucune permission → `Sites.Selected` (type « Application ») doit recevoir le **consentement administrateur** dans Entra. Ensuite : inventaire réel, calibrage de l'analyseur sur les vrais noms, échantillon de 20, jalon A.
+
 ## Réponses reçues (6 novembre 2026)
 1. Boîte de candidatures : adresse existante **`recrutement@unitechsolutions.fr`** (type de boîte à relever en partie 3.1 du guide). L'utilisatrice **est l'administratrice Microsoft 365** → la partie 3 du guide est un pas-à-pas d'administration (plus de demande à un tiers).
 2. CV SharePoint rangés **par métier** (un dossier par métier).
@@ -79,6 +84,7 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 | D11 | **Historique de `recrutement@`** : seuls les emails reçus après la mise en service de la phase 2 sont traités ; l'historique pourra l'être ensuite, après estimation. | Évite un traitement de masse non estimé ; les anciens CV sont déjà dans SharePoint. |
 | D12 | **Connexion par lien magique** au démarrage (inscription libre désactivée : seuls les invités reçoivent le lien) ; pas de filtre sur le nom de domaine pour l'instant (décision de l'utilisatrice). Connexion Microsoft ajoutable plus tard. | Démarrer sans les réglages Entra 3.1 et 3.4. |
 | D13 | **Supabase reste à Londres** (`eu-west-2`) au lieu de Paris : la région ne peut pas être changée sans recréer le projet ; le Royaume-Uni bénéficie d'une décision d'adéquation RGPD. À mentionner dans le registre des traitements. | Décidé par l'utilisatrice le 9/11/2026. |
+| D14 | **Garde-fou association** : même avec un seul PDF au bon trigramme, si les deux textes n'ont presque rien en commun (similarité < 0,3), l'association passe en « douteux » au lieu d'être automatique. Seuils (0,5 minimum, écart 0,15) à calibrer sur l'échantillon. | Évite d'associer le CV d'un homonyme de trigramme. |
 | D8 | **Haiku et Sonnet 5.5** : thinking désactivé ou `effort: low` pour les extractions. | La réflexion est facturée comme sortie ; inutile pour de l'extraction. |
 
 ## Coûts IA réels
