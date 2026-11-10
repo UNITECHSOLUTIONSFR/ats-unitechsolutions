@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { exigerUtilisateur } from "@/lib/acces";
+import { rattacherCV } from "@/lib/consultants/rattachement";
 
 interface Doc {
   id: string;
@@ -38,11 +39,11 @@ export default async function PageCV({ searchParams }: { searchParams: Promise<{
   const lignes = tous
     .filter((d) => d.type === "word_nominatif")
     .map((w) => ({ w, pdf: w.document_associe_id ? parId.get(w.document_associe_id) : undefined, fiche: w.consultant_id ? fiches.get(w.consultant_id) : undefined }))
-    .filter((l) => (filtre === "sans_fiche" ? !l.fiche : filtre === "versions" ? (l.w.association_details?.versions_pdf ?? 1) > 1 : true))
+    .filter((l) => (filtre === "sans_fiche" ? !l.fiche : filtre === "sans_pdf" ? !l.pdf : filtre === "versions" ? (l.w.association_details?.versions_pdf ?? 1) > 1 : true))
     .filter((l) => !terme || [l.w.nom_fichier, l.w.metier_dossier, l.fiche?.nom, l.fiche?.prenom].some((x) => x?.toLowerCase().includes(terme)))
     .sort((a, b) => (a.w.metier_dossier ?? "").localeCompare(b.w.metier_dossier ?? "") || a.w.nom_fichier.localeCompare(b.w.nom_fichier));
 
-  const filtres = [["tous", "Tous"], ["sans_fiche", "Sans fiche consultant"], ["versions", "Plusieurs versions PDF"]];
+  const filtres = [["tous", "Tous"], ["sans_fiche", "Sans fiche consultant"], ["sans_pdf", "PDF anonymisé manquant"], ["versions", "Plusieurs versions PDF"]];
   return (
     <div className="space-y-4">
       <h1 className="titre-page">CV SharePoint</h1>
@@ -71,7 +72,13 @@ export default async function PageCV({ searchParams }: { searchParams: Promise<{
                     <Link href={`/consultants/${w.consultant_id}`} className="font-medium text-marque-700 hover:underline">
                       {fiche.prenom} {fiche.nom} <span className="font-mono text-xs text-zinc-500">{fiche.trigramme}</span>
                     </Link>
-                  ) : <span className="pastille">fiche non trouvée</span>}
+                  ) : (
+                    <form action={rattacherCV} className="flex items-center gap-1">
+                      <input type="hidden" name="document_id" value={w.id} />
+                      <input name="fiche" placeholder="Prénom Nom ou trigramme" className="champ w-44 px-2 py-1" />
+                      <button className="bouton-secondaire">Rattacher</button>
+                    </form>
+                  )}
                 </td>
                 <td className="p-3">{w.url_web ? <a href={w.url_web} target="_blank" rel="noreferrer" className="text-marque-700 hover:underline">{w.nom_fichier}</a> : w.nom_fichier}</td>
                 <td className="p-3">
