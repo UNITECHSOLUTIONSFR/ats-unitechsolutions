@@ -40,6 +40,9 @@ interface Props {
 
 export default function TableauExcel({ vues, vueInitiale, colonneDomaine, ongletId, entetes, champs, lignes: initiales, estAdmin, documents }: Props) {
   const [lignes, setLignes] = useState(initiales);
+  // Données rafraîchies (après l'affichage de la version gardée en mémoire) : on les prend sans perdre filtres ni tri.
+  const [source, setSource] = useState(initiales);
+  if (source !== initiales) { setSource(initiales); setLignes(initiales); }
   // Vue par domaine : filtrée dans le navigateur, sans recharger les 4 000 lignes.
   const [vueActive, setVueActive] = useState(vueInitiale);
   const [filtres, setFiltres] = useState<Filtres>({});
@@ -321,8 +324,6 @@ function Cellule({ valeur, champ }: { valeur: string; champ?: ChampFiche }) {
     return <a href={valeur} target="_blank" rel="noreferrer" className="block truncate text-marque-700 hover:underline" title={valeur}>{valeur.replace(/^https?:\/\/(www\.)?/i, "")}</a>;
   }
   if (champ === "statut" || champ === "disponibilite") return <span className={classePastille(valeur)}>{valeur}</span>;
-  if (champ === "prenom" || champ === "nom" || champ === "nom_complet") return <span className="block truncate font-semibold text-nuit" title={valeur}>{valeur}</span>;
-  if (champ === "trigramme") return <span className="font-mono text-xs text-slate-400">{valeur}</span>;
   return <span className="block truncate" title={valeur.length > 20 ? valeur : undefined}>{valeur}</span>;
 }
 
