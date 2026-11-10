@@ -21,7 +21,11 @@ const nextConfig: NextConfig = {
     }];
   },
   // Import du fichier Excel de suivi : jusqu'à 4 Mo (limite d'une requête sur Vercel : 4,5 Mo).
-  experimental: { serverActions: { bodySizeLimit: "4mb" } },
+  experimental: {
+    serverActions: { bodySizeLimit: "4mb" },
+    // Revenir sur un écran déjà ouvert dans les 2 dernières minutes : affichage immédiat (les modifications le rafraîchissent).
+    staleTimes: { dynamic: 120, static: 300 },
+  },
   turbopack: {
     rules: {
       "*.css": {

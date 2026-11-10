@@ -52,6 +52,7 @@ export async function modifierConsultant(formData: FormData) {
     utilisateur_id: utilisateur.id, action: "modification", consultant_id: id, details: { champs: Object.keys(modifications) },
   });
   revalidatePath(`/consultants/${id}`);
+  revalidatePath("/consultants"); // le tableau gardé en mémoire dans le navigateur est rafraîchi
 }
 
 export interface EtatCreation { erreur?: string }

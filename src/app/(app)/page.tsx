@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { exigerUtilisateur } from "@/lib/acces";
 import { classementMission } from "@/lib/matching/classement";
@@ -34,8 +35,6 @@ export default async function Accueil() {
     supabase.from("executions").select("type, debut, statut, rapport").in("type", Object.values(TACHES).map((t) => t.type)).gte("debut", depuis)
       .order("debut", { ascending: false }).limit(6),
   ]);
-  // Les 3 meilleurs profils de chaque mission ouverte (même calcul que l'écran de la mission, sans IA).
-  const meilleurs = await Promise.all((missions ?? []).map((m) => classementMission(supabase, m.id, 3).catch(() => [])));
   const parType = new Map<string, number>();
   for (const a of typesAlertes ?? []) parType.set(a.type, (parType.get(a.type) ?? 0) + 1);
   const prenom = (utilisateur.nomAffiche ?? "").split(" ")[0];
@@ -71,25 +70,16 @@ export default async function Accueil() {
         <section className="carte p-6 xl:col-span-2">
           <EnTete titre="Mes missions" lien="/missions?vue=toutes" libelle="Voir aussi celles des autres" />
           <div className="mt-4 space-y-3">
-            {(missions ?? []).map((m, i) => (
+            {(missions ?? []).map((m) => (
               <div key={m.id} className="rounded-2xl bg-white/60 p-4 ring-1 ring-white/80">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <Link href={`/missions/${m.id}`} className="font-semibold text-nuit hover:text-marque-600">{m.intitule}</Link>
                   <span className="flex items-center gap-2 text-xs text-slate-500">{m.client ?? ""}{!m.responsable_id && <span className="pastille pastille-orange">À assigner</span>}</span>
                 </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                  {meilleurs[i].map((c) => (
-                    <Link key={c.consultant_id} href={`/consultants/${c.consultant_id}`}
-                      className="flex items-center gap-3 rounded-xl bg-white/70 p-2.5 ring-1 ring-white/80 transition hover:bg-white">
-                      <Score valeur={c.resultat.score} />
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold text-nuit">{c.prenom} {c.nom}</div>
-                        <div className="truncate text-xs text-slate-500">{c.intitule_poste ?? "—"}</div>
-                      </div>
-                    </Link>
-                  ))}
-                  {!meilleurs[i].length && <p className="text-sm text-slate-500">Aucun profil classé pour l&apos;instant.</p>}
-                </div>
+                {/* Calculés à part : le tableau de bord s'affiche sans attendre le classement. */}
+                <Suspense fallback={<div className="mt-3 grid gap-2 sm:grid-cols-3">{[0, 1, 2].map((k) => <div key={k} className="squelette h-14" />)}</div>}>
+                  <MeilleursProfils missionId={m.id} />
+                </Suspense>
               </div>
             ))}
             {!missions?.length && (
@@ -150,6 +140,27 @@ export default async function Accueil() {
           {!nuit?.length && <li className="text-slate-500">Aucun traitement automatique depuis hier.</li>}
         </ul>
       </section>
+    </div>
+  );
+}
+
+/** Les 3 meilleurs profils d'une mission ouverte (même calcul que l'écran de la mission, sans IA). */
+async function MeilleursProfils({ missionId }: { missionId: string }) {
+  const { supabase } = await exigerUtilisateur();
+  const meilleurs = await classementMission(supabase, missionId, 3).catch(() => []);
+  return (
+    <div className="mt-3 grid gap-2 sm:grid-cols-3">
+      {meilleurs.map((c) => (
+        <Link key={c.consultant_id} href={`/consultants/${c.consultant_id}`}
+          className="flex items-center gap-3 rounded-xl bg-white/70 p-2.5 ring-1 ring-white/80 transition hover:bg-white">
+          <Score valeur={c.resultat.score} />
+          <div className="min-w-0">
+            <div className="truncate text-sm font-semibold text-nuit">{c.prenom} {c.nom}</div>
+            <div className="truncate text-xs text-slate-500">{c.intitule_poste ?? "—"}</div>
+          </div>
+        </Link>
+      ))}
+      {!meilleurs.length && <p className="text-sm text-slate-500">Aucun profil classé pour l&apos;instant.</p>}
     </div>
   );
 }
