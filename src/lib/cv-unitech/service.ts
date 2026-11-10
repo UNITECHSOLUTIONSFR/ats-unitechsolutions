@@ -9,7 +9,7 @@ import { graphGet, graphTeleverser, listerEnfants, SHAREPOINT, trouverBibliotheq
 import { genererDocx, nomsFichiers, type CVUnitech } from "./generation";
 
 /** Dossier où sont déposés les essais (validation du rendu avant de généraliser). */
-export const DOSSIER_ESSAIS = "General/0 - Recrutement/Sauvegardes ATS/Essais CV Unitech";
+export const DOSSIER_ESSAIS = "General/0 - Recrutement/Sauvegardes ATS/Essais CV Unitech - version 2";
 
 export interface ResultatCVUnitech { word: { nom: string; url: string }; pdf: { nom: string; url: string }; dossier: string; coutUSD: number }
 

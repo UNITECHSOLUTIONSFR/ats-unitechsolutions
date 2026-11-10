@@ -62,8 +62,11 @@ interface Style { gras?: boolean; bleu?: boolean; italique?: boolean }
 export function paragraphe(modele: string, segments: { texte: string; style?: Style }[]): string {
   const pPr = /<w:pPr>[\s\S]*?<\/w:pPr>/.exec(modele)?.[0] ?? "";
   const runs = modele.match(/<w:r[ >][\s\S]*?<\/w:r>/g) ?? [];
-  const prefixe = runs.filter((r) => !r.includes("<w:t")).slice(0, 2).join(""); // puce losange (Wingdings) et tabulation
-  const avecTexte = runs.filter((r) => r.includes("<w:t"));
+  // « <w:t » seul attrape aussi <w:tab/> : un vrai texte est <w:t> ou <w:t xml:space…>.
+  const aDuTexte = (r: string) => /<w:t[ >]/.test(r);
+  // Puce losange du modèle : caractère de la police Wingdings, repris tel quel devant le texte.
+  const prefixe = runs.filter((r) => r.includes("Wingdings")).slice(0, 2).join("");
+  const avecTexte = runs.filter((r) => aDuTexte(r) && !r.includes("Wingdings"));
   const rPr = (s: Style = {}) => {
     const candidats = avecTexte.map((r) => /<w:rPr>[\s\S]*?<\/w:rPr>/.exec(r)?.[0] ?? "");
     const ok = (x: string) => /<w:b\/>/.test(x) === !!s.gras && /5B9BD5|1189D0/.test(x) === !!s.bleu;

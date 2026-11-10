@@ -27,6 +27,8 @@ describe("CV au format Unitech", () => {
     expect(texte).toContain("Billettique &lt;temps réel&gt;"); // texte échappé
     expect(texte).not.toMatch(/\{\{|xxxx|BPCE|ASO/);
     expect(xml).toContain("Century Gothic");
+    // Les puces losange du modèle (police Wingdings) sont reprises devant les outils, langues et formations.
+    expect((xml.match(/Wingdings/g) ?? []).length).toBeGreaterThan(6);
   });
   it("nomme les fichiers selon la convention", () => {
     expect(nomsFichiers("Ana", "Roux", "ARO", "Développeur Java", "RATP")).toEqual({

@@ -42,7 +42,7 @@ export default async function AnalyseCV() {
           <p className="text-slate-500">
             {depotMetier
               ? "Les CV générés sont déposés dans le dossier métier de SharePoint, et les CV reçus par email sont traités chaque nuit."
-              : "Mode essai : les CV générés vont dans « Sauvegardes ATS / Essais CV Unitech ». Validez le rendu, puis activez le dépôt."}
+              : "Mode essai : les CV générés vont dans « Sauvegardes ATS / Essais CV Unitech - version 2 ». Validez le rendu, puis activez le dépôt."}
           </p>
         </div>
         <button className={depotMetier ? "bouton-secondaire" : "bouton-primaire"}>{depotMetier ? "Revenir au mode essai" : "Activer le dépôt dans les dossiers métier"}</button>
