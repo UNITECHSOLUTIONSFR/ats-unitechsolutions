@@ -87,6 +87,7 @@ export async function ecrireFiches(
       for (const [k, v] of Object.entries(valeurs)) {
         if (v === null || v === "") continue;
         if (k === "statut" && !options.excelFaitFoi) continue;
+        if (k === "disponibilite_maj_le") continue; // date technique : posée plus bas, seulement si la disponibilité change
         const vide = existant[k] === null || existant[k] === undefined || existant[k] === "";
         // Synchronisation pendant la transition : l'Excel fait foi, ses valeurs remplacent celles de la fiche.
         const remplace = options.excelFaitFoi && String(existant[k] ?? "") !== String(v);
@@ -96,6 +97,9 @@ export async function ecrireFiches(
           modifications[k] = { avant: existant[k] ?? null, apres: v };
         }
       }
+      if ((maj.disponibilite !== undefined || maj.disponible_le !== undefined) && valeurs.disponibilite_maj_le) {
+        maj.disponibilite_maj_le = valeurs.disponibilite_maj_le;
+      }
       // Les lignes Excel d'origine sont toujours ajoutées (jamais de doublon de ligne en cas de réimport).
       const dejaVues = new Set(((existant.donnees_excel as { ligne: number }[] | undefined) ?? []).map((d) => JSON.stringify(d)));
       const nouvelles = f.donnees_excel.filter((d) => !dejaVues.has(JSON.stringify(d)));
@@ -104,10 +108,13 @@ export async function ecrireFiches(
         const { error } = await supabase.from("consultants").update(maj).eq("id", existant.id);
         if (error) bilan.erreurs.push(`Ligne ${f.ligne} : ${error.message}`);
         else {
-          bilan.misAJour++;
-          await supabase.from("consultants_historique").insert({
-            consultant_id: existant.id, source: options.excelFaitFoi ? "synchro_excel" : "import_excel", modifications, par: utilisateurId,
-          });
+          // Historique seulement pour une vraie modification (pas pour le seul ajout de la ligne d'origine).
+          if (Object.keys(modifications).length) {
+            bilan.misAJour++;
+            await supabase.from("consultants_historique").insert({
+              consultant_id: existant.id, source: options.excelFaitFoi ? "synchro_excel" : "import_excel", modifications, par: utilisateurId,
+            });
+          }
         }
       }
       continue;

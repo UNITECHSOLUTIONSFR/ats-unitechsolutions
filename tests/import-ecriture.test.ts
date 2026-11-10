@@ -95,4 +95,14 @@ describe("écriture de l'import", () => {
     expect(bilan.crees).toBe(0);
     expect(tables.consultants).toHaveLength(1);
   });
+
+  it("synchronisation : une ligne Excel identique ne modifie rien, ni la date de disponibilité ni l'historique", async () => {
+    const { client, tables } = baseSimulee({
+      consultants: [{ id: "a", prenom: "Jean", nom: "Dupont", trigramme: "JDU", email: "jean@ex.fr", telephone_e164: null, disponibilite: "Immédiate", disponibilite_maj_le: "2026-01-01T00:00:00Z", statut: "candidat" }],
+    });
+    const bilan = await ecrireFiches(client, [fiche({ email: "jean@ex.fr", disponibilite: "Immédiate" })], null, { excelFaitFoi: true });
+    expect(tables.consultants[0].disponibilite_maj_le).toBe("2026-01-01T00:00:00Z");
+    expect(tables.consultants_historique).toHaveLength(0);
+    expect(bilan.misAJour).toBe(0);
+  });
 });
