@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { exigerUtilisateur } from "@/lib/acces";
-import { traiterAlerte } from "@/lib/alertes/actions";
+import { traiterAlertes } from "@/lib/alertes/actions";
 import { detailAlerte, LIBELLES_ALERTES } from "@/lib/alertes/libelles";
 
 export default async function Alertes({ searchParams }: { searchParams: Promise<{ type?: string }> }) {
@@ -24,34 +24,36 @@ export default async function Alertes({ searchParams }: { searchParams: Promise<
           </Link>
         ))}
       </div>
+      <form action={traiterAlertes} className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="text-slate-500">Cochez des lignes puis :</span>
+        <button name="action" value="resolue:selection" className="bouton-secondaire">Marquer résolus</button>
+        <button name="action" value="ignoree:selection" className="bouton-secondaire">Ignorer</button>
+      </div>
       <div className="carte overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-white/50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500"><tr><th className="p-3">Cas</th><th className="p-3">Fiche</th><th className="p-3">Détail</th><th className="p-3"></th></tr></thead>
+          <thead className="bg-white/50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500"><tr><th className="w-10 p-3"></th><th className="p-3">Cas</th><th className="p-3">Fiche</th><th className="p-3">Détail</th><th className="p-3"></th></tr></thead>
           <tbody>
             {(alertes ?? []).map((a) => {
               const c = a.consultants as unknown as { prenom: string; nom: string; trigramme: string } | null;
               return (
                 <tr key={a.id} className="border-t border-white/70 align-top">
+                  <td className="p-3"><input type="checkbox" name="ids" value={a.id} className="accent-marque-600" aria-label="Sélectionner" /></td>
                   <td className="p-3"><span className="pastille pastille-orange">{LIBELLES_ALERTES[a.type] ?? a.type}</span></td>
                   <td className="p-3">{c ? <Link href={`/consultants/${a.consultant_id}`} className="font-medium text-marque-700 hover:underline">{c.prenom} {c.nom} <span className="font-mono text-xs text-zinc-500">{c.trigramme}</span></Link> : "—"}</td>
                   <td className="p-3 text-zinc-600">{detailAlerte(a.details as Record<string, unknown>)}</td>
                   <td className="whitespace-nowrap p-3 text-right">
-                    <form action={traiterAlerte} className="inline">
-                      <input type="hidden" name="id" value={a.id} /><input type="hidden" name="statut" value="resolue" />
-                      <button className="bouton-secondaire">Résolu</button>
-                    </form>{" "}
-                    <form action={traiterAlerte} className="inline">
-                      <input type="hidden" name="id" value={a.id} /><input type="hidden" name="statut" value="ignoree" />
-                      <button className="bouton-secondaire">Ignorer</button>
-                    </form>
+                    <button name="action" value={`resolue:${a.id}`} className="bouton-secondaire">Résolu</button>{" "}
+                    <button name="action" value={`ignoree:${a.id}`} className="bouton-secondaire">Ignorer</button>
                   </td>
                 </tr>
               );
             })}
-            {!alertes?.length && <tr><td colSpan={4} className="p-6 text-center text-zinc-500">Aucun cas à vérifier.</td></tr>}
+            {!alertes?.length && <tr><td colSpan={5} className="p-6 text-center text-zinc-500">Aucun cas à vérifier.</td></tr>}
           </tbody>
         </table>
       </div>
+      </form>
     </div>
   );
 }

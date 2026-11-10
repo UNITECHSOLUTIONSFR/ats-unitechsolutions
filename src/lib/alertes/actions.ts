@@ -11,3 +11,15 @@ export async function traiterAlerte(formData: FormData) {
   revalidatePath("/alertes");
   revalidatePath("/");
 }
+
+/** Traite une alerte (bouton de la ligne) ou toutes les alertes cochées : « resolue:<id> », « ignoree:selection »… */
+export async function traiterAlertes(formData: FormData) {
+  const { utilisateur, supabase } = await exigerUtilisateur();
+  const [statutDemande, cible] = String(formData.get("action") ?? "").split(":");
+  const statut = statutDemande === "ignoree" ? "ignoree" : "resolue";
+  const ids = (cible === "selection" ? formData.getAll("ids").map(String) : [cible]).filter((x) => /^[0-9a-f-]{36}$/i.test(x)).slice(0, 500);
+  if (!ids.length) return;
+  await supabase.from("alertes").update({ statut, resolue_par: utilisateur.id, resolue_le: new Date().toISOString() }).in("id", ids);
+  revalidatePath("/alertes");
+  revalidatePath("/");
+}

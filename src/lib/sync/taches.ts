@@ -32,7 +32,16 @@ export async function executerTache(nom: NomTache, supabase: SupabaseClient): Pr
     if (nom === "emails") rapport = { ...(await traiterEmails(supabase)) };
     if (nom === "relance") {
       if (!relanceActive()) throw new Error("relance des disponibilités désactivée");
-      rapport = { ...(await envoyerLot(supabase, process.env.URL_SITE ?? "https://ats-unitechsolutions.vercel.app")) };
+      // Un appel = jusqu'à 4 lots espacés d'une minute (rythme toléré par Exchange), dans la limite des 5 minutes.
+      const total = { envoyes: 0, erreurs: 0, termines: 0 };
+      const debut = Date.now();
+      for (let lot = 0; lot < 4 && Date.now() - debut < 200_000; lot++) {
+        const b = await envoyerLot(supabase, process.env.URL_SITE ?? "https://ats-unitechsolutions.vercel.app");
+        total.envoyes += b.envoyes; total.erreurs += b.erreurs; total.termines += b.termines;
+        if (!b.envoyes) break;
+        if (lot < 3) await new Promise((ok) => setTimeout(ok, 60_000));
+      }
+      rapport = { ...total };
     }
   } catch (e) {
     ok = false;

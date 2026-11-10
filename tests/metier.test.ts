@@ -18,6 +18,9 @@ describe("téléphones", () => {
     ["0033612345678", "+33612345678", "valide"],
     ["145678901", "+33145678901", "corrige"],
     ["945678901", "+33945678901", "corrige"],
+    ["33764847471", "+33764847471", "corrige"],
+    ["33 (0)6 23 02 71 65", "+33623027165", "corrige"],
+    ["O7 58 90 64 22", "+33758906422", "valide"],
   ])("%s -> %s", (entree, attendu, statut) => {
     const r = normaliserTelephone(entree);
     expect(r.e164).toBe(attendu);
