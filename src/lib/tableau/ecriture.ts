@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { entetesUniques, valeurAffichee, type Cellule, type OngletLu } from "@/lib/import/excel";
-import { cleStable } from "./modele";
+import { cleContenu, cleStable } from "./modele";
 
 /** Valeurs d'une ligne telles que l'import des fiches les a conservées (sert à relier ligne ↔ fiche). */
 function valeursFiche(entetes: string[], l: Cellule[]): Record<string, string> {
@@ -37,6 +37,7 @@ export async function ecrireTableau(supabase: SupabaseClient, onglets: OngletLu[
     for (const c of data ?? []) {
       for (const d of (c.donnees_excel ?? []) as { ligne: number; valeurs: Record<string, string> }[]) {
         lien.set(cleStable(d.ligne, d.valeurs), c.id);
+        if (!lien.has(cleContenu(d.valeurs))) lien.set(cleContenu(d.valeurs), c.id);
       }
     }
     if (!data || data.length < 1000) break;
@@ -69,7 +70,8 @@ export async function ecrireTableau(supabase: SupabaseClient, onglets: OngletLu[
           if (v !== null) valeurs[e] = v;
         });
         // Même numérotation que l'import des fiches (index + 2).
-        const consultant_id = principal ? lien.get(cleStable(i + 2, valeursFiche(o.entetes, l))) ?? null : null;
+        const vf = principal ? valeursFiche(o.entetes, l) : null;
+        const consultant_id = vf ? lien.get(cleStable(i + 2, vf)) ?? lien.get(cleContenu(vf)) ?? null : null;
         return { onglet_id: onglet.id, position: o.numeros[i] ?? i + 2, valeurs, consultant_id };
       })
       .filter((x) => x !== null);

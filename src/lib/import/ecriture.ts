@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FicheImport } from "./excel";
 import { normaliserNomPersonne } from "@/lib/metier/texte";
-import { cleStable, statutDepuisTexte } from "@/lib/tableau/modele";
+import { cleContenu, cleStable, statutDepuisTexte } from "@/lib/tableau/modele";
 
 export interface BilanEcriture {
   crees: number;
@@ -40,12 +40,30 @@ export async function ecrireFiches(
     }
   }
   // Fiches de l'ATS ajoutées au fichier Excel par l'outil : retrouvées par prénom + nom + trigramme si elles n'ont ni email ni téléphone.
+  // Replis pour les lignes sans email ni téléphone : ligne déplacée (même contenu), ou cellule modifiée (même numéro de ligne et même nom).
+  const parContenu = new Map<string, (typeof existants)[number]>();
+  const parLigneNom = new Map<string, (typeof existants)[number]>();
+  for (const e of existants) {
+    for (const d of (e.donnees_excel as { ligne: number; valeurs: Record<string, string> }[] | undefined) ?? []) {
+      parContenu.set(cleContenu(d.valeurs), e);
+      parLigneNom.set(`${d.ligne}|${normaliserNomPersonne(e.prenom, e.nom)}`, e);
+    }
+  }
   const parExport = new Map(existants.filter((e) => e.ajoute_excel_le).map((e) => [`${normaliserNomPersonne(e.prenom, e.nom)}|${e.trigramme}`, e]));
   const parNom = new Map<string, string[]>();
   for (const e of existants) {
     const n = normaliserNomPersonne(e.prenom, e.nom);
     parNom.set(n, [...(parNom.get(n) ?? []), e.id]);
   }
+
+  const parId = new Map(existants.map((e) => [e.id, e]));
+  // Synchronisation : ligne déplacée ET modifiée, sans email ni téléphone → la seule fiche de ce nom venant de l'Excel, si elle n'a pas d'autres coordonnées.
+  const homonymeUnique = (f: FicheImport) => {
+    if (!f.nom || f.email || f.telephone_e164) return null;
+    const ids = parNom.get(normaliserNomPersonne(f.prenom, f.nom)) ?? [];
+    const e = ids.length === 1 ? parId.get(ids[0]) : undefined;
+    return e && e.source === "import_excel" && !e.email && !e.telephone_e164 ? e : null;
+  };
 
   const maintenant = new Date().toISOString();
   const aCreer: Record<string, unknown>[] = [];
@@ -78,7 +96,10 @@ export async function ecrireFiches(
       f.donnees_excel.map((d) => parLigne.get(cleStable(d.ligne, d.valeurs))).find(Boolean) ||
       (f.email && parEmail.get(f.email)) ||
       (f.telephone_e164 && parTel.get(f.telephone_e164)) ||
+      f.donnees_excel.map((d) => parContenu.get(cleContenu(d.valeurs))).find(Boolean) ||
+      f.donnees_excel.map((d) => parLigneNom.get(`${d.ligne}|${normaliserNomPersonne(f.prenom || "—", f.nom)}`)).find(Boolean) ||
       parExport.get(`${normaliserNomPersonne(f.prenom, f.nom)}|${f.trigramme}`) ||
+      (options.excelFaitFoi ? homonymeUnique(f) : null) ||
       null;
 
     if (existant) {

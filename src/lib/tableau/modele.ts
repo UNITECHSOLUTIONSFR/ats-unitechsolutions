@@ -19,8 +19,14 @@ export function statutDepuisTexte(t: string | null): StatutFiche {
 
 /** Sérialisation stable d'un objet (ordre des clés indifférent), pour comparer des lignes. */
 export function cleStable(ligne: number, valeurs: Record<string, string>): string {
-  const tri = Object.keys(valeurs).sort().map((k) => [k, valeurs[k]]);
+  // « Domaine » est calculé par l'outil (fusion des onglets métier) : il ne doit pas changer l'identité d'une ligne.
+  const tri = Object.keys(valeurs).filter((k) => k !== "Domaine").sort().map((k) => [k, valeurs[k]]);
   return `${ligne}|${JSON.stringify(tri)}`;
+}
+
+/** Même contenu sans le numéro de ligne : retrouve une ligne déplacée dans l'Excel (lignes insérées ou supprimées au-dessus). */
+export function cleContenu(valeurs: Record<string, string>): string {
+  return cleStable(0, valeurs).slice(2);
 }
 
 const DATE_FR = /^(\d{2})\/(\d{2})\/(\d{4})$/;

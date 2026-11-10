@@ -10,7 +10,7 @@ import { normaliserTelephone } from "@/lib/metier/telephone";
 import { normaliserNomPersonne } from "@/lib/metier/texte";
 import { calculerTrigramme } from "@/lib/metier/trigramme";
 import { empreinteSHA256, extraireTexte } from "@/lib/sharepoint";
-import { BOITE_CANDIDATURES, estInterne, messagesDepuis, piecesJointesCV, type MessageBoite } from "./boite";
+import { BOITE_CANDIDATURES, estInterne, messagesDepuis, piecesJointesCV, type MessageBoite, type PieceJointe } from "./boite";
 
 export interface BilanEmails {
   lus: number;
@@ -34,7 +34,8 @@ export async function traiterEmails(supabase: SupabaseClient, options: { depuisJ
   const limite = options.limite ?? 25;
 
   // Point de départ : le dernier email traité (ou N jours en arrière au premier passage).
-  const { data: dernier } = await supabase.from("emails_entrants").select("recu_le").order("recu_le", { ascending: false }).limit(1).maybeSingle();
+  // (hors reprise de l'historique du groupe, dont les dates ne disent rien de la boîte ATS)
+  const { data: dernier } = await supabase.from("emails_entrants").select("recu_le").not("message_id", "like", "groupe:%").order("recu_le", { ascending: false }).limit(1).maybeSingle();
   const depuis = dernier?.recu_le ?? new Date(Date.now() - (options.depuisJours ?? 30) * 86_400_000).toISOString();
   const messages = await messagesDepuis(new Date(depuis).toISOString(), limite + 50);
   const { data: connus } = await supabase.from("emails_entrants").select("message_id").in("message_id", messages.map(cle));
@@ -43,36 +44,48 @@ export async function traiterEmails(supabase: SupabaseClient, options: { depuisJ
   bilan.restants = aTraiter.length > limite;
 
   const usages: UsageIA[] = [];
-  for (const m of aTraiter.slice(0, limite)) {
-    bilan.lus++;
-    let statut: Statut = "non_candidature";
-    let consultantId: string | null = null;
-    try {
-      const expediteur = m.from?.emailAddress?.address?.toLowerCase();
-      const cvs = !estInterne(expediteur) && m.hasAttachments ? await piecesJointesCV(m.id) : [];
-      if (estInterne(expediteur)) statut = "non_candidature";
-      else if (!cvs.length) statut = "sans_piece_jointe";
-      else {
-        const r = await traiterCandidature(supabase, m, cvs[0], usages);
-        statut = r.statut;
-        consultantId = r.consultantId;
-        if (r.dejaConnu) bilan.dejaConnues++;
-      }
-    } catch (e) {
-      statut = "erreur";
-      bilan.erreurs.push(`${m.subject ?? "(sans objet)"} : ${(e as Error).message}`);
-    }
-    if (statut === "candidature_traitee") bilan.candidatures++;
-    else if (statut !== "erreur") bilan.ignores++;
-    await supabase.from("emails_entrants").insert({
-      message_id: cle(m), expediteur: m.from?.emailAddress?.address ?? null, recu_le: m.receivedDateTime,
-      objet: m.subject, statut, consultant_id: consultantId,
-    });
-  }
+  const origine = { driveId: `boite:${BOITE_CANDIDATURES}` };
+  for (const m of aTraiter.slice(0, limite)) await traiterMessage(supabase, m, () => piecesJointesCV(m.id), origine, usages, bilan);
 
-  await enregistrerUsages(usages, `boite:${BOITE_CANDIDATURES}`);
+  await enregistrerUsages(usages, origine.driveId);
   bilan.coutUSD = usages.reduce((s, u) => s + u.cout_estime_usd, 0);
   return bilan;
+}
+
+/** Où le CV reste stocké (pas d'écriture SharePoint en V1) : la boîte ATS ou le groupe recrutement. */
+export interface OrigineCV { driveId: string }
+
+/**
+ * Traite un email (boîte ATS ou message du groupe recrutement) et le note dans emails_entrants.
+ * Sans IA : expéditeur interne, pas de CV joint, CV déjà connu (même empreinte).
+ */
+export async function traiterMessage(
+  supabase: SupabaseClient, m: MessageBoite, piecesJointes: () => Promise<PieceJointe[]>, origine: OrigineCV, usages: UsageIA[], bilan: BilanEmails,
+): Promise<void> {
+  bilan.lus++;
+  let statut: Statut = "non_candidature";
+  let consultantId: string | null = null;
+  try {
+    const expediteur = m.from?.emailAddress?.address?.toLowerCase();
+    const cvs = !estInterne(expediteur) && m.hasAttachments ? await piecesJointes() : [];
+    if (estInterne(expediteur)) statut = "non_candidature";
+    else if (!cvs.length) statut = "sans_piece_jointe";
+    else {
+      const r = await traiterCandidature(supabase, m, cvs[0], origine, usages);
+      statut = r.statut;
+      consultantId = r.consultantId;
+      if (r.dejaConnu) bilan.dejaConnues++;
+    }
+  } catch (e) {
+    statut = "erreur";
+    bilan.erreurs.push(`${m.subject ?? "(sans objet)"} : ${(e as Error).message}`);
+  }
+  if (statut === "candidature_traitee") bilan.candidatures++;
+  else if (statut !== "erreur") bilan.ignores++;
+  await supabase.from("emails_entrants").insert({
+    message_id: cle(m), expediteur: m.from?.emailAddress?.address ?? null, recu_le: m.receivedDateTime,
+    objet: m.subject, statut, consultant_id: consultantId,
+  });
 }
 
 const cle = (m: MessageBoite) => m.internetMessageId || m.id;
@@ -81,6 +94,7 @@ async function traiterCandidature(
   supabase: SupabaseClient,
   m: MessageBoite,
   pj: { id: string; name: string; contentBytes?: string },
+  origine: OrigineCV,
   usages: UsageIA[],
 ): Promise<{ statut: Statut; consultantId: string | null; dejaConnu?: boolean }> {
   const contenu = Buffer.from(pj.contentBytes ?? "", "base64");
@@ -137,7 +151,7 @@ async function traiterCandidature(
 
   // Le CV reste dans la boîte mail (pas d'écriture dans SharePoint en V1) : on garde la référence et le lien vers l'email.
   const { data: doc } = await supabase.from("documents").insert({
-    consultant_id: consultantId, type: "word_nominatif", sharepoint_drive_id: `boite:${BOITE_CANDIDATURES}`,
+    consultant_id: consultantId, type: "word_nominatif", sharepoint_drive_id: origine.driveId,
     sharepoint_item_id: `${m.id}/${pj.id}`, url_web: m.webLink, nom_fichier: pj.name, empreinte_sha256: empreinte,
     texte_extrait: extrait.texte, texte_extractible: true, modifie_sharepoint_le: m.receivedDateTime, statut_association: "non_traite",
   }).select("id").single();

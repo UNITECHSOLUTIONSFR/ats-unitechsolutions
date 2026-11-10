@@ -105,4 +105,22 @@ describe("écriture de l'import", () => {
     expect(tables.consultants_historique).toHaveLength(0);
     expect(bilan.misAJour).toBe(0);
   });
+
+  it("synchronisation : une ligne sans email ni téléphone dont une cellule a changé n'est pas recréée", async () => {
+    const { client, tables } = baseSimulee({
+      consultants: [{ id: "a", prenom: "Jean", nom: "Dupont", trigramme: "JDU", email: null, telephone_e164: null, donnees_excel: [{ ligne: 9, valeurs: { Nom: "Dupont" } }] }],
+    });
+    const bilan = await ecrireFiches(client, [fiche({ ligne: 9, donnees_excel: [{ ligne: 9, valeurs: { Nom: "Dupont", Domaine: "Dev", Notes: "rappeler" } }] })], null, { excelFaitFoi: true });
+    expect(bilan.crees).toBe(0);
+    expect(tables.consultants).toHaveLength(1);
+  });
+
+  it("synchronisation : une ligne déplacée dans l'Excel (lignes supprimées au-dessus) n'est pas recréée", async () => {
+    const { client, tables } = baseSimulee({
+      consultants: [{ id: "a", prenom: "STOP 21/08", nom: "", trigramme: "", source: "import_excel", email: null, telephone_e164: null, donnees_excel: [{ ligne: 4037, valeurs: { "Prénoms": "STOP 21/08" } }] }],
+    });
+    const bilan = await ecrireFiches(client, [fiche({ prenom: "STOP 21/08", nom: "", ligne: 4014, donnees_excel: [{ ligne: 4014, valeurs: { "Prénoms": "STOP 21/08", Domaine: "Dev" } }] })], null, { excelFaitFoi: true });
+    expect(bilan.crees).toBe(0);
+    expect(tables.consultants).toHaveLength(1);
+  });
 });
