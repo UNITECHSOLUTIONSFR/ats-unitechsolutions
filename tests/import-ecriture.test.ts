@@ -86,4 +86,13 @@ describe("écriture de l'import", () => {
     expect(tables.consultants[0]).toMatchObject({ telephone_e164: "+33611111111", disponibilite: "Immédiate", statut: "en_mission" });
     expect(tables.consultants_historique[0].source).toBe("synchro_excel");
   });
+
+  it("une fiche de l'ATS renvoyée dans l'Excel est retrouvée à la relecture, même sans email ni téléphone", async () => {
+    const { client, tables } = baseSimulee({
+      consultants: [{ id: "a", prenom: "Ana", nom: "Roux", trigramme: "ARO", email: null, telephone_e164: null, ajoute_excel_le: "2026-11-10", donnees_excel: [] }],
+    });
+    const bilan = await ecrireFiches(client, [fiche({ prenom: "Ana", nom: "Roux", trigramme: "ARO", ligne: 4034, donnees_excel: [{ ligne: 4034, valeurs: { Nom: "Roux" } }] })], null, { excelFaitFoi: true });
+    expect(bilan.crees).toBe(0);
+    expect(tables.consultants).toHaveLength(1);
+  });
 });

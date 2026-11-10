@@ -39,6 +39,8 @@ export async function ecrireFiches(
       parLigne.set(cleStable(d.ligne, d.valeurs), e);
     }
   }
+  // Fiches de l'ATS ajoutées au fichier Excel par l'outil : retrouvées par prénom + nom + trigramme si elles n'ont ni email ni téléphone.
+  const parExport = new Map(existants.filter((e) => e.ajoute_excel_le).map((e) => [`${normaliserNomPersonne(e.prenom, e.nom)}|${e.trigramme}`, e]));
   const parNom = new Map<string, string[]>();
   for (const e of existants) {
     const n = normaliserNomPersonne(e.prenom, e.nom);
@@ -76,6 +78,7 @@ export async function ecrireFiches(
       f.donnees_excel.map((d) => parLigne.get(cleStable(d.ligne, d.valeurs))).find(Boolean) ||
       (f.email && parEmail.get(f.email)) ||
       (f.telephone_e164 && parTel.get(f.telephone_e164)) ||
+      parExport.get(`${normaliserNomPersonne(f.prenom, f.nom)}|${f.trigramme}`) ||
       null;
 
     if (existant) {

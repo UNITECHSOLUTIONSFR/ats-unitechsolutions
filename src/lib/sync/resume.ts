@@ -4,9 +4,11 @@ export function resumerRapport(type: string, r: Record<string, unknown> | null):
   if (r.erreur) return `Erreur : ${String(r.erreur)}`;
   const n = (v: unknown) => Number(v ?? 0);
   if (type === "synchro_excel") {
-    if (r.inchange) return "Fichier Excel inchangé.";
+    const v = (r.versExcel ?? {}) as Record<string, unknown>;
+    const ajout = n(v.ajoutees) ? `${n(v.ajoutees)} fiche(s) de l'ATS ajoutée(s) au fichier (ligne ${n(v.premiereLigne)}). ` : "";
+    if (r.inchange) return `${ajout}Fichier Excel inchangé.`;
     const f = (r.fiches ?? {}) as Record<string, unknown>;
-    return `Excel relu : ${n(f.crees)} fiche(s) créée(s), ${n(f.misAJour)} mise(s) à jour, ${n(r.lignesTableau)} lignes dans le tableau.`;
+    return `${ajout}Excel relu : ${n(f.crees)} fiche(s) créée(s), ${n(f.misAJour)} mise(s) à jour, ${n(r.lignesTableau)} lignes dans le tableau.`;
   }
   if (type === "synchro_cv") {
     const s = (r.synchro ?? {}) as Record<string, unknown>;

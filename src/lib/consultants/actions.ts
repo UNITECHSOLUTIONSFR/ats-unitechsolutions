@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { calculerTrigramme } from "@/lib/metier/trigramme";
 import { exigerUtilisateur } from "@/lib/acces";
 import { normaliserTelephone } from "@/lib/metier/telephone";
 import { normaliserEmail } from "@/lib/metier/dedoublonnage";
@@ -50,4 +52,36 @@ export async function modifierConsultant(formData: FormData) {
     utilisateur_id: utilisateur.id, action: "modification", consultant_id: id, details: { champs: Object.keys(modifications) },
   });
   revalidatePath(`/consultants/${id}`);
+}
+
+export interface EtatCreation { erreur?: string }
+
+/** Crée une fiche à la main. Elle apparaît dans l'écran Consultants et sera ajoutée au fichier Excel la nuit suivante. */
+export async function creerConsultant(_e: EtatCreation, formData: FormData): Promise<EtatCreation> {
+  const { utilisateur, supabase } = await exigerUtilisateur();
+  const texte = (k: string) => String(formData.get(k) ?? "").trim() || null;
+  const prenom = texte("prenom"), nom = texte("nom");
+  if (!nom) return { erreur: "Le nom est obligatoire." };
+  const email = normaliserEmail(texte("email"));
+  if (texte("email") && !email) return { erreur: "Email invalide." };
+  const tel = normaliserTelephone(texte("telephone"));
+  // Dédoublonnage : jamais de seconde fiche pour la même personne.
+  if (email) {
+    const { data } = await supabase.from("consultants").select("id").eq("email", email).maybeSingle();
+    if (data) return { erreur: "Une fiche existe déjà avec cet email." };
+  }
+  if (tel.e164) {
+    const { data } = await supabase.from("consultants").select("id").eq("telephone_e164", tel.e164).limit(1).maybeSingle();
+    if (data) return { erreur: "Une fiche existe déjà avec ce téléphone." };
+  }
+  const { data: cree, error } = await supabase.from("consultants").insert({
+    prenom: prenom ?? "—", nom, trigramme: calculerTrigramme(prenom ?? "", nom), email, telephone_e164: tel.e164,
+    telephone_brut: tel.statut === "invalide" ? tel.brut : null, intitule_poste: texte("intitule_poste"),
+    disponibilite: texte("disponibilite"), disponibilite_maj_le: texte("disponibilite") ? new Date().toISOString() : null,
+    localisation: texte("localisation"), notes: texte("notes"), source: "manuel", statut: "candidat",
+  }).select("id").single();
+  if (error || !cree) return { erreur: error?.message ?? "Fiche non créée." };
+  await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "creation", consultant_id: cree.id, details: {} });
+  revalidatePath("/consultants");
+  redirect(`/consultants/${cree.id}`);
 }

@@ -44,6 +44,18 @@ export async function obtenirJeton(fetchFn: typeof fetch = fetch): Promise<strin
   return d.access_token;
 }
 
+/** Appel Graph en écriture (PATCH / POST). Utilisé uniquement pour ajouter des lignes au fichier Excel de suivi. */
+export async function graphEnvoyer<T>(methode: "PATCH" | "POST", chemin: string, corps: unknown, fetchFn: typeof fetch = fetch): Promise<T> {
+  const jeton = await obtenirJeton(fetchFn);
+  const r = await fetchFn(`${GRAPH}/${chemin.replace(/^\//, "")}`, {
+    method: methode,
+    headers: { Authorization: `Bearer ${jeton}`, "Content-Type": "application/json" },
+    body: JSON.stringify(corps),
+  });
+  if (!r.ok) throw new Error(`Graph ${r.status} sur ${chemin} : ${(await r.text()).slice(0, 300)}`);
+  return (r.status === 204 ? null : await r.json()) as T;
+}
+
 /** Appel GET Graph avec reprise automatique en cas de limitation (429/503). */
 export async function graphGet<T>(chemin: string, options: { fetchFn?: typeof fetch; brut?: boolean } = {}): Promise<T> {
   const fetchFn = options.fetchFn ?? fetch;

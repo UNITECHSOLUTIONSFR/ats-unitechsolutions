@@ -109,7 +109,7 @@ export default function TableauExcel({ vues, vueActive, ongletId, entetes, champ
       {ficheOuverte && <PanneauFiche id={ficheOuverte} onFermer={fermerFiche} />}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="titre-page">Consultants</h1>
+          <div className="flex items-center gap-3"><h1 className="titre-page">Consultants</h1><Link href="/consultants/nouveau" className="bouton-primaire">+ Nouveau consultant</Link></div>
           <p className="text-sm text-zinc-500">
             {visibles.length.toLocaleString("fr-FR")} ligne(s){nbFiltres > 0 && ` sur ${lignes.length.toLocaleString("fr-FR")}`} ·
             double-cliquez sur une cellule pour la modifier
