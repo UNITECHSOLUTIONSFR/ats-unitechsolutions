@@ -142,3 +142,8 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Fait : « CDI / Freelance » dans l'Excel ne donne plus « consultant » ; 259 fiches remises en « candidat » (historique `correction_statut`, liste d'origine sauvegardée). « En mission » = déjà en mission, pas disponible.
 - Testé : test du statut lu dans l'Excel ; contrôle en base (4 259 candidats, 72 en mission, 2 inactifs).
 - Suite : rien.
+
+### 10/11/2026 (soir) — Tests et corrections
+- Fait : liens CV Word inutilisables (Outlook) remplacés dans les missions ; 13 CV SharePoint restés au modèle Unitech vierge signalés avec ce motif ; coût des seconds essais (Sonnet) compté au bon tarif.
+- Testé : 156 tests, matching sur les 3 missions, tableau, accès sans connexion refusés.
+- À surveiller : aucune exécution planifiée GitHub depuis la création du workflow (seulement les lancements manuels) ; vérifier après 2 h.

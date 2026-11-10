@@ -225,6 +225,7 @@ export interface ResultatLotCV {
   id: string;
   profil: ProfilCV | null; // null : réponse invalide ou erreur
   usage: UsageIA | null;
+  modele?: string; // modèle réellement utilisé (Haiku, ou Sonnet pour un second essai)
 }
 
 /** État d'un lot ; quand il est terminé, renvoie la fiche structurée de chaque CV. */
@@ -239,10 +240,13 @@ export async function lireLotProfilsCV(idLot: string): Promise<{ termine: boolea
     }
     const message = r.result.message;
     const profil = lireJSON(message, SchemaProfilCV);
+    // Second essai envoyé à Sonnet : coût compté à son tarif (et non à celui de Haiku).
+    const modele = message.model.startsWith(MODELES.ficheCVRepli) ? MODELES.ficheCVRepli : MODELES.ficheCV;
     resultats.push({
       id: r.custom_id,
       profil: profil && ficheCVValide(profil) ? borner(profil) : null,
-      usage: usageDepuisReponse(message.usage, MODELES.ficheCV, "fiche_cv", "batch"),
+      usage: usageDepuisReponse(message.usage, modele, "fiche_cv", "batch"),
+      modele,
     });
   }
   return { termine: true, enCours: 0, resultats };

@@ -85,7 +85,7 @@ export async function collecterAnalyse(supabase: SupabaseClient): Promise<EtatAn
   for (const r of lot.resultats) {
     const consultantId = consultantDe.get(r.id);
     if (!r.profil || !consultantId) { echecs.push(r.id); continue; }
-    if (!(await enregistrerProfil(supabase, consultantId, r.id, r.profil, MODELES.ficheCV, correspondance))) { echecs.push(r.id); continue; }
+    if (!(await enregistrerProfil(supabase, consultantId, r.id, r.profil, r.modele ?? MODELES.ficheCV, correspondance))) { echecs.push(r.id); continue; }
     enregistres++;
   }
 
