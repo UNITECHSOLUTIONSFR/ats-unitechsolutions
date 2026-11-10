@@ -11,26 +11,48 @@ export const EXPEDITEUR = { nom: "Unitech Solutions – Recrutement", adresse: B
 export const ENVOIS_PAR_MINUTE = 25;
 
 export interface FiltreCampagne {
-  statuts?: string[];             // ex. ["candidat", "consultant"] ; vide = tous sauf inactifs
-  dispoPlusVieilleQueJours?: number; // ex. 90 : seulement les disponibilités non mises à jour depuis 3 mois
+  statuts?: string[];                // ex. ["candidat", "consultant"] ; vide = tous sauf inactifs
+  fonction?: string;                 // mot cherché dans l'intitulé de poste ou les compétences (ex. « java », « chef de projet »)
+  dispoPlusVieilleQueJours?: number; // seulement les disponibilités non mises à jour depuis N jours
+  disponibleAvant?: string;          // AAAA-MM-JJ : disponibles (ou bientôt) avant cette date
+  exclus?: string[];                 // consultants décochés à la main
 }
 
-/** Consultants à contacter : email valide, pas désinscrits, pas inactifs, filtre appliqué. */
+const sansAccents = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+/** Consultants à contacter : email valide, pas désinscrits, pas inactifs, critères appliqués. */
 export async function destinatairesCampagne(supabase: SupabaseClient, filtre: FiltreCampagne) {
-  const tous = await lireTout<{ id: string; prenom: string; nom: string; email: string; statut: string; disponibilite_maj_le: string | null }>((a, b) =>
-    supabase.from("consultants").select("id, prenom, nom, email, statut, disponibilite_maj_le")
-      .not("email", "is", null).eq("ne_plus_contacter", false).neq("statut", "inactif").range(a, b));
+  const [tous, competences] = await Promise.all([
+    lireTout<{ id: string; prenom: string; nom: string; email: string; statut: string; intitule_poste: string | null; disponibilite: string | null; disponible_le: string | null; disponibilite_maj_le: string | null }>((a, b) =>
+      supabase.from("consultants").select("id, prenom, nom, email, statut, intitule_poste, disponibilite, disponible_le, disponibilite_maj_le")
+        .not("email", "is", null).eq("ne_plus_contacter", false).neq("statut", "inactif").order("nom").range(a, b)),
+    filtre.fonction ? lireTout<{ consultant_id: string; competences: string }>((a, b) => supabase.from("competences_par_consultant").select("consultant_id, competences").range(a, b)) : Promise.resolve([]),
+  ]);
+  const comp = new Map(competences.map((c) => [c.consultant_id, sansAccents(c.competences)]));
+  const mots = filtre.fonction ? sansAccents(filtre.fonction).split(/\s+/).filter(Boolean) : [];
   const limite = filtre.dispoPlusVieilleQueJours ? Date.now() - filtre.dispoPlusVieilleQueJours * 86_400_000 : null;
-  return tous.filter((c) =>
-    (!filtre.statuts?.length || filtre.statuts.includes(c.statut)) &&
-    (!limite || !c.disponibilite_maj_le || Date.parse(c.disponibilite_maj_le) < limite));
+  const exclus = new Set(filtre.exclus ?? []);
+  return tous.filter((c) => {
+    if (exclus.has(c.id)) return false;
+    if (filtre.statuts?.length && !filtre.statuts.includes(c.statut)) return false;
+    if (mots.length) {
+      const texte = `${sansAccents(c.intitule_poste ?? "")} ${comp.get(c.id) ?? ""}`;
+      if (!mots.every((m) => texte.includes(m))) return false;
+    }
+    if (limite && c.disponibilite_maj_le && Date.parse(c.disponibilite_maj_le) >= limite) return false;
+    if (filtre.disponibleAvant) {
+      const immediat = /imm[ée]diat|asap|disponible$/i.test(c.disponibilite ?? "");
+      if (!immediat && !(c.disponible_le && c.disponible_le <= filtre.disponibleAvant)) return false;
+    }
+    return true;
+  });
 }
 
 /** Prépare une campagne : un envoi « à envoyer » par destinataire. Rien n'est envoyé ici. */
-export async function preparerCampagne(supabase: SupabaseClient, p: { objet: string; corps: string; filtre: FiltreCampagne; par: string }) {
+export async function preparerCampagne(supabase: SupabaseClient, p: { objet: string; corps: string; type: "disponibilite" | "libre"; filtre: FiltreCampagne; par: string }) {
   const dest = await destinatairesCampagne(supabase, p.filtre);
   const { data: c, error } = await supabase.from("campagnes_relance")
-    .insert({ objet: p.objet, corps: p.corps, filtre: p.filtre, nb_destinataires: dest.length, cree_par: p.par }).select("id").single();
+    .insert({ objet: p.objet, corps: p.corps, type: p.type, filtre: p.filtre, nb_destinataires: dest.length, cree_par: p.par }).select("id").single();
   if (error || !c) throw new Error(error?.message ?? "Campagne non créée");
   for (let i = 0; i < dest.length; i += 500) {
     const { error: e } = await supabase.from("envois_relance").insert(dest.slice(i, i + 500).map((d) => ({ campagne_id: c.id, consultant_id: d.id, email: d.email })));

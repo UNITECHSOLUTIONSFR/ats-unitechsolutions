@@ -9,13 +9,13 @@ import { miseAJourDepuisReponse, texteDeLaReponse } from "./modele";
 /** L'email reçu répond-il à une relance ? Même fil Outlook d'abord, sinon même expéditeur relancé depuis moins de 60 jours. */
 export async function envoiCorrespondant(supabase: SupabaseClient, m: MessageBoite) {
   if (m.conversationId) {
-    const { data } = await supabase.from("envois_relance").select("id, consultant_id").eq("conversation_id", m.conversationId)
+    const { data } = await supabase.from("envois_relance").select("id, consultant_id, campagnes_relance(type)").eq("conversation_id", m.conversationId)
       .in("statut", ["envoye", "repondu", "a_verifier"]).limit(1).maybeSingle();
     if (data) return data;
   }
   const expediteur = m.from?.emailAddress?.address?.toLowerCase();
   if (!expediteur) return null;
-  const { data } = await supabase.from("envois_relance").select("id, consultant_id").eq("email", expediteur).eq("statut", "envoye")
+  const { data } = await supabase.from("envois_relance").select("id, consultant_id, campagnes_relance(type)").eq("email", expediteur).eq("statut", "envoye")
     .gte("envoye_le", new Date(Date.now() - 60 * 86_400_000).toISOString()).order("envoye_le", { ascending: false }).limit(1).maybeSingle();
   return data;
 }
@@ -29,7 +29,13 @@ const texteBrut = (html: string) => html
  * (historique gardé), ainsi que la ligne du tableau ; la cellule est notée pour le fichier Excel (synchronisation suivante).
  * Le texte de l'email n'est pas conservé, seulement la lecture qui en est faite.
  */
-export async function traiterReponse(supabase: SupabaseClient, m: MessageBoite, envoi: { id: string; consultant_id: string }, usages: UsageIA[]) {
+export async function traiterReponse(supabase: SupabaseClient, m: MessageBoite, envoi: { id: string; consultant_id: string; campagnes_relance?: unknown }, usages: UsageIA[]) {
+  // Email « libre » : la réponse est seulement rattachée (pas de lecture par l'IA).
+  if ((envoi.campagnes_relance as { type?: string } | null)?.type === "libre") {
+    await supabase.from("envois_relance").update({ statut: "repondu", repondu_le: m.receivedDateTime, reponse: { applique: false, objet: m.subject } }).eq("id", envoi.id);
+    await supabase.from("consultants").update({ dernier_contact_le: m.receivedDateTime }).eq("id", envoi.consultant_id);
+    return null;
+  }
   const msg = await graphGet<{ uniqueBody?: { content: string }; body?: { content: string } }>(
     `users/${BOITE_CANDIDATURES}/messages/${m.id}?$select=uniqueBody,body`);
   const texte = texteDeLaReponse(texteBrut(msg.uniqueBody?.content || msg.body?.content || ""));

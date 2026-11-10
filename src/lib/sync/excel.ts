@@ -4,7 +4,6 @@ import { corrigerOngletPrincipal, fusionnerOnglets, lireOnglets, preparerImport 
 import { ecrireFiches, type BilanEcriture } from "@/lib/import/ecriture";
 import { ecrireTableau } from "@/lib/tableau/ecriture";
 import { graphGet, SHAREPOINT, trouverBibliotheque } from "@/lib/sharepoint";
-import { relanceActive } from "@/lib/relance/modele";
 import { ajouterFichesAuFichierExcel, recopierDisponibilitesDansExcel, type BilanVersExcel } from "./vers-excel";
 
 const ETAT = "excel:suivi";
@@ -26,8 +25,8 @@ export interface BilanSynchroExcel {
  */
 export async function synchroniserExcel(supabase: SupabaseClient): Promise<BilanSynchroExcel> {
   const versExcel = await ajouterFichesAuFichierExcel(supabase);
-  // Relance des disponibilités (si activée) : les réponses reçues sont recopiées dans l'Excel avant sa relecture.
-  const disponibilites = relanceActive() ? await recopierDisponibilitesDansExcel(supabase) : undefined;
+  // Module Email : les disponibilités mises à jour par les réponses sont recopiées dans l'Excel avant sa relecture.
+  const disponibilites = await recopierDisponibilitesDansExcel(supabase);
   const driveId = await trouverBibliotheque();
   const chemin = SHAREPOINT.fichierSuivi.split("/").map(encodeURIComponent).join("/");
   const meta = await graphGet<{ lastModifiedDateTime: string }>(`drives/${driveId}/root:/${chemin}?$select=lastModifiedDateTime`);

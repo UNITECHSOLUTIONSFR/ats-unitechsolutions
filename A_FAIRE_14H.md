@@ -7,11 +7,11 @@
    - Mettre la même valeur dans le secret réseau de la session Claude (hôte ats-unitechsolutions.vercel.app).
    - Je vérifie ensuite le premier passage (onglet Actions du dépôt).
 
-2. **Relance des disponibilités (fonctionnalité prête, désactivée)** — à valider avant tout envoi
-   - Relire le message type et le filtre des destinataires (Paramètres → Relance des disponibilités, une fois activée).
+2. **Module Email (prêt, envoi coupé)** — menu « Emails » — à valider avant tout envoi
+   - Relire le modèle « Mise à jour de disponibilité » et tester la sélection des destinataires.
    - Exchange : autoriser l'outil à **envoyer** des emails depuis la seule boîte `ats-candidatures@` (rôle « Application Mail.Send » + « Application Mail.ReadWrite », limité à cette boîte, comme pour la lecture). Je fournis les commandes.
    - Fonctionnement : **seul un administrateur déclenche un envoi**, dans l'application (Paramètres → Relance des disponibilités → « Lancer l'envoi »). L'envoi part aussitôt, par lots, jusqu'au bout. Rien n'est planifié et je ne peux lancer aucune campagne (une campagne non lancée par un admin n'est jamais envoyée).
-   - Go pour : appliquer la migration 14 (nouvelles tables), activer l'interrupteur `RELANCE_DISPONIBILITE=1` dans Vercel, puis un **envoi test à 10 consultants** avant le reste.
+   - Ensuite : variable `EMAILS_ENVOI_ACTIF=1` dans Vercel (tables déjà créées), puis un **envoi test à 10 consultants**, lancé par toi.
 
 3. **Décisions à confirmer**
    - Téléphones : une lettre « O » tapée à la place du zéro et « 33… » sans « + » sont désormais corrigés automatiquement (68 numéros corrigés).

@@ -1,10 +1,8 @@
 import { notFound } from "next/navigation";
 import { clientSupabaseAdmin } from "@/lib/supabase/admin";
-import { relanceActive } from "@/lib/relance/modele";
 
 /** Lien de désinscription des emails de relance (page publique, sans connexion). */
 export default async function Desinscription({ params }: { params: Promise<{ jeton: string }> }) {
-  if (!relanceActive()) notFound();
   const { jeton } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(jeton)) notFound();
   const supabase = clientSupabaseAdmin();

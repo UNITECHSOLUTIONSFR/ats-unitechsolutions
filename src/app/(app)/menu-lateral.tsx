@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { IconeAccueil, IconeFiche, IconeMallette, IconePersonnes, IconeReglages, IconeSortie } from "./icones";
+import { IconeAccueil, IconeEnveloppe, IconeFiche, IconeMallette, IconePersonnes, IconeReglages, IconeSortie } from "./icones";
 
 const LIENS = [
   { href: "/", libelle: "Tableau de bord", Icone: IconeAccueil },
@@ -14,7 +14,12 @@ const LIENS = [
 export default function MenuLateral({ nom, email, estAdmin }: { nom: string; email: string; estAdmin: boolean }) {
   const chemin = usePathname();
   const [ouvert, setOuvert] = useState(false);
-  const liens = [...LIENS, { href: "/aide", libelle: "Aide", Icone: IconeFiche }, ...(estAdmin ? [{ href: "/parametres", libelle: "Paramètres", Icone: IconeReglages }] : [])];
+  const liens = [
+    ...LIENS,
+    ...(estAdmin ? [{ href: "/emails", libelle: "Emails", Icone: IconeEnveloppe }] : []),
+    { href: "/aide", libelle: "Aide", Icone: IconeFiche },
+    ...(estAdmin ? [{ href: "/parametres", libelle: "Paramètres", Icone: IconeReglages }] : []),
+  ];
   const actif = (href: string) => (href === "/" ? chemin === "/" : chemin.startsWith(href));
   const initiales = nom.split(/[\s.@]+/).filter(Boolean).slice(0, 2).map((m) => m[0]!.toUpperCase()).join("");
 

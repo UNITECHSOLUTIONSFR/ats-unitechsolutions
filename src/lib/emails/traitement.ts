@@ -11,7 +11,7 @@ import { normaliserNomPersonne } from "@/lib/metier/texte";
 import { calculerTrigramme } from "@/lib/metier/trigramme";
 import { empreinteSHA256, extraireTexte } from "@/lib/sharepoint";
 import { envoiCorrespondant, traiterReponse } from "@/lib/relance/reponses";
-import { relanceActive } from "@/lib/relance/modele";
+import { envoiActif } from "@/lib/relance/modele";
 import { BOITE_CANDIDATURES, estInterne, messagesDepuis, piecesJointesCV, type MessageBoite, type PieceJointe } from "./boite";
 
 export interface BilanEmails {
@@ -72,7 +72,7 @@ export async function traiterMessage(
   try {
     const expediteur = m.from?.emailAddress?.address?.toLowerCase();
     // Réponse à une relance des disponibilités : la fiche est mise à jour automatiquement (puis un éventuel CV joint est traité).
-    if (relanceActive() && !estInterne(expediteur)) {
+    if (envoiActif() && !estInterne(expediteur)) {
       const envoi = await envoiCorrespondant(supabase, m);
       if (envoi) {
         await traiterReponse(supabase, m, envoi, usages);

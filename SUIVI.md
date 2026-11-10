@@ -34,7 +34,7 @@ Toutes les tâches réalisables sans action de l'utilisatrice sont **terminées 
 - **Responsable de mission** (en ligne) : colonne `missions.responsable_id`, assignation réservée aux admins (vérifiée aussi par la base), « Mes missions » par défaut (miennes + à assigner) dans Missions et sur le tableau de bord, filtre « Toutes les missions ». Décision (10/11) : une nouvelle mission est donnée d'office à la personne qui la crée.
 
 - **Vitesse (10/11)** : classement d'une mission 15× plus rapide (1,5 s → 0,1 s, migration 15 appliquée), tableau de bord affiché sans attendre les classements, écrans déjà vus réaffichés immédiatement (2 min), fiche servie par une lecture directe et préchargée au survol.
-- **Relance des disponibilités** : en ligne mais **désactivée** (interrupteur `RELANCE_DISPONIBILITE`, migration 14 non appliquée, pas de droit d'envoi). Seul un admin la déclenche dans l'application. Voir `A_FAIRE_14H.md`.
+- **Module Email** (menu « Emails », admins) : sélection par fonction/compétence, disponibilité, statut ; modèles ; email « Disponibilité » (réponses appliquées automatiquement à la fiche, au tableau et à l'Excel) ou « libre » ; préparation puis lancement par l'admin. Tables créées (migrations 14 et 17). **Envoi réel coupé** tant qu'Exchange n'est pas branché (`EMAILS_ENVOI_ACTIF`).
 
 ## En attente de l'utilisatrice
 1. Copier l'historique des emails (2-3 semaines) du groupe recrutement dans la boîte ATS Candidatures, puis Paramètres → Candidatures email → « Traiter les nouveaux emails » (relancer tant qu'il en reste).

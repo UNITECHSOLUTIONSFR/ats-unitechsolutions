@@ -6,9 +6,11 @@
  */
 import type { ReponseDisponibilite } from "@/lib/ai/schemas";
 
-/** Interrupteur : la fonctionnalité reste invisible et inactive tant que RELANCE_DISPONIBILITE n'est pas à « 1 ».
- * Une fois activée, seul un administrateur déclenche un envoi, depuis l'application (bouton « Lancer l'envoi »). */
-export const relanceActive = () => process.env.RELANCE_DISPONIBILITE === "1";
+/**
+ * Envoi réel des emails : coupé tant qu'Exchange n'est pas branché (EMAILS_ENVOI_ACTIF absent).
+ * Le module Email reste utilisable (destinataires, modèles, préparation) ; seul un administrateur lance un envoi.
+ */
+export const envoiActif = () => process.env.EMAILS_ENVOI_ACTIF === "1";
 
 /** En dessous de ce niveau de certitude, la réponse n'est pas appliquée et passe en « à vérifier ». */
 export const SEUIL_CONFIANCE = 0.6;
