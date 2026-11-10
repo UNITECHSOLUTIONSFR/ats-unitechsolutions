@@ -4,6 +4,8 @@ import type { NextConfig } from "next";
 // (outil interne, données toujours à jour), sans mécanisme de cache avancé.
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Gabarit Word des CV Unitech : lu au moment de la génération, il doit accompagner le code mis en ligne.
+  outputFileTracingIncludes: { "/**": ["./src/lib/cv-unitech/gabarit-unitech.docx"] },
   // En-têtes de sécurité sur toutes les pages : pas d'affichage dans un cadre d'un autre site, HTTPS imposé,
   // pas de devinette du type de fichier, adresse de la page non transmise aux sites externes, caméra/micro/position coupés.
   async headers() {

@@ -79,3 +79,27 @@ export const SchemaReponseDisponibilite = z.object({
   confiance: z.number(), // 0 à 1
 });
 export type ReponseDisponibilite = z.infer<typeof SchemaReponseDisponibilite>;
+
+/** CV complet rangé dans les rubriques du modèle Unitech (consignes : CONSIGNES_CV_UNITECH). */
+export const SchemaCVUnitech = z.object({
+  titre: z.string(),
+  annees_experience: z.number().nullable(),
+  resume: z.string(),
+  points_forts: z.array(z.object({ libelle: z.string(), detail: z.string() })),
+  competences_metier: z.array(z.object({ domaine: z.string(), points: z.array(z.string()) })),
+  outils: z.array(z.object({ categorie: z.string(), elements: z.string() })),
+  langues: z.array(z.object({ langue: z.string(), niveau: z.string() })),
+  formations: z.array(z.object({ annee: z.string().nullable(), intitule: z.string(), etablissement: z.string().nullable() })),
+  experiences: z.array(z.object({
+    entreprise: z.string(), poste: z.string(), periode: z.string(), projet: z.string().nullable(),
+    missions: z.array(z.string()), environnement: z.string().nullable(),
+  })),
+});
+export type CVStructure = z.infer<typeof SchemaCVUnitech>;
+
+/** Section « Adéquation à la mission » (consignes : CONSIGNES_ADEQUATION). */
+export const SchemaAdequation = z.object({
+  resume: z.string(),
+  points: z.array(z.object({ libelle: z.string(), detail: z.string() })),
+});
+export type Adequation = z.infer<typeof SchemaAdequation>;

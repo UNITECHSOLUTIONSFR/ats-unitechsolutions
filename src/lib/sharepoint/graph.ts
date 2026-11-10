@@ -57,14 +57,16 @@ export async function graphEnvoyer<T>(methode: "PATCH" | "POST", chemin: string,
 }
 
 /** Dépose un fichier (4 Mo au plus) dans un dossier SharePoint ; le dossier est créé s'il n'existe pas. Renvoie l'adresse web du fichier. */
-export async function graphTeleverser(driveId: string, cheminFichier: string, contenu: Buffer, typeContenu: string, fetchFn: typeof fetch = fetch): Promise<{ id: string; webUrl: string }> {
+export async function graphTeleverser(driveId: string, cheminFichier: string, contenu: Buffer, typeContenu: string, fetchFn: typeof fetch = fetch,
+  siExiste: "replace" | "rename" = "replace"): Promise<{ id: string; webUrl: string; name: string }> {
   const jeton = await obtenirJeton(fetchFn);
   const chemin = cheminFichier.split("/").map(encodeURIComponent).join("/");
-  const r = await fetchFn(`${GRAPH}/drives/${driveId}/root:/${chemin}:/content?@microsoft.graph.conflictBehavior=replace`, {
+  // « rename » : un fichier existant n'est jamais écrasé (le nouveau reçoit un suffixe).
+  const r = await fetchFn(`${GRAPH}/drives/${driveId}/root:/${chemin}:/content?@microsoft.graph.conflictBehavior=${siExiste}`, {
     method: "PUT", headers: { Authorization: `Bearer ${jeton}`, "Content-Type": typeContenu }, body: new Uint8Array(contenu),
   });
   if (!r.ok) throw new Error(`Graph ${r.status} (dépôt de ${cheminFichier}) : ${(await r.text()).slice(0, 300)}`);
-  return (await r.json()) as { id: string; webUrl: string };
+  return (await r.json()) as { id: string; webUrl: string; name: string };
 }
 
 /** Appel GET Graph avec reprise automatique en cas de limitation (429/503). */

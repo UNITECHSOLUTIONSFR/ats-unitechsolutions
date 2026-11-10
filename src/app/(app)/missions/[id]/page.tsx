@@ -6,6 +6,10 @@ import { formaterTelephone } from "@/lib/metier/telephone";
 import { responsablesPossibles } from "@/lib/missions/responsables";
 import ChoixResponsable from "../responsable";
 import Shortlist, { type ProfilShortlist } from "./shortlist";
+import BoutonCVMission from "./cv-mission";
+
+// Génération des CV Unitech (IA + SharePoint) depuis cet écran : jusqu'à 2 minutes.
+export const maxDuration = 120;
 import { changerStatutMission, modifierExigence, suivreProposition } from "@/lib/missions/actions";
 
 const STATUTS_PROPOSITION: Record<string, string> = {
@@ -159,6 +163,7 @@ function CarteCandidat({ rang, c, missionId, statut, ouvert }: {
           {c.pdf_anonyme_url
             ? <a href={c.pdf_anonyme_url} target="_blank" rel="noreferrer" className={action}>PDF anonymisé</a>
             : <span className="pastille pastille-orange">PDF anonymisé manquant</span>}
+          <BoutonCVMission consultantId={c.consultant_id} missionId={missionId} />
           <form action={suivreProposition} className="flex items-center gap-1 rounded-full bg-white/70 p-1 ring-1 ring-white/80">
             <input type="hidden" name="mission_id" value={missionId} />
             <input type="hidden" name="consultant_id" value={c.consultant_id} />

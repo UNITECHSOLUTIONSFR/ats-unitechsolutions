@@ -8,25 +8,29 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
 import { LONGUEUR_MAX_TEXTE, MAX_TOKENS, MODELES, estimerCoutUSD } from "./config";
-import { CONSIGNES_MISSION, CONSIGNES_PROFIL_CV, CONSIGNES_REPONSE_DISPO } from "./consignes";
+import { CONSIGNES_ADEQUATION, CONSIGNES_CV_UNITECH, CONSIGNES_MISSION, CONSIGNES_PROFIL_CV, CONSIGNES_REPONSE_DISPO } from "./consignes";
 import {
   PROMPT_VERSION,
   SchemaExigencesMission,
   SchemaProfilCV,
   SchemaReponseDisponibilite,
+  SchemaCVUnitech,
+  SchemaAdequation,
   borner,
   bornerMission,
   ficheCVValide,
   type ExigencesMission,
   type ProfilCV,
   type ReponseDisponibilite,
+  type CVStructure,
+  type Adequation,
 } from "./schemas";
 
 export { PROMPT_VERSION };
-export type { ExigencesMission, ProfilCV, ReponseDisponibilite };
+export type { ExigencesMission, ProfilCV, ReponseDisponibilite, CVStructure, Adequation };
 
 export interface UsageIA {
-  usage: "fiche_cv" | "mission" | "tri_email" | "analyse_approfondie" | "reponse_disponibilite" | "lecture_scan";
+  usage: "fiche_cv" | "mission" | "tri_email" | "analyse_approfondie" | "reponse_disponibilite" | "lecture_scan" | "cv_unitech" | "adequation";
   modele: string;
   mode: "standard" | "batch";
   tokens_entree: number;
@@ -163,6 +167,21 @@ export async function lireReponseDisponibilite(texteReponse: string, aujourdhui:
   const r = await appeler(MODELES.reponseDisponibilite, CONSIGNES_REPONSE_DISPO, SchemaReponseDisponibilite, texte, MAX_TOKENS.reponseDisponibilite, "reponse_disponibilite");
   if (!r.donnees) throw Object.assign(new ErreurIA("Réponse impossible à lire."), { usages: [r.usage] });
   return { donnees: r.donnees, modele: MODELES.reponseDisponibilite, promptVersion: PROMPT_VERSION, usages: [r.usage] };
+}
+
+/** Réécrit un CV (texte brut) dans les rubriques du modèle Unitech. */
+export async function structurerCVUnitech(texteCV: string): Promise<ResultatIA<CVStructure>> {
+  const r = await appeler(MODELES.cvUnitech, CONSIGNES_CV_UNITECH, SchemaCVUnitech, texteCV, MAX_TOKENS.cvUnitech, "cv_unitech");
+  if (!r.donnees) throw Object.assign(new ErreurIA("CV impossible à mettre au format Unitech."), { usages: [r.usage] });
+  return { donnees: r.donnees, modele: MODELES.cvUnitech, promptVersion: PROMPT_VERSION, usages: [r.usage] };
+}
+
+/** Rédige la section « Adéquation à la mission » à partir du besoin client et du CV structuré. */
+export async function redigerAdequation(mission: string, cv: CVStructure): Promise<ResultatIA<Adequation>> {
+  const texte = `BESOIN CLIENT :\n${mission.slice(0, 12_000)}\n\nCV DU CONSULTANT (structuré) :\n${JSON.stringify(cv).slice(0, 15_000)}`;
+  const r = await appeler(MODELES.adequation, CONSIGNES_ADEQUATION, SchemaAdequation, texte, MAX_TOKENS.adequation, "adequation");
+  if (!r.donnees) throw Object.assign(new ErreurIA("Adéquation impossible à rédiger."), { usages: [r.usage] });
+  return { donnees: r.donnees, modele: MODELES.adequation, promptVersion: PROMPT_VERSION, usages: [r.usage] };
 }
 
 /**

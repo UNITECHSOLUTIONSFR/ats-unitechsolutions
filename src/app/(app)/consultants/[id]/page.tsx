@@ -4,6 +4,10 @@ import { exigerUtilisateur, journaliser } from "@/lib/acces";
 import { formaterTelephone } from "@/lib/metier/telephone";
 import { modifierConsultant } from "@/lib/consultants/actions";
 import BlocRGPD from "./rgpd";
+import BlocCVUnitech from "./cv-unitech";
+
+// Génération du CV Unitech (IA + SharePoint) : jusqu'à 2 minutes.
+export const maxDuration = 120;
 import { frise, type Evenement } from "@/lib/consultants/historique";
 
 const COULEUR_EVENEMENT: Record<Evenement["type"], string> = {
@@ -26,7 +30,11 @@ export default async function FicheConsultant({ params }: { params: Promise<{ id
     supabase.from("propositions").select("statut, score, updated_at, missions(id, intitule, client)").eq("consultant_id", id).order("updated_at", { ascending: false }),
   ]);
   if (!c) notFound();
-  const [evenements] = await Promise.all([frise(supabase, id, c.created_at, c.source), journaliser(supabase, utilisateur.id, "consultation", id)]);
+  const [evenements, { data: missionsOuvertes }] = await Promise.all([
+    frise(supabase, id, c.created_at, c.source),
+    supabase.from("missions").select("id, intitule, client").eq("statut", "ouverte").order("created_at", { ascending: false }),
+    journaliser(supabase, utilisateur.id, "consultation", id),
+  ]);
 
   const { majDispo, dispoAncienne } = etatDisponibilite(c.disponibilite_maj_le);
   const pdf = (documents ?? []).find((d) => d.type === "pdf_anonyme");
@@ -175,6 +183,7 @@ export default async function FicheConsultant({ params }: { params: Promise<{ id
           </label>
           <button className="bouton-primaire w-full justify-center">Enregistrer</button>
         </form>
+          <BlocCVUnitech consultantId={c.id} missions={missionsOuvertes ?? []} />
           {utilisateur.role === "admin" && <BlocRGPD id={c.id} trigramme={c.trigramme} />}
         </div>
       </div>

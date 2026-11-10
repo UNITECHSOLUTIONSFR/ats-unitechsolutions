@@ -6,6 +6,7 @@ import { envoiActif } from "@/lib/relance/modele";
 import { envoyerLot } from "@/lib/relance/envoi";
 import { synchroniserCV } from "./cv";
 import { reprendreIllisibles } from "@/lib/analyse-cv/illisibles";
+import { deposerCVEmails } from "@/lib/cv-unitech/service";
 import { sauvegarderDansSharePoint } from "./sauvegarde";
 import { synchroniserExcel } from "./excel";
 
@@ -32,7 +33,9 @@ export async function executerTache(nom: NomTache, supabase: SupabaseClient): Pr
       // CV illisibles (vieux .doc, scans) : une dizaine repris par nuit, avant l'envoi de l'analyse.
       const illisibles = await reprendreIllisibles(supabase).catch((e) => ({ erreur: (e as Error).message }));
       const envoi = await envoyerAnalyse(supabase);
-      rapport = { synchro, illisibles, resultatsAnalyse: resultats.message ?? resultats.erreur, envoiAnalyse: envoi.message ?? envoi.erreur };
+      // CV reçus par email : Word et PDF Unitech déposés dans SharePoint (une fois le rendu validé).
+      const cvUnitech = await deposerCVEmails(supabase).catch((e) => ({ erreur: (e as Error).message }));
+      rapport = { synchro, illisibles, cvUnitech, resultatsAnalyse: resultats.message ?? resultats.erreur, envoiAnalyse: envoi.message ?? envoi.erreur };
     }
     if (nom === "emails") rapport = { ...(await traiterEmails(supabase)) };
     if (nom === "sauvegarde") rapport = { ...(await sauvegarderDansSharePoint(supabase)) };

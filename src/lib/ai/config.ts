@@ -11,6 +11,8 @@ export const MODELES = {
   analyseApprofondie: "claude-sonnet-5-5",
   reponseDisponibilite: "claude-haiku-5-5", // lecture d'une réponse à la relance des disponibilités
   lectureScan: "claude-haiku-5-5", // CV scannés : recopie du texte d'un PDF image
+  cvUnitech: "claude-haiku-5-5", // réécriture d'un CV dans le modèle Unitech
+  adequation: "claude-haiku-5-5", // section « Adéquation à la mission »
 } as const;
 
 export const MAX_TOKENS = {
@@ -20,6 +22,8 @@ export const MAX_TOKENS = {
   analyseApprofondie: 1500,
   reponseDisponibilite: 250,
   lectureScan: 8000,
+  cvUnitech: 8000,
+  adequation: 1200,
 } as const;
 
 /** Texte envoyé à l'IA tronqué à cette longueur (règle 4 du brief). */
