@@ -5,6 +5,7 @@ import { classementMission, type LigneClassement } from "@/lib/matching/classeme
 import { formaterTelephone } from "@/lib/metier/telephone";
 import { responsablesPossibles } from "@/lib/missions/responsables";
 import ChoixResponsable from "../responsable";
+import Shortlist, { type ProfilShortlist } from "./shortlist";
 import { changerStatutMission, modifierExigence, suivreProposition } from "@/lib/missions/actions";
 
 const STATUTS_PROPOSITION: Record<string, string> = {
@@ -28,6 +29,10 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
     responsablesPossibles(supabase),
   ]);
   const suivi = new Map((propositions ?? []).map((p) => [p.consultant_id, p.statut as string]));
+  const shortlist: ProfilShortlist[] = classement.filter((c) => suivi.has(c.consultant_id) && suivi.get(c.consultant_id) !== "refuse").map((c) => ({
+    trigramme: c.trigramme, poste: c.intitule_poste, annees: c.annees_experience, score: Math.round(c.resultat.score),
+    disponibilite: c.disponible_le ? new Date(c.disponible_le).toLocaleDateString("fr-FR") : c.disponibilite ?? "à préciser", pdf: c.pdf_anonyme_url,
+  }));
   const exigences = (mission.mission_competences ?? []) as unknown as {
     competence_id: string; obligatoire: boolean; importance: number; annees_min: number | null; competences: { nom_canonique: string } | null;
   }[];
@@ -44,6 +49,8 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+        <Shortlist mission={mission.intitule} profils={shortlist} />
+        {utilisateur.role === "admin" && <a href={`/missions/${id}/export`} className="bouton-secondaire">Exporter en Excel</a>}
         <div className="flex items-center gap-2 text-sm">
           <span className="text-slate-500">Responsable</span>
           <ChoixResponsable missionId={id} responsableId={mission.responsable_id} responsables={responsables} estAdmin={utilisateur.role === "admin"} />

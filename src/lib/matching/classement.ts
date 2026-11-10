@@ -23,6 +23,7 @@ export interface LigneClassement {
   disponible_le: string | null;
   pdf_anonyme_url: string | null;
   word_url: string | null;
+  annees_experience: number | null;
   resultat: ResultatScore;
 }
 
@@ -101,6 +102,7 @@ export async function classementMission(supabase: SupabaseClient, missionId: str
     disponible_le: c.disponible_le,
     pdf_anonyme_url: c.pdf_anonyme_url,
     word_url: c.word_url,
+    annees_experience: c.annees_experience === null ? null : Number(c.annees_experience),
     resultat: scorerConsultant(mission, {
       competences: c.competences.map((x) => ({ competence_id: x.competence_id, annees: x.annees === null ? null : Number(x.annees) })),
       annees_experience: c.annees_experience === null ? null : Number(c.annees_experience),

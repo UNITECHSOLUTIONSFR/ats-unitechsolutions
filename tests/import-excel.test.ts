@@ -134,3 +134,19 @@ describe("recherche dans le texte des CV", () => {
     expect(filtrerEtTrier(lignes, {}, "kafka", null, undefined, new Set(["c2"])).map((l) => l.id)).toEqual(["2"]);
   });
 });
+
+describe("filtres rapides", () => {
+  const maintenant = Date.parse("2026-11-10T12:00:00Z");
+  const l = (meta: LigneTableau["meta"]): LigneTableau => ({ id: "x", position: 1, consultant_id: "c", valeurs: {}, meta });
+  it("disponibles maintenant, à vérifier, ajoutés cette semaine, CV analysé", async () => {
+    const { filtreRapide } = await import("@/lib/tableau/modele");
+    expect(filtreRapide(l({ dispo: "Immédiate" }), "disponibles", maintenant)).toBe(true);
+    expect(filtreRapide(l({ dispoLe: "2026-11-01" }), "disponibles", maintenant)).toBe(true);
+    expect(filtreRapide(l({ dispoLe: "2027-01-01" }), "disponibles", maintenant)).toBe(false);
+    expect(filtreRapide(l({ dispoMaj: "2026-06-01T00:00:00Z" }), "a_verifier", maintenant)).toBe(true);
+    expect(filtreRapide(l({ dispoMaj: "2026-11-01T00:00:00Z" }), "a_verifier", maintenant)).toBe(false);
+    expect(filtreRapide(l({ creeLe: "2026-11-08T00:00:00Z" }), "semaine", maintenant)).toBe(true);
+    expect(filtreRapide(l({ cvAnalyse: true }), "cv", maintenant)).toBe(true);
+    expect(filtreRapide({ id: "y", position: 2, consultant_id: null, valeurs: {} }, "cv", maintenant)).toBe(false);
+  });
+});

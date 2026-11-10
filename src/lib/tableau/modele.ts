@@ -100,6 +100,21 @@ export interface LigneTableau {
   valeurs: Record<string, string>;
   /** Texte cherchable en plus des colonnes (compétences du CV analysé). */
   recherche?: string;
+  /** Repères de la fiche reliée, pour les filtres rapides. */
+  meta?: { dispoMaj?: string | null; dispoLe?: string | null; dispo?: string | null; creeLe?: string; cvAnalyse?: boolean };
+}
+
+export type FiltreRapide = "disponibles" | "a_verifier" | "semaine" | "cv";
+
+/** Filtres rapides de l'écran Consultants (au-dessus du tableau). */
+export function filtreRapide(l: LigneTableau, f: FiltreRapide, maintenant: number): boolean {
+  const m = l.meta;
+  if (!m) return false;
+  if (f === "cv") return !!m.cvAnalyse;
+  if (f === "semaine") return !!m.creeLe && Date.parse(m.creeLe) > maintenant - 7 * 86_400_000;
+  if (f === "a_verifier") return !m.dispoMaj || Date.parse(m.dispoMaj) < maintenant - 90 * 86_400_000;
+  const aujourdhui = new Date(maintenant).toISOString().slice(0, 10);
+  return /imm[ée]diat|asap|^disponible$/i.test((m.dispo ?? "").trim()) || (!!m.dispoLe && m.dispoLe <= aujourdhui);
 }
 
 /** Filtres par colonne : liste des valeurs cochées (absente = pas de filtre). */

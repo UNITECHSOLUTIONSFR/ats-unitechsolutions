@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import type { ChampFiche } from "@/lib/import/excel";
 import {
-  filtrerEtTrier, valeurEcran, valeursDistinctes, VIDE,
-  type Filtres, type LigneTableau, type Tri,
+  filtreRapide, filtrerEtTrier, valeurEcran, valeursDistinctes, VIDE,
+  type FiltreRapide, type Filtres, type LigneTableau, type Tri,
 } from "@/lib/tableau/modele";
 import { modifierCellules } from "@/lib/tableau/actions";
 import { classePastille } from "@/lib/statuts";
@@ -67,10 +67,13 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
   const affiche = useCallback((c: string, v: string | undefined) => valeurEcran(champs[c], v), [champs]);
   // La saisie reste fluide : le filtrage suit juste derrière la frappe.
   const rechercheDifferee = useDeferredValue(recherche);
-  const lignesVue = useMemo(
-    () => (vueActive ? lignes.filter((l) => (l.valeurs[colonneDomaine] ?? "").split(" ; ").includes(vueActive)) : lignes),
-    [lignes, vueActive, colonneDomaine],
-  );
+  const [rapides, setRapides] = useState<FiltreRapide[]>([]);
+  const lignesVue = useMemo(() => {
+    const maintenant = Date.parse(new Date().toISOString());
+    return lignes.filter((l) =>
+      (!vueActive || (l.valeurs[colonneDomaine] ?? "").split(" ; ").includes(vueActive)) &&
+      rapides.every((f) => filtreRapide(l, f, maintenant)));
+  }, [lignes, vueActive, colonneDomaine, rapides]);
   // La recherche porte aussi sur le texte complet des CV (côté base, index plein texte).
   const [dansCV, setDansCV] = useState<{ q: string; ids: Set<string> }>({ q: "", ids: new Set() });
   useEffect(() => {
@@ -87,7 +90,7 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
   const pages = Math.max(1, Math.ceil(visibles.length / PAR_PAGE));
   const pageCourante = Math.min(page, pages - 1);
   const affichees = visibles.slice(pageCourante * PAR_PAGE, (pageCourante + 1) * PAR_PAGE);
-  const nbFiltres = Object.keys(filtres).length + (recherche ? 1 : 0);
+  const nbFiltres = Object.keys(filtres).length + (recherche ? 1 : 0) + rapides.length;
 
   useEffect(() => {
     if (!message) return;
@@ -162,7 +165,7 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
               placeholder="Nom, compétence, ville, téléphone, mot du CV…" className="champ w-full pl-9 sm:w-72" />
           </label>
           {nbFiltres > 0 && (
-            <button className="bouton-secondaire" onClick={() => { setFiltres({}); setRecherche(""); setTri(null); setPage(0); }}>
+            <button className="bouton-secondaire" onClick={() => { setFiltres({}); setRecherche(""); setRapides([]); setTri(null); setPage(0); }}>
               Effacer les filtres
             </button>
           )}
@@ -184,6 +187,20 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
             {o.nom}
           </button>
         ))}
+      </div>
+
+      {/* Filtres rapides */}
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        {([["disponibles", "Disponibles maintenant"], ["a_verifier", "Dispo à vérifier (> 3 mois)"], ["semaine", "Ajoutés cette semaine"], ["cv", "CV analysé"]] as const).map(([f, libelle]) => {
+          const actif = rapides.includes(f);
+          return (
+            <button key={f} type="button" disabled={chargementPartiel}
+              onClick={() => { setRapides((r) => (actif ? r.filter((x) => x !== f) : [...r, f])); setPage(0); }}
+              className={`rounded-full px-3.5 py-1 font-medium ring-1 transition disabled:opacity-50 ${actif ? "bg-nuit text-white ring-nuit" : "bg-white/70 text-slate-600 ring-slate-200 hover:bg-white"}`}>
+              {libelle}
+            </button>
+          );
+        })}
       </div>
 
       {selection.size > 0 && (
