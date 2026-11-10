@@ -36,6 +36,7 @@ export async function creerMission(_etat: EtatFormulaireMission, formData: FormD
         client: client ?? ex.client,
         intitule: ex.intitule,
         texte_besoin: texte,
+        responsable_id: utilisateur.id, // la personne qui crée la mission en est responsable d'office (un admin peut réassigner)
         exigences: ex,
         localisation: ex.localisation,
         date_debut: /^\d{4}-\d{2}-\d{2}$/.test(ex.date_debut ?? "") ? ex.date_debut : null,
