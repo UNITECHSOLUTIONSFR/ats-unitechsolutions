@@ -99,6 +99,22 @@ export async function collecterAnalyse(supabase: SupabaseClient): Promise<EtatAn
   // Second échec : signalé pour vérification à la main (CV atypique).
   const deja = await echecsRecents(supabase);
   const definitifs = echecs.filter((id) => (deja.get(id) ?? 0) >= 2);
-  if (definitifs.length) await supabase.from("alertes").insert(definitifs.map((id) => ({ type: "cv_illisible", document_id: id, consultant_id: consultantDe.get(id) ?? null, details: { motif: "analyse IA impossible (2 essais)" } })));
+  if (definitifs.length) {
+    const { data: textes } = await supabase.from("documents").select("id, texte_extrait").in("id", definitifs);
+    const vide = new Set((textes ?? []).filter((t) => modeleUnitechVide(t.texte_extrait)).map((t) => t.id));
+    await supabase.from("alertes").insert(definitifs.map((id) => ({
+      type: "cv_illisible", document_id: id, consultant_id: consultantDe.get(id) ?? null,
+      details: { motif: vide.has(id) ? MOTIF_MODELE_VIDE : "analyse IA impossible (2 essais)" },
+    })));
+  }
   return { message: `${enregistres} CV analysés et enregistrés, ${echecs.length} en échec. Coût réel : ${cout.toFixed(2)} $.` };
+}
+
+export const MOTIF_MODELE_VIDE = "le fichier SharePoint est le modèle CV Unitech non rempli";
+
+/** Fichier enregistré sous le nom du consultant mais resté au modèle Unitech vierge (textes d'exemple). */
+export function modeleUnitechVide(texte: string | null): boolean {
+  if (!texte) return false;
+  const exemples = ["Diplôme Universitaire de Cambridge", "Rôle du consultant dans le projet", "Contexte de la mission/projet client", "- Détail 1"];
+  return exemples.filter((e) => texte.includes(e)).length >= 3;
 }

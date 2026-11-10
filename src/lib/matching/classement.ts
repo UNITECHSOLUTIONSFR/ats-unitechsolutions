@@ -101,7 +101,8 @@ export async function classementMission(supabase: SupabaseClient, missionId: str
     disponibilite: c.disponibilite,
     disponible_le: c.disponible_le,
     pdf_anonyme_url: c.pdf_anonyme_url,
-    word_url: c.word_url,
+    // CV reçus par l'ancien groupe recrutement@ : le lien vers la messagerie ne mène nulle part, seul un fichier SharePoint est proposé.
+    word_url: c.word_url?.includes("sharepoint.com") ? c.word_url : null,
     annees_experience: c.annees_experience === null ? null : Number(c.annees_experience),
     resultat: scorerConsultant(mission, {
       competences: c.competences.map((x) => ({ competence_id: x.competence_id, annees: x.annees === null ? null : Number(x.annees) })),
@@ -114,5 +115,16 @@ export async function classementMission(supabase: SupabaseClient, missionId: str
       similarite: c.similarite,
     }, ponderations),
   }));
-  return classer(lignes).slice(0, limite);
+  const retenus = classer(lignes).slice(0, limite);
+  // Lien Outlook écarté : on cherche alors un CV Word rangé dans SharePoint pour la même personne.
+  const sansWord = retenus.filter((l) => !l.word_url).map((l) => l.consultant_id);
+  if (sansWord.length) {
+    const { data: docs } = await supabase.from("documents").select("consultant_id, url_web")
+      .in("consultant_id", sansWord).eq("type", "word_nominatif").eq("supprime_sharepoint", false)
+      .ilike("url_web", "%sharepoint.com%").order("modifie_sharepoint_le", { ascending: false, nullsFirst: false });
+    const parConsultant = new Map<string, string>();
+    for (const d of docs ?? []) if (!parConsultant.has(d.consultant_id)) parConsultant.set(d.consultant_id, d.url_web);
+    for (const l of retenus) l.word_url ??= parConsultant.get(l.consultant_id) ?? null;
+  }
+  return retenus;
 }
