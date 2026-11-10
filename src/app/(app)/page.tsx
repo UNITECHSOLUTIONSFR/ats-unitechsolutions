@@ -57,7 +57,7 @@ export default async function Accueil() {
       {/* Chiffres clés */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Tuile titre="Consultants" valeur={consultants} lien="/consultants" Icone={IconePersonnes} />
-        <Tuile titre="CV Unitech (SharePoint)" valeur={cvs} lien="/cv" Icone={IconeTableau} />
+        <Tuile titre="CV Unitech (SharePoint)" valeur={cvs} lien={utilisateur.role === "admin" ? "/parametres/cv" : "/consultants"} Icone={IconeTableau} />
         <Tuile titre="Missions ouvertes" valeur={missions?.length ?? 0} lien="/missions" Icone={IconeMallette} />
         <Tuile titre="Cas à vérifier" valeur={alertes} lien="/alertes" Icone={IconeAlerte} attention={alertes > 0} />
       </div>

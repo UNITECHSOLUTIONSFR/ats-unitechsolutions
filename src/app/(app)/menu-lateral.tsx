@@ -3,19 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { IconeAccueil, IconeFiche, IconeMallette, IconePersonnes, IconeReglages, IconeSortie, IconeTableau } from "./icones";
+import { IconeAccueil, IconeFiche, IconeMallette, IconePersonnes, IconeReglages, IconeSortie } from "./icones";
 
 const LIENS = [
   { href: "/", libelle: "Tableau de bord", Icone: IconeAccueil },
   { href: "/consultants", libelle: "Consultants", Icone: IconePersonnes },
-  { href: "/cv", libelle: "CV SharePoint", Icone: IconeTableau },
   { href: "/missions", libelle: "Missions", Icone: IconeMallette },
 ];
 
 export default function MenuLateral({ nom, email, estAdmin }: { nom: string; email: string; estAdmin: boolean }) {
   const chemin = usePathname();
   const [ouvert, setOuvert] = useState(false);
-  const liens = [...LIENS, ...(estAdmin ? [{ href: "/parametres", libelle: "Paramètres", Icone: IconeReglages }] : []), { href: "/aide", libelle: "Aide", Icone: IconeFiche }];
+  const liens = [...LIENS, { href: "/aide", libelle: "Aide", Icone: IconeFiche }, ...(estAdmin ? [{ href: "/parametres", libelle: "Paramètres", Icone: IconeReglages }] : [])];
   const actif = (href: string) => (href === "/" ? chemin === "/" : chemin.startsWith(href));
   const initiales = nom.split(/[\s.@]+/).filter(Boolean).slice(0, 2).map((m) => m[0]!.toUpperCase()).join("");
 

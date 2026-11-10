@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { exigerUtilisateur } from "@/lib/acces";
+import { exigerAdmin } from "@/lib/acces-admin";
 import { normaliserNomPersonne } from "@/lib/metier/texte";
 
 /**
@@ -9,7 +9,7 @@ import { normaliserNomPersonne } from "@/lib/metier/texte";
  * ou par son trigramme. Refuse si plusieurs fiches correspondent (il faut alors préciser).
  */
 export async function rattacherCV(formData: FormData) {
-  const { utilisateur, supabase } = await exigerUtilisateur();
+  const { utilisateur, supabase } = await exigerAdmin();
   const documentId = String(formData.get("document_id"));
   const saisie = String(formData.get("fiche") ?? "").trim();
   if (!saisie) return;
@@ -24,5 +24,5 @@ export async function rattacherCV(formData: FormData) {
   await supabase.from("documents").update({ consultant_id: consultantId }).eq("id", documentId);
   if (doc?.document_associe_id) await supabase.from("documents").update({ consultant_id: consultantId }).eq("id", doc.document_associe_id);
   await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "modification", consultant_id: consultantId, details: { rattachement_cv: documentId } });
-  revalidatePath("/cv");
+  revalidatePath("/parametres/cv");
 }
