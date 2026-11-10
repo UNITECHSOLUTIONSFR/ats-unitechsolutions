@@ -39,7 +39,7 @@ export default async function Accueil() {
   return (
     <div className="space-y-6">
       {/* En-tête */}
-      <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-nuit via-marque-600 to-marque-500 p-8 text-white shadow-[0_30px_60px_-30px_rgba(2,33,121,0.7)]">
+      <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-marque-500 via-marque-400 to-[#7d9be0] p-8 text-white shadow-[0_30px_60px_-30px_rgba(31,69,163,0.6)]">
         <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-white/15 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-24 left-1/3 h-64 w-64 rounded-full bg-sky-300/20 blur-3xl" />
         <div className="relative flex flex-wrap items-end justify-between gap-6">
