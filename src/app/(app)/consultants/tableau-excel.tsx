@@ -36,9 +36,11 @@ interface Props {
   estAdmin: boolean;
   /** Liens SharePoint par fiche consultant : Word Unitech et PDF anonymisé. */
   documents: Record<string, { word?: string; pdf?: string }>;
+  /** Vrai tant que seules les 100 premières lignes sont arrivées. */
+  chargementPartiel?: boolean;
 }
 
-export default function TableauExcel({ vues, vueInitiale, colonneDomaine, ongletId, entetes, champs, lignes: initiales, estAdmin, documents }: Props) {
+export default function TableauExcel({ vues, vueInitiale, colonneDomaine, ongletId, entetes, champs, lignes: initiales, estAdmin, documents, chargementPartiel }: Props) {
   const [lignes, setLignes] = useState(initiales);
   // Données rafraîchies (après l'affichage de la version gardée en mémoire) : on les prend sans perdre filtres ni tri.
   const [source, setSource] = useState(initiales);
@@ -137,7 +139,7 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
         <div>
           <h1 className="titre-page">Consultants</h1>
           <p className="text-sm text-zinc-500">
-            {visibles.length.toLocaleString("fr-FR")} ligne(s){nbFiltres > 0 && ` sur ${lignesVue.length.toLocaleString("fr-FR")}`} ·
+            {chargementPartiel ? "Chargement des autres lignes…" : <>{visibles.length.toLocaleString("fr-FR")} ligne(s){nbFiltres > 0 && ` sur ${lignesVue.length.toLocaleString("fr-FR")}`}</>} ·
             double-cliquez sur une cellule pour la modifier
           </p>
         </div>

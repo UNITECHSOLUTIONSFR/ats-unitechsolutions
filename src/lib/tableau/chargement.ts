@@ -44,3 +44,15 @@ export async function chargerTableau(supabase: SupabaseClient): Promise<DonneesT
   const domaines = [...new Set(lignes.flatMap((l) => (l.valeurs[COLONNE_DOMAINE] ?? "").split(" ; ").filter(Boolean)))].sort((a, b) => a.localeCompare(b, "fr"));
   return { ongletId: onglet.id, entetes: onglet.entetes, champs: champsParEntete(onglet.entetes, onglet.entetes), lignes, domaines, documents };
 }
+
+/** Les 100 premières lignes (par prénom) pour un affichage immédiat, le temps que le reste arrive. */
+export async function chargerApercuTableau(supabase: SupabaseClient): Promise<DonneesTableau | null> {
+  const { data: onglet } = await supabase.from("tableau_onglets").select("id, entetes").eq("principal", true).maybeSingle();
+  if (!onglet) return null;
+  const champs = champsParEntete(onglet.entetes, onglet.entetes);
+  const colonnePrenom = Object.entries(champs).find(([, c]) => c === "prenom")?.[0];
+  let q = supabase.from("tableau_lignes").select("id, position, consultant_id, valeurs").eq("onglet_id", onglet.id);
+  q = colonnePrenom ? q.order(`valeurs->>${colonnePrenom}`, { ascending: true, nullsFirst: false }) : q.order("position");
+  const { data } = await q.limit(100);
+  return { ongletId: onglet.id, entetes: onglet.entetes, champs, lignes: (data ?? []) as LigneTableau[], domaines: [], documents: {} };
+}
