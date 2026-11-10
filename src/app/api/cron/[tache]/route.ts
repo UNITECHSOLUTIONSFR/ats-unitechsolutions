@@ -1,6 +1,7 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { after, NextResponse, type NextRequest } from "next/server";
 import { clientSupabaseAdmin } from "@/lib/supabase/admin";
 import { autorisationTachesValide } from "@/lib/securite/secret";
+import { poursuivreEnvoi } from "@/lib/relance/declenchement";
 import { executerTache, TACHES, type NomTache } from "@/lib/sync/taches";
 
 // Tâches planifiées (vercel.json) : jusqu'à 5 minutes chacune.
@@ -13,6 +14,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
   const { tache } = await params;
   if (!(tache in TACHES)) return new NextResponse("Tâche inconnue", { status: 404 });
-  const r = await executerTache(tache as NomTache, clientSupabaseAdmin());
+  const supabase = clientSupabaseAdmin();
+  const r = await executerTache(tache as NomTache, supabase);
+  // Relance lancée par un administrateur : tant qu'il reste des emails à envoyer, l'appel suivant est enchaîné.
+  if (tache === "relance" && r.ok && Number(r.rapport.envoyes ?? 0) > 0) after(poursuivreEnvoi);
   return NextResponse.json(r, { status: r.ok ? 200 : 500 });
 }

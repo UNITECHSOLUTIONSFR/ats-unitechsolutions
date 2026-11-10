@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { poursuivreEnvoi } from "./declenchement";
 import { exigerAdmin } from "@/lib/acces-admin";
 import { destinatairesCampagne, preparerCampagne, type FiltreCampagne } from "./envoi";
 import { relanceActive } from "./modele";
@@ -39,6 +41,7 @@ export async function changerCampagne(formData: FormData) {
   if (action === "lancer") {
     await supabase.from("campagnes_relance").update({ statut: "en_cours", lancee_le: new Date().toISOString() }).eq("id", id).eq("statut", "preparee");
     await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "modification", consultant_id: null, details: { relance_lancee: id } });
+    after(poursuivreEnvoi); // l'envoi démarre tout de suite, depuis l'application
   }
   if (action === "annuler") await supabase.from("campagnes_relance").update({ statut: "annulee" }).eq("id", id).in("statut", ["preparee", "en_cours"]);
   revalidatePath("/parametres/relance");
