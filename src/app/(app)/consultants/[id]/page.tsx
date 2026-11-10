@@ -7,7 +7,7 @@ import BlocRGPD from "./rgpd";
 import { frise, type Evenement } from "@/lib/consultants/historique";
 
 const COULEUR_EVENEMENT: Record<Evenement["type"], string> = {
-  modification: "bg-marque-500", email: "bg-amber-400", mission: "bg-emerald-500", document: "bg-sky-400", relance: "bg-violet-500", creation: "bg-slate-400",
+  modification: "bg-marque-500", note: "bg-rose-400", email: "bg-amber-400", mission: "bg-emerald-500", document: "bg-sky-400", relance: "bg-violet-500", creation: "bg-slate-400",
 };
 
 const TYPES_DOC: Record<string, string> = { word_nominatif: "Word nominatif", pdf_anonyme: "PDF anonymisé", autre: "Autre" };

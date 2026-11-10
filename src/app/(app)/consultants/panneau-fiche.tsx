@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState, useTransition } from "react";
 import type { FicheResume } from "@/lib/consultants/fiche";
 import { suivreProposition } from "@/lib/missions/actions";
+import { ajouterNote } from "@/lib/consultants/actions";
 import { classePastille } from "@/lib/statuts";
 
 const ALERTES: Record<string, string> = {
@@ -140,7 +141,21 @@ export default function PanneauFiche({ id, onFermer }: { id: string; onFermer: (
               )}
             </Bloc>
 
-            {fiche.notes && <Bloc titre="Notes"><p className="whitespace-pre-line text-slate-700">{fiche.notes}</p></Bloc>}
+            <Bloc titre="Échanges de l'équipe">
+              <form action={(f) => demarrer(async () => { await ajouterNote(f); await recharger(); (document.getElementById("note-rapide") as HTMLInputElement | null)?.form?.reset(); })} className="flex gap-2">
+                <input type="hidden" name="consultant_id" value={fiche.id} />
+                <input id="note-rapide" name="texte" required maxLength={2000} placeholder="Ex. appelé, dispo début mars" className="champ min-w-0 flex-1" />
+                <button disabled={envoi} className="bouton-primaire shrink-0">Noter</button>
+              </form>
+              {fiche.notesEquipe.map((n) => (
+                <div key={n.id} className="rounded-xl bg-white/70 px-3 py-2 ring-1 ring-white/80">
+                  <div className="text-xs text-slate-400">{n.auteur} · {new Date(n.date).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}</div>
+                  <div className="whitespace-pre-line text-nuit">{n.texte}</div>
+                </div>
+              ))}
+            </Bloc>
+
+            {fiche.notes && <Bloc titre="Notes (fichier de suivi)"><p className="whitespace-pre-line text-slate-700">{fiche.notes}</p></Bloc>}
           </div>
         )}
 

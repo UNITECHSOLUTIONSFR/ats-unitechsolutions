@@ -28,12 +28,14 @@ export interface FicheResume {
   alertes: string[];
   /** Missions ouvertes sur lesquelles il n'est pas encore proposé (bouton « Proposer sur une mission »). */
   missionsOuvertes: { id: string; intitule: string; client: string | null }[];
+  /** Notes rapides de l'équipe, les plus récentes d'abord. */
+  notesEquipe: { id: string; texte: string; date: string; auteur: string; moi: boolean }[];
 }
 
 /** Fiche complète d'un consultant, pour le panneau latéral de l'écran Consultants (servie par /api/fiche/[id]). La consultation est journalisée. */
 export async function chargerFiche(supabase: SupabaseClient, utilisateurId: string | null, id: string): Promise<FicheResume | null> {
   // Toutes les lectures en même temps.
-  const [{ data: c }, { data: profil }, { data: comp }, { data: docs }, { data: props }, { data: alertes }, { data: ouvertes }] = await Promise.all([
+  const [{ data: c }, { data: profil }, { data: comp }, { data: docs }, { data: props }, { data: alertes }, { data: ouvertes }, { data: notes }] = await Promise.all([
     supabase.from("consultants").select("*").eq("id", id).maybeSingle(),
     supabase.from("profils").select("resume, annees_experience, seniorite").eq("consultant_id", id).maybeSingle(),
     supabase.from("consultant_competences").select("annees, competences(nom_canonique)").eq("consultant_id", id).order("annees", { ascending: false, nullsFirst: false }),
@@ -41,7 +43,11 @@ export async function chargerFiche(supabase: SupabaseClient, utilisateurId: stri
     supabase.from("propositions").select("mission_id, statut, score, missions(intitule)").eq("consultant_id", id).order("updated_at", { ascending: false }),
     supabase.from("alertes").select("type").eq("consultant_id", id).eq("statut", "ouverte"),
     supabase.from("missions").select("id, intitule, client").eq("statut", "ouverte").order("created_at", { ascending: false }),
+    supabase.from("notes_consultant").select("id, texte, created_at, auteur").eq("consultant_id", id).order("created_at", { ascending: false }).limit(30),
   ]);
+  // Noms des auteurs (un recruteur ne lit pas la table des utilisateurs : liste des personnes invitées).
+  const { data: personnes } = notes?.length ? await supabase.rpc("responsables_possibles") : { data: [] };
+  const nomDe = new Map(((personnes ?? []) as { id: string; nom: string }[]).map((p) => [p.id, p.nom]));
 
   if (!c) return null;
   if (utilisateurId) await journaliser(supabase, utilisateurId, "consultation", id, { ecran: "panneau" });
@@ -59,5 +65,6 @@ export async function chargerFiche(supabase: SupabaseClient, utilisateurId: stri
     })),
     alertes: [...new Set((alertes ?? []).map((a) => a.type as string))],
     missionsOuvertes: (ouvertes ?? []).filter((m) => !(props ?? []).some((p) => p.mission_id === m.id)),
+    notesEquipe: (notes ?? []).map((n) => ({ id: n.id, texte: n.texte, date: n.created_at, auteur: (n.auteur && nomDe.get(n.auteur)) || "—", moi: n.auteur === utilisateurId })),
   };
 }

@@ -256,4 +256,14 @@ describe("tableau de suivi", () => {
     const [h] = await commeUtilisateur<{ n: string }>(ADMIN, "select count(*) n from consultants_historique where consultant_id = $1 and source = 'fusion'", [a.id]);
     expect(Number(h.n)).toBe(1);
   });
+  it("notes rapides : tout invité ajoute et lit ; on ne retire que ses notes (un admin retire tout)", async () => {
+    const [f] = await commeUtilisateur<{ id: string }>(ADMIN, "insert into consultants (prenom, nom, trigramme) values ('N', 'Ote', 'NOT') returning id");
+    await commeUtilisateur(RECRUTEUR, "insert into notes_consultant (consultant_id, texte) values ($1, 'appelé, dispo mars')", [f.id]);
+    await expect(commeUtilisateur(RECRUTEUR, "insert into notes_consultant (consultant_id, texte, auteur) values ($1, 'x', $2)", [f.id, ADMIN])).rejects.toThrow();
+    const [n] = await commeUtilisateur<{ id: string; texte: string }>(ADMIN, "select id, texte from notes_consultant where consultant_id = $1", [f.id]);
+    expect(n.texte).toBe("appelé, dispo mars");
+    expect(await commeUtilisateur(INACTIF, "select id from notes_consultant")).toEqual([]);
+    await commeUtilisateur(ADMIN, "delete from notes_consultant where id = $1", [n.id]);
+    expect(await commeUtilisateur(ADMIN, "select id from notes_consultant where consultant_id = $1", [f.id])).toEqual([]);
+  });
 });

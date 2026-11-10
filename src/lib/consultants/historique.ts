@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export interface Evenement { date: string; type: "modification" | "email" | "mission" | "document" | "relance" | "creation"; titre: string; detail?: string; lien?: string }
+export interface Evenement { date: string; type: "modification" | "email" | "mission" | "document" | "relance" | "creation" | "note"; titre: string; detail?: string; lien?: string }
 
 const SOURCES: Record<string, string> = {
   interface: "Modifiée dans l'outil", import_excel: "Import du fichier Excel", synchro_excel: "Mise à jour depuis le fichier Excel",
@@ -15,16 +15,19 @@ const STATUTS: Record<string, string> = { propose: "Proposé", appele: "Appelé"
 
 /** Frise d'une fiche : modifications, emails reçus, suivi des missions, CV et relances, du plus récent au plus ancien. */
 export async function frise(supabase: SupabaseClient, consultantId: string, creeLe: string, source: string): Promise<Evenement[]> {
-  const [{ data: modifs }, { data: emails }, { data: props }, { data: docs }, { data: relances }, { data: utilisateurs }] = await Promise.all([
+  const [{ data: modifs }, { data: emails }, { data: props }, { data: docs }, { data: relances }, { data: utilisateurs }, { data: notes }] = await Promise.all([
     supabase.from("consultants_historique").select("created_at, source, modifications, par").eq("consultant_id", consultantId).order("created_at", { ascending: false }).limit(50),
     supabase.from("emails_entrants").select("recu_le, objet, statut").eq("consultant_id", consultantId).order("recu_le", { ascending: false }).limit(30),
     supabase.from("propositions").select("id, mission_id, missions(intitule), propositions_historique(nouveau_statut, created_at)").eq("consultant_id", consultantId),
     supabase.from("documents").select("nom_fichier, type, modifie_sharepoint_le, created_at, sharepoint_drive_id").eq("consultant_id", consultantId),
     supabase.from("envois_relance").select("envoye_le, repondu_le, statut, reponse, campagnes_relance(objet)").eq("consultant_id", consultantId),
-    supabase.from("utilisateurs").select("id, nom_affiche, email"),
+    supabase.rpc("responsables_possibles"),
+    supabase.from("notes_consultant").select("created_at, texte, auteur").eq("consultant_id", consultantId).order("created_at", { ascending: false }).limit(30),
   ]);
-  const qui = new Map((utilisateurs ?? []).map((u) => [u.id, u.nom_affiche || u.email.split("@")[0]]));
+  const qui = new Map(((utilisateurs ?? []) as { id: string; nom: string }[]).map((u) => [u.id, u.nom]));
   const ev: Evenement[] = [];
+  for (const n of notes ?? []) ev.push({ date: n.created_at, type: "note", titre: `Note${n.auteur && qui.get(n.auteur) ? ` de ${qui.get(n.auteur)}` : ""}`, detail: n.texte });
+
   for (const m of modifs ?? []) {
     const champs = Object.keys((m.modifications ?? {}) as object).filter((k) => CHAMPS[k]).map((k) => CHAMPS[k]);
     ev.push({ date: m.created_at, type: "modification", titre: SOURCES[m.source] ?? "Fiche modifiée", detail: [champs.length ? champs.join(", ") : "", m.par ? `par ${qui.get(m.par) ?? "un utilisateur"}` : ""].filter(Boolean).join(" · ") });

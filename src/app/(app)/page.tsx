@@ -112,6 +112,9 @@ export default async function Accueil() {
             </ul>
           </section>
 
+          {/* Nouveaux profils ajoutés automatiquement à mes missions */}
+          <Suspense fallback={null}><NouveauxPourMesMissions moi={utilisateur.id} /></Suspense>
+
           {/* Relances à faire */}
           <section className="carte p-6">
             <h2 className="font-semibold text-nuit">À relancer</h2>
@@ -184,6 +187,39 @@ async function MeilleursProfils({ missionId }: { missionId: string }) {
       {!meilleurs.length && <p className="text-sm text-slate-500">Aucun profil classé pour l&apos;instant.</p>}
     </div>
     </>
+  );
+}
+
+/** Nouveaux profils (CV reçus ou mis à jour) ajoutés automatiquement à mes missions ouvertes ces 7 derniers jours. */
+async function NouveauxPourMesMissions({ moi }: { moi: string }) {
+  const { supabase } = await exigerUtilisateur();
+  const { data } = await supabase.from("propositions")
+    .select("created_at, score, mission_id, consultant_id, consultants(prenom, nom, intitule_poste), missions!inner(intitule, responsable_id, statut)")
+    .like("commentaire", "Ajouté automatiquement%").eq("statut", "propose").gte("created_at", depuisJours(7))
+    .eq("missions.responsable_id", moi).eq("missions.statut", "ouverte").order("score", { ascending: false }).limit(6);
+  if (!data?.length) return null;
+  return (
+    <section className="carte p-6 ring-1 ring-emerald-200">
+      <h2 className="font-semibold text-nuit">Nouveaux profils pour vos missions</h2>
+      <p className="mt-0.5 text-xs text-slate-500">CV reçus ces 7 derniers jours qui correspondent à une de vos missions ouvertes.</p>
+      <ul className="mt-3 space-y-2 text-sm">
+        {data.map((p) => {
+          const c = p.consultants as unknown as { prenom: string; nom: string; intitule_poste: string | null } | null;
+          const m = p.missions as unknown as { intitule: string } | null;
+          return (
+            <li key={`${p.mission_id}-${p.consultant_id}`}>
+              <Link href={`/missions/${p.mission_id}`} className="flex items-center gap-3 rounded-xl p-1.5 transition hover:bg-white/70">
+                <Score valeur={Number(p.score ?? 0)} />
+                <div className="min-w-0">
+                  <div className="truncate font-semibold text-nuit">{c?.prenom} {c?.nom}</div>
+                  <div className="truncate text-xs text-slate-500">{m?.intitule}</div>
+                </div>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

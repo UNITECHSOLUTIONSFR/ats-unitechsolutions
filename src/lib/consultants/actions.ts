@@ -105,3 +105,20 @@ export async function fusionnerFiches(formData: FormData) {
   revalidatePath("/consultants");
   redirect(`/consultants/${garde}`);
 }
+
+/** Ajoute une note datée sur une fiche (visible par toute l'équipe). */
+export async function ajouterNote(formData: FormData): Promise<{ ok: boolean }> {
+  const { utilisateur, supabase } = await exigerUtilisateur();
+  const consultantId = String(formData.get("consultant_id")), texte = String(formData.get("texte") ?? "").trim();
+  if (!texte) return { ok: false };
+  const { error } = await supabase.from("notes_consultant").insert({ consultant_id: consultantId, texte: texte.slice(0, 2000), auteur: utilisateur.id });
+  await supabase.from("consultants").update({ dernier_contact_le: new Date().toISOString() }).eq("id", consultantId);
+  revalidatePath(`/consultants/${consultantId}`);
+  return { ok: !error };
+}
+
+export async function retirerNote(formData: FormData) {
+  const { supabase } = await exigerUtilisateur();
+  await supabase.from("notes_consultant").delete().eq("id", String(formData.get("id")));
+  revalidatePath(`/consultants/${String(formData.get("consultant_id"))}`);
+}
