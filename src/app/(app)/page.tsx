@@ -91,7 +91,8 @@ export default async function Accueil() {
         <div className="space-y-6">
           {/* Nouvelles candidatures */}
           <section className="carte p-6">
-            <EnTete titre="Nouvelles fiches (7 jours)" lien="/consultants" libelle="Voir" />
+            <h2 className="font-semibold text-nuit">Nouveaux profils · 7 derniers jours</h2>
+            <p className="mt-0.5 text-xs text-slate-500">Reçus par email, déposés dans SharePoint ou saisis à la main. Cliquez sur un nom pour ouvrir sa fiche.</p>
             <ul className="mt-3 space-y-2">
               {(nouveaux ?? []).map((c) => (
                 <li key={c.id}>
@@ -107,7 +108,7 @@ export default async function Accueil() {
                   </Link>
                 </li>
               ))}
-              {!nouveaux?.length && <li className="text-sm text-slate-500">Aucune nouvelle fiche cette semaine.</li>}
+              {!nouveaux?.length && <li className="text-sm text-slate-500">Aucun nouveau profil cette semaine.</li>}
             </ul>
           </section>
 

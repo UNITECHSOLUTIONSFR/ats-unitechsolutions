@@ -29,7 +29,6 @@
 body {
   color: var(--foreground);
   font-family: var(--font-sans);
-  font-feature-settings: "cv11", "ss01";
   background-color: var(--background);
   /* Fond dégradé fixe : c'est lui que les surfaces en verre laissent deviner. */
   background-image:

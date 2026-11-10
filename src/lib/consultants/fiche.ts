@@ -22,6 +22,7 @@ export interface FicheResume {
   annees_experience: number | null;
   seniorite: string | null;
   competences: { nom: string; annees: number | null }[];
+  /** type « email » : CV reçu par email (le lien ouvre l'email dans Outlook). */
   documents: { type: string; nom: string; url: string | null }[];
   propositions: { mission_id: string; mission: string; statut: string; score: number | null }[];
   alertes: string[];
@@ -36,7 +37,7 @@ export async function chargerFiche(supabase: SupabaseClient, utilisateurId: stri
     supabase.from("consultants").select("*").eq("id", id).maybeSingle(),
     supabase.from("profils").select("resume, annees_experience, seniorite").eq("consultant_id", id).maybeSingle(),
     supabase.from("consultant_competences").select("annees, competences(nom_canonique)").eq("consultant_id", id).order("annees", { ascending: false, nullsFirst: false }),
-    supabase.from("documents").select("type, nom_fichier, url_web, modifie_sharepoint_le").eq("consultant_id", id).eq("supprime_sharepoint", false).order("modifie_sharepoint_le", { ascending: false }),
+    supabase.from("documents").select("type, nom_fichier, url_web, modifie_sharepoint_le, sharepoint_drive_id").eq("consultant_id", id).eq("supprime_sharepoint", false).order("modifie_sharepoint_le", { ascending: false }),
     supabase.from("propositions").select("mission_id, statut, score, missions(intitule)").eq("consultant_id", id).order("updated_at", { ascending: false }),
     supabase.from("alertes").select("type").eq("consultant_id", id).eq("statut", "ouverte"),
     supabase.from("missions").select("id, intitule, client").eq("statut", "ouverte").order("created_at", { ascending: false }),
@@ -51,7 +52,7 @@ export async function chargerFiche(supabase: SupabaseClient, utilisateurId: stri
     disponibilite_maj_le: c.disponibilite_maj_le, linkedin: c.linkedin, notes: c.notes,
     resume: profil?.resume ?? null, annees_experience: profil?.annees_experience ?? null, seniorite: profil?.seniorite ?? null,
     competences: (comp ?? []).map((k) => ({ nom: (k.competences as unknown as { nom_canonique: string } | null)?.nom_canonique ?? "?", annees: k.annees })),
-    documents: (docs ?? []).map((d) => ({ type: d.type, nom: d.nom_fichier, url: d.url_web })),
+    documents: (docs ?? []).map((d) => ({ type: String(d.sharepoint_drive_id).startsWith("boite:") ? "email" : d.type, nom: d.nom_fichier, url: d.url_web })),
     propositions: (props ?? []).map((p) => ({
       mission_id: p.mission_id, statut: p.statut, score: p.score,
       mission: (p.missions as unknown as { intitule: string } | null)?.intitule ?? "Mission",

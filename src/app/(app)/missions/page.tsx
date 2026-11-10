@@ -4,6 +4,7 @@ import { FILTRE_MES_MISSIONS, responsablesPossibles } from "@/lib/missions/respo
 import ChoixResponsable from "./responsable";
 
 const LIBELLES: Record<string, string> = { ouverte: "Ouverte", pourvue: "Pourvue", fermee: "Fermée" };
+const LIBELLES_PLURIEL: Record<string, string> = { ouverte: "Ouvertes", pourvue: "Pourvues", fermee: "Fermées", toutes: "Tous statuts" };
 
 export default async function Missions({ searchParams }: { searchParams: Promise<{ statut?: string; vue?: string }> }) {
   const { utilisateur, supabase } = await exigerUtilisateur();
@@ -15,7 +16,6 @@ export default async function Missions({ searchParams }: { searchParams: Promise
   const [{ data: missions }, responsables] = await Promise.all([q, responsablesPossibles(supabase)]);
   const estAdmin = utilisateur.role === "admin";
   const lien = (s: string, v: string) => `/missions?statut=${s}&vue=${v}`;
-  const pastille = (actif: boolean) => `rounded-full px-3.5 py-1.5 font-medium transition ${actif ? "bg-nuit text-white shadow-md" : "text-slate-600 hover:bg-white"}`;
 
   return (
     <div className="space-y-4">
@@ -23,16 +23,18 @@ export default async function Missions({ searchParams }: { searchParams: Promise
         <h1 className="titre-page">Missions</h1>
         <Link href="/missions/nouvelle" className="bouton-primaire">+ Nouvelle mission</Link>
       </div>
-      <div className="flex flex-wrap items-center gap-3 text-sm">
-        <div className="verre flex gap-1 rounded-full p-1">
-          <Link href={lien(statut, "miennes")} className={pastille(vue !== "toutes")}>Mes missions</Link>
-          <Link href={lien(statut, "toutes")} className={pastille(vue === "toutes")}>Toutes les missions</Link>
-        </div>
-        <div className="verre flex gap-1 rounded-full p-1">
+      {/* Filtres : à qui sont les missions, puis leur statut */}
+      <div className="carte flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3 text-sm">
+        <Groupe libelle="Afficher">
+          <Choix href={lien(statut, "miennes")} actif={vue !== "toutes"}>Mes missions</Choix>
+          <Choix href={lien(statut, "toutes")} actif={vue === "toutes"}>Toutes les missions</Choix>
+        </Groupe>
+        <span className="hidden h-6 w-px bg-slate-200 sm:block" />
+        <Groupe libelle="Statut">
           {["ouverte", "pourvue", "fermee", "toutes"].map((s) => (
-            <Link key={s} href={lien(s, vue)} className={pastille(s === statut)}>{LIBELLES[s] ?? "Tous statuts"}</Link>
+            <Choix key={s} href={lien(s, vue)} actif={s === statut}>{LIBELLES_PLURIEL[s]}</Choix>
           ))}
-        </div>
+        </Groupe>
       </div>
       <div className="overflow-x-auto carte">
         <table className="w-full text-sm">
@@ -59,5 +61,22 @@ export default async function Missions({ searchParams }: { searchParams: Promise
         </table>
       </div>
     </div>
+  );
+}
+
+function Groupe({ libelle, children }: { libelle: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-xs font-semibold text-slate-400">{libelle}</span>
+      <div className="flex flex-wrap gap-1 rounded-full bg-slate-100/80 p-1">{children}</div>
+    </div>
+  );
+}
+
+function Choix({ href, actif, children }: { href: string; actif: boolean; children: React.ReactNode }) {
+  return (
+    <Link href={href} className={`rounded-full px-3.5 py-1 font-medium transition ${actif ? "bg-white text-nuit shadow-sm ring-1 ring-slate-200" : "text-slate-500 hover:text-nuit"}`}>
+      {children}
+    </Link>
   );
 }

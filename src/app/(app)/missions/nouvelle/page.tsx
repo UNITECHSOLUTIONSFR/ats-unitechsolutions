@@ -5,11 +5,10 @@ export default async function NouvelleMission() {
   await exigerUtilisateur();
   return (
     <div className="max-w-3xl space-y-4">
-      <h1 className="titre-page">Nouvelle mission</h1>
-      <p className="text-zinc-600">
-        Collez le besoin du client tel que vous l&apos;avez reçu. L&apos;outil en extrait les compétences demandées, puis
-        classe les consultants. Vous pourrez ajuster les exigences ensuite.
-      </p>
+      <div>
+        <h1 className="titre-page">Nouvelle mission</h1>
+        <p className="sous-titre mt-1">Importez la fiche du client : l&apos;outil la lit, vous vérifiez, puis il classe les consultants avec un score expliqué.</p>
+      </div>
       <FormulaireMission />
     </div>
   );

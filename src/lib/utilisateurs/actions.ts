@@ -40,7 +40,7 @@ export async function ajouterUtilisateur(_e: EtatUtilisateur, formData: FormData
 
   const { error } = await supabase.from("utilisateurs").insert({ id, email, nom_affiche: nom, role, actif: true });
   if (error) return { erreur: `Enregistrement impossible : ${error.message}` };
-  revalidatePath("/parametres");
+  revalidatePath("/parametres/utilisateurs");
   return { message: `${email} peut maintenant se connecter (lien envoyé à chaque connexion).` };
 }
 
@@ -55,5 +55,5 @@ export async function modifierUtilisateur(formData: FormData) {
   } else if (action === "actif") {
     await supabase.from("utilisateurs").update({ actif: formData.get("valeur") === "true" }).eq("id", id);
   }
-  revalidatePath("/parametres");
+  revalidatePath("/parametres/utilisateurs");
 }

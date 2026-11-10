@@ -45,6 +45,7 @@ export default function PanneauFiche({ id, onFermer }: { id: string; onFermer: (
 
   const ancienne = disponibiliteAncienne(fiche?.disponibilite_maj_le);
   const word = fiche?.documents.find((d) => d.type === "word_nominatif");
+  const email = fiche?.documents.find((d) => d.type === "email");
   const pdf = fiche?.documents.find((d) => d.type === "pdf_anonyme");
   const initiales = fiche ? `${fiche.prenom?.[0] ?? ""}${fiche.nom?.[0] ?? ""}`.replace("—", "").toUpperCase() : "";
 
@@ -76,8 +77,10 @@ export default function PanneauFiche({ id, onFermer }: { id: string; onFermer: (
             {/* Actions rapides */}
             <div className="grid grid-cols-4 gap-2">
               <Action href={fiche.telephone ? `tel:${fiche.telephone.replace(/\s/g, "")}` : undefined} libelle="Appeler" icone="☎" />
-              <Action href={fiche.email ? `mailto:${fiche.email}` : undefined} libelle="Email" icone="✉" />
-              <Action href={word?.url ?? undefined} libelle="CV Word" icone="W" externe />
+              <Action href={fiche.email ? `mailto:${fiche.email}` : undefined} libelle="Écrire" icone="@" />
+              {word || !email
+                ? <Action href={word?.url ?? undefined} libelle="CV Word" icone="W" externe />
+                : <Action href={email.url ?? undefined} libelle="Email reçu" icone="✉" externe />}
               <Action href={pdf?.url ?? undefined} libelle="PDF anonyme" icone="PDF" externe />
             </div>
 

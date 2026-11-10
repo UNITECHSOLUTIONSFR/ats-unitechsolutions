@@ -35,7 +35,7 @@ interface Props {
   lignes: LigneTableau[];
   estAdmin: boolean;
   /** Liens SharePoint par fiche consultant : Word Unitech et PDF anonymisé. */
-  documents: Record<string, { word?: string; pdf?: string }>;
+  documents: Record<string, { word?: string; email?: string; pdf?: string }>;
   /** Vrai tant que seules les 100 premières lignes sont arrivées. */
   chargementPartiel?: boolean;
 }
@@ -199,7 +199,7 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
               {entetes.map((e) => {
                 const actif = !!filtres[e] || tri?.colonne === e;
                 return (
-                  <th key={e} className={`${largeur(champs[e])} sticky top-0 z-20 bg-white/95 p-0 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 backdrop-blur-xl`}>
+                  <th key={e} className={`${largeur(champs[e])} sticky top-0 z-20 bg-white/95 p-0 text-left text-[13px] font-semibold text-slate-500 backdrop-blur-xl`}>
                     <button
                       onClick={(ev) => {
                         const r = ev.currentTarget.getBoundingClientRect();
@@ -231,18 +231,22 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
                   <td className={`sticky left-0 z-10 border-t border-slate-100/80 px-4 py-2.5 ${cochee ? "bg-marque-50" : "bg-white group-hover:bg-[#f3f6fc]"}`}>
                     <div className="flex items-center gap-2">
                       <input type="checkbox" checked={cochee} onChange={() => basculer(l.id)} className="accent-marque-600" aria-label={`Ligne ${l.position}`} />
-                      <span className="w-9 text-right text-[11px] tabular-nums text-slate-300">{l.position}</span>
+                      <span className="w-9 text-right text-[13px] tabular-nums text-slate-400">{l.position}</span>
                       {l.consultant_id ? (
                         <button type="button" onClick={() => setFicheOuverte(l.consultant_id)} title="Ouvrir la fiche" className="text-zinc-400 hover:text-marque-600">
                           <IconeFiche className="h-4 w-4" />
                         </button>
                       ) : <span className="w-4" />}
                       {l.consultant_id && documents[l.consultant_id]?.word && (
-                        <a href={documents[l.consultant_id].word} target="_blank" rel="noreferrer" title="CV Word Unitech (SharePoint)"
-                          className="rounded-md bg-marque-50 px-1.5 py-0.5 text-[10px] font-bold text-marque-700 hover:bg-marque-100">W</a>
+                        <a href={documents[l.consultant_id].word} target="_blank" rel="noreferrer" title="Ouvrir le CV Word (SharePoint)"
+                          className="rounded-md bg-marque-50 px-1.5 py-0.5 text-[10px] font-bold text-marque-700 hover:bg-marque-100">Word</a>
+                      )}
+                      {l.consultant_id && documents[l.consultant_id]?.email && (
+                        <a href={documents[l.consultant_id].email} target="_blank" rel="noreferrer" title="Ouvrir l'email de candidature (Outlook)"
+                          className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 hover:bg-amber-100">Email</a>
                       )}
                       {l.consultant_id && documents[l.consultant_id]?.pdf && (
-                        <a href={documents[l.consultant_id].pdf} target="_blank" rel="noreferrer" title="PDF anonymisé (SharePoint)"
+                        <a href={documents[l.consultant_id].pdf} target="_blank" rel="noreferrer" title="Ouvrir le PDF anonymisé (SharePoint)"
                           className="rounded-md bg-marque-50 px-1.5 py-0.5 text-[10px] font-bold text-marque-700 hover:bg-marque-100">PDF</a>
                       )}
                     </div>
@@ -325,7 +329,7 @@ function Cellule({ valeur, champ }: { valeur: string; champ?: ChampFiche }) {
   if (/^https?:\/\//i.test(valeur)) {
     return <a href={valeur} target="_blank" rel="noreferrer" className="block truncate text-marque-700 hover:underline" title={valeur}>{valeur.replace(/^https?:\/\/(www\.)?/i, "")}</a>;
   }
-  if (champ === "statut" || champ === "disponibilite") return <span className={classePastille(valeur)}>{valeur}</span>;
+  if (champ === "statut" || champ === "disponibilite") return <span className={`${classePastille(valeur)} text-[13px]`}>{valeur}</span>;
   return <span className="block truncate" title={valeur.length > 20 ? valeur : undefined}>{valeur}</span>;
 }
 
