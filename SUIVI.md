@@ -2,28 +2,34 @@
 
 Dernière mise à jour : 9 novembre 2026
 
-## Où on en est
-**Étape 0 — Cadrage** terminée : brief enregistré (`BRIEF.md`), règles du projet (`CLAUDE.md`), guide de préparation (`GUIDE_PREPARATION.md`).
-**En attente** : que tu suives `GUIDE_PREPARATION.md` (parties 1 à 5). Les trois questions ont reçu leur réponse ; la partie 3 du guide a été réécrite en pas-à-pas d'administration Microsoft 365. Ensuite je démarre l'étape 1.
+## Où on en est (10 novembre 2026)
+Toutes les tâches réalisables sans action de l'utilisatrice sont **terminées et en ligne**. Restent en attente : les actions listées ci-dessous (« En attente de l'utilisatrice »).
 
 ## Plan des 13 étapes
 
 | # | Étape | Statut | Jalon |
 |---|---|---|---|
-| 0 | Cadrage (brief, règles, guide de préparation) | ✅ Terminé | |
-| 1 | Préparation des comptes (vérification du guide) | 🔄 En cours | |
-| 2 | Squelette en ligne (Next.js + connexion + Vercel) | 🟡 Code prêt et testé ; mise en ligne dès que Vercel et Supabase sont prêts | |
-| 3 | Base de données (schéma, RLS, rôles, référentiel) | 🟡 Schéma écrit et testé sur base temporaire ; à créer dans Supabase | |
-| 4 | Import du fichier Excel de suivi | 🟡 Lecture + rapport prêts et testés ; attend la copie .xlsx | |
-| 5 | Connexion SharePoint + association Word-PDF sur 20 consultants | 🔄 En cours : module prêt et testé ; lecture réelle bloquée (permission Microsoft à consentir) | **Jalon A** |
-| 6 | Structuration IA : comparatif Haiku / Sonnet + estimation | 🟡 Module IA prêt (sans appel réel) | **Jalon B** |
-| 7 | Import complet des ~2 000 CV (Batch API) | ⬜ À faire | |
-| 8 | Interface principale + administration + export Excel | 🟡 Tableau de bord, liste/recherche et fiche consultant prêts ; administration et export à faire | |
-| 9 | Matching des missions + suivi des propositions | 🟡 Écrans prêts (saisie, exigences ajustables, classement, suivi) ; test réel dès que Supabase est prêt | **Jalon C** |
-| 10 | Synchronisation nocturne + rapport du matin | ⬜ À faire | |
-| 12 | Sécurité et RGPD (revue complète) | ⬜ À faire | **Jalon D** |
-| 13 | Mise en service (guides, restauration, invitation) | ⬜ À faire | |
-| 11 → Phase 2 | Candidatures par email (`recrutement@`) — **reportée après la mise en service de la V1** | ⏸ Phase 2 | |
+| 0 | Cadrage | ✅ Terminé | |
+| 1 | Préparation des comptes | ✅ Terminé (GitHub, Vercel, Supabase Londres, Anthropic, Entra) | |
+| 2 | Squelette en ligne | ✅ En ligne, connexion par lien magique | |
+| 3 | Base de données | ✅ 18 tables, RLS partout, testée | |
+| 4 | Import du fichier Excel | ✅ 3 897 fiches, tableau de suivi (vues par domaine), corrections emails, doublons supprimés | |
+| 5 | Connexion SharePoint + association Word ↔ PDF | ✅ Lecture seule ; 501 associations puis synchro de nuit | Jalon A : **validé** (association par nom de fichier acceptée) |
+| 6 | Structuration IA | ✅ Haiku 5.5 en lot ; 323 CV analysés pour 0,17 $ | Jalon B : **validé de fait** (Haiku retenu) |
+| 7 | Analyse de tous les CV | ✅ Lancée ; le reste est repris chaque nuit | |
+| 8 | Interface + administration + export Excel | ✅ Écran Consultants (panneau de fiche), CV SharePoint, cas à vérifier, coûts et réglages, synchronisations | |
+| 9 | Matching des missions | ✅ En ligne | **Jalon C : en attente** (3 missions passées à fournir) |
+| 10 | Synchronisations de nuit + rapport du matin | ✅ Excel (l'Excel fait foi), CV SharePoint, emails ; rapport sur l'accueil | |
+| 11 | Candidatures par email | ✅ Boîte ATS Candidatures, relève horaire ; historique à copier | |
+| 12 | Sécurité et RGPD | ✅ Export, effacement, purge 24 mois ; mention et registre rédigés (`RGPD.md`) | **Jalon D : en attente** de validation |
+| 13 | Mise en service | 🟡 Guides prêts (`GUIDE_EXPLOITATION.md`, `GUIDE_UTILISATEUR.md`) ; reste : test de restauration, invitation de l'équipe | |
+
+## En attente de l'utilisatrice
+1. Copier l'historique des emails (2-3 semaines) du groupe recrutement dans la boîte ATS Candidatures, puis Paramètres → Candidatures email → « Traiter les nouveaux emails » (relancer tant qu'il en reste).
+2. Jalon C : 3 missions passées avec les bons profils.
+3. Jalon D : valider `RGPD.md` (mention, registre) et compléter l'adresse de contact RGPD ; ajouter la mention à la réponse automatique de recrutement@.
+4. Test de restauration de sauvegarde (procédure dans `GUIDE_EXPLOITATION.md` § 7) et invitation de l'équipe.
+5. Bascule de fin de transition : décider la date où l'ATS devient la seule référence (la synchronisation Excel sera alors arrêtée).
 
 ## Changement de périmètre (6 novembre 2026, à la demande de l'utilisatrice)
 - **V1** = import du fichier Excel et des CV SharePoint, synchronisation de nuit, saisie manuelle d'une mission et matching avec les CV existants, interface, sécurité, mise en service.
@@ -104,6 +110,7 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 | D8 | **Haiku et Sonnet 5.5** : thinking désactivé ou `effort: low` pour les extractions. | La réflexion est facturée comme sortie ; inutile pour de l'extraction. |
 
 ## Coûts IA réels
+| 10/11/2026 | Analyse de 323 CV (lot Haiku 5.5) | 0,17 $ |
 | Date | Traitement | Coût réel |
 |---|---|---|
 | — | — | 0 $ |

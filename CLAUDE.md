@@ -7,9 +7,10 @@
 - ATS interne (suivi et matching de candidats) pour Unitech Solution, porté par une personne **non développeuse**.
 - Existant : fichier Excel de suivi (M365), ~2 000 CV dans SharePoint (Word nominatif + PDF anonymisé), 200 à 500 candidatures/mois.
 - L'utilisatrice est **elle-même administratrice Microsoft 365** : les réglages Entra ID / Exchange / SharePoint se font avec elle, en pas-à-pas.
-- **Périmètre V1 (décision du 6/11/2026)** : import Excel + CV SharePoint, synchro de nuit, mission saisie à la main + matching, interface, sécurité, mise en service. La **liaison email** (`recrutement@unitechsolutions.fr`, ancienne étape 11) est reportée en **phase 2**. En V1, accès SharePoint en **lecture seule**.
+- **Périmètre réalisé (10/11/2026)** : import Excel, CV SharePoint, synchronisations de nuit (Excel qui fait foi pendant la transition, CV, emails), missions + matching, interface, RGPD. Emails : le groupe `recrutement@` est copié (règle Exchange) dans la boîte partagée `ats-candidatures@`, seule boîte lisible par l'outil (RBAC Exchange « Application Mail.Read »). Accès SharePoint en **lecture seule**.
+- **Tâches planifiées** : Vercel Cron (`vercel.json`) → `/api/cron/excel` (2 h), `/api/cron/cv` (2 h 30), `/api/cron/emails` (toutes les heures), protégées par `CRON_SECRET`.
 - Les CV SharePoint sont rangés **par métier** (un dossier par métier) ; CV reçus par email déposés dans le dossier métier détecté, sinon `À classer`.
-- Connexion des équipes : comptes Microsoft 365 (fournisseur Azure de Supabase), réservée au groupe Entra « ATS – Utilisateurs ».
+- Connexion des équipes : **lien magique** (inscription libre fermée, invitation par un admin) ; connexion Microsoft possible plus tard.
 - Personne en interne ne maintiendra l'outil : **simple, robuste, documenté, peu coûteux**.
 - **Tout en français** : interface, explications, documentation, messages de commit.
 
@@ -23,8 +24,9 @@
 7. Tenir CLAUDE.md et SUIVI.md à jour à chaque fin d'étape.
 8. Un commit clair par étape, poussé. Fin de session : résumé en 3 lignes + prochaine étape.
 9. Signaler avant d'agir toute demande qui contredit le brief ou augmente nettement les coûts.
-10. **Quand l'utilisatrice pose une question, y répondre d'abord, littéralement, sans rien modifier.** N'agir qu'ensuite, si elle le demande.
-11. Elle veut avancer **vite** : réponses courtes, pas de détours.
+10. **Ne rien publier ni lancer sans son go explicite** quand elle l'a demandé ; montrer un aperçu (capture) avant tout changement visuel.
+11. **Quand l'utilisatrice pose une question, y répondre d'abord, littéralement, sans rien modifier.** N'agir qu'ensuite, si elle le demande.
+12. Elle veut avancer **vite** : réponses courtes, pas de détours.
 
 ## 3. Architecture (outils autorisés, aucun autre sans accord)
 | Brique | Outil |
