@@ -1,10 +1,12 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { PROMPT_VERSION, type ProfilCV } from "@/lib/ai";
+import { signalerMissionsCorrespondantes } from "@/lib/matching/nouvelle-fiche";
 
 /**
  * Enregistre la fiche de compétences d'un consultant (profil + compétences rattachées au référentiel).
  * `correspondance` : nom de compétence extrait → identifiant du référentiel (voir resoudreCompetences).
+ * Le profil est ensuite comparé aux missions ouvertes (signalement au-dessus du seuil).
  */
 export async function enregistrerProfil(
   supabase: SupabaseClient,
@@ -29,5 +31,6 @@ export async function enregistrerProfil(
   if (lignes.size) {
     await supabase.from("consultant_competences").insert([...lignes].map(([competence_id, v]) => ({ consultant_id: consultantId, competence_id, ...v })));
   }
+  await signalerMissionsCorrespondantes(supabase, consultantId);
   return true;
 }

@@ -12,6 +12,7 @@ export default async function LayoutParametres({ children }: { children: React.R
         <Link href="/parametres/analyse-cv" className="rounded-full bg-white px-3 py-1 ring-1 ring-zinc-300 hover:bg-zinc-50">Analyse des CV</Link>
         <Link href="/parametres/emails" className="rounded-full bg-white px-3 py-1 ring-1 ring-zinc-300 hover:bg-zinc-50">Candidatures email</Link>
         <Link href="/parametres/synchronisations" className="rounded-full bg-white px-3 py-1 ring-1 ring-zinc-300 hover:bg-zinc-50">Synchronisations</Link>
+        <Link href="/parametres/couts" className="rounded-full bg-white px-3 py-1 ring-1 ring-zinc-300 hover:bg-zinc-50">Coûts et réglages</Link>
       </nav>
       {children}
     </div>
