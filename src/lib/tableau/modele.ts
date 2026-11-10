@@ -13,7 +13,7 @@ export function statutDepuisTexte(t: string | null): StatutFiche {
   const s = (t ?? "").toLowerCase();
   if (/mission/.test(s)) return "en_mission";
   if (/inactif|parti|archiv/.test(s)) return "inactif";
-  if (/consultant|salari|interne|cdi/.test(s)) return "consultant";
+  // Jamais « consultant » depuis l'Excel : il ne contient que des candidats (« CDI », « Freelance » = type de contrat).
   return "candidat";
 }
 

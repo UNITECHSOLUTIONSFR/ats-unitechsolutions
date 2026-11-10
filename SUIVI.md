@@ -137,3 +137,8 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Fait : statut de mission enregistré automatiquement (« Enregistré ✓ ») ; recherche : badge « mot dans le CV » + case pour l'exclure ; CV Unitech générés conservés (table `cv_unitech_generes`) et listés sur la fiche et la carte mission ; lien « Email » remplacé par « CV reçu » (fichier copié dans SharePoint, `Candidatures reçues/<mois>`).
 - Testé : 153 tests, règles RLS (21), build.
 - Suite : 522 CV de l'historique du groupe sans fichier (accès groupe retiré) — récupérables si Group.Read.All est remis temporairement (à décider).
+
+### 10/11/2026 — Correction des statuts
+- Fait : « CDI / Freelance » dans l'Excel ne donne plus « consultant » ; 259 fiches remises en « candidat » (historique `correction_statut`, liste d'origine sauvegardée). « En mission » = déjà en mission, pas disponible.
+- Testé : test du statut lu dans l'Excel ; contrôle en base (4 259 candidats, 72 en mission, 2 inactifs).
+- Suite : rien.

@@ -37,6 +37,9 @@ Choisir des consultants (fonction ou compétence, disponibilité, statut) → «
 ## Pendant la transition
 Continuez à remplir le fichier Excel : il est relu chaque nuit et reçoit les fiches créées dans l'outil. Les CV déposés dans SharePoint (« UNITECH SOLUTIONS - CV Prénom Nom - Métier » et « … - CV TRI - … ») et les candidatures envoyées à recrutement@ sont traités automatiquement.
 
+## Statuts
+**Candidat** : toute personne du vivier (l'Excel ne contient que des candidats ; « CDI », « Freelance » y décrivent le contrat). **En mission** : déjà en mission, donc pas disponible pour nous. **Consultant** : uniquement saisi à la main dans l'outil. **Inactif** : marqué inactif, parti ou archivé.
+
 ## Pastilles
 🟢 disponible ou retenu · 🟠 à vérifier · 🔴 alerte · ⚪ inactif
 

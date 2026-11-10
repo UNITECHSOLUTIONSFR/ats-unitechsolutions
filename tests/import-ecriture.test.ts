@@ -124,3 +124,11 @@ describe("écriture de l'import", () => {
     expect(tables.consultants).toHaveLength(1);
   });
 });
+
+import { statutDepuisTexte } from "@/lib/tableau/modele";
+describe("statut lu dans l'Excel", () => {
+  it("« CDI » ou « Freelance » restent des candidats ; « En mission » = déjà en mission", () => {
+    for (const t of ["Freelance - CDI", "CDI", "Free/CDI", "en CDI avec 1 mois de préavis", "consultant", null]) expect(statutDepuisTexte(t)).toBe("candidat");
+    expect(statutDepuisTexte("En Mission")).toBe("en_mission");
+  });
+});
