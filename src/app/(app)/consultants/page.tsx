@@ -45,10 +45,10 @@ export default async function TableauDeSuivi({ searchParams }: { searchParams: P
     if (!data || data.length < 1000) break;
   }
 
-  // Fiches créées hors Excel (emails, CV SharePoint) : ajoutées en fin de tableau, sous l'onglet de leur origine.
+  // Fiches créées hors Excel (emails, CV SharePoint) : en haut du tableau, les plus récentes d'abord, et sous l'onglet de leur origine.
   const relies = new Set(lignes.map((l) => l.consultant_id).filter(Boolean));
-  const { data: horsExcel } = await supabase.from("consultants").select("*").neq("source", "import_excel").order("created_at");
-  lignes.push(...lignesHorsExcel(
+  const { data: horsExcel } = await supabase.from("consultants").select("*").neq("source", "import_excel").order("created_at", { ascending: false });
+  lignes.unshift(...lignesHorsExcel(
     (horsExcel ?? []).filter((c) => !relies.has(c.id)) as FicheHorsExcel[],
     onglet.entetes,
     Math.max(0, ...lignes.map((l) => l.position)) + 1,
