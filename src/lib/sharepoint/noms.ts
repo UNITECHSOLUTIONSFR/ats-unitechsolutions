@@ -3,9 +3,10 @@ import { sansAccents } from "@/lib/metier/texte";
 
 /**
  * Analyse des noms de fichiers CV.
- *  Word nominatif : « Unitech Solution, Prénom Nom, Fonction.docx »
- *  PDF anonymisé  : « Unitech Solution, Trigramme, Fonction.pdf »
- * Provisoire : à calibrer sur les vrais noms observés dans SharePoint.
+ * Convention réelle observée dans SharePoint (novembre 2026) :
+ *  Word nominatif : « UNITECH SOLUTIONS - CV Prénom Nom - Métier.docx »
+ *  PDF anonymisé  : « UNITECH SOLUTIONS - CV TRI - Métier.pdf »
+ * L'ancienne forme à virgules (« Unitech Solution, Prénom Nom, Fonction ») reste reconnue.
  */
 
 export interface NomAnalyse {
@@ -20,6 +21,8 @@ export interface NomAnalyse {
 }
 
 const PREFIXE = /^\s*unitech[\s_-]*solutions?\s*[,;_–-]\s*/i;
+/** Séparateurs entre identité et fonction : « - » entouré d'espaces (convention actuelle) ou virgule. */
+const SEPARATEUR = /\s+[-–]\s+|\s*[-–]\s+(?=\S)|\s*,\s*/;
 
 export function analyserNomFichier(nomFichier: string): NomAnalyse {
   const point = nomFichier.lastIndexOf(".");
@@ -31,12 +34,12 @@ export function analyserNomFichier(nomFichier: string): NomAnalyse {
 
   const aPrefixe = PREFIXE.test(base);
   const reste = base.replace(PREFIXE, "");
-  const morceaux = reste.split(/\s*,\s*/).filter(Boolean);
-  const identite = (morceaux[0] ?? "").trim();
+  const morceaux = reste.split(SEPARATEUR).filter(Boolean);
+  const identite = (morceaux[0] ?? "").trim().replace(/^CV[\s_]+/i, "").replace(/_/g, " ").trim();
   const fonction = morceaux.slice(1).join(", ").trim() || null;
 
   const tri = sansAccents(identite).replace(/\s+/g, "");
-  if (/^[A-Za-z]{3}$/.test(tri) && identite.length <= 4) {
+  if (/^[A-Za-z]{2,4}\d?$/.test(tri) && identite.length <= 5 && (identite === identite.toUpperCase() || type === "pdf_anonyme")) {
     return { ...vide, trigramme: tri.toUpperCase(), fonction, conforme: aPrefixe && !!fonction };
   }
   const { prenom, nom } = separerPrenomNom(identite);

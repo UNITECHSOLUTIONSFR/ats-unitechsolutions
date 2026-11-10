@@ -77,4 +77,13 @@ describe("écriture de l'import", () => {
     expect(bilan.crees).toBe(0);
     expect(tables.consultants).toHaveLength(1);
   });
+
+  it("synchronisation : l'Excel fait foi et remplace les valeurs de la fiche", async () => {
+    const { client, tables } = baseSimulee({
+      consultants: [{ id: "a", prenom: "Jean", nom: "Dupont", email: "jean@ex.fr", telephone_e164: "+33600000000", disponibilite: "Mars", statut: "candidat" }],
+    });
+    await ecrireFiches(client, [fiche({ email: "jean@ex.fr", telephone_e164: "+33611111111", disponibilite: "Immédiate", statut_texte: "En mission" })], null, { excelFaitFoi: true });
+    expect(tables.consultants[0]).toMatchObject({ telephone_e164: "+33611111111", disponibilite: "Immédiate", statut: "en_mission" });
+    expect(tables.consultants_historique[0].source).toBe("synchro_excel");
+  });
 });

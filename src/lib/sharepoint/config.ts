@@ -11,6 +11,8 @@ export const SHAREPOINT = {
   nomsBibliotheque: ["Documents partagés", "Documents", "Shared Documents"],
   /** Dossier racine des CV, un sous-dossier par métier. */
   dossierCV: "General/0 - Recrutement/Consultant/CV Consultants",
+  /** Fichier Excel de suivi (Excel Online), synchronisé chaque nuit pendant la transition. */
+  fichierSuivi: "General/0 - Recrutement/0 - Sourcing général/Sourcing_General_par_metier.xlsx",
 } as const;
 
 /** Texte envoyé à l'IA : tronqué à 30 000 caractères (règle de coût du brief). */

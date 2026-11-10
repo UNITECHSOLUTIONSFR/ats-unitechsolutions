@@ -12,12 +12,17 @@ export interface BilanEcriture {
 }
 
 /**
- * Écrit les fiches dans la base. Dédoublonnage avec l'existant : même ligne d'origine du fichier
+ * Écrit les fiches dans la base (import ponctuel ou synchronisation de nuit avec « l'Excel fait foi »). Dédoublonnage avec l'existant : même ligne d'origine du fichier
  * (réimport du même fichier, y compris sans email ni téléphone), puis email, puis téléphone.
  * Un doublon met à jour les champs vides et garde l'historique ; un même nom avec des coordonnées
  * différentes crée une alerte « doublon possible ». Jamais de seconde fiche pour la même personne.
  */
-export async function ecrireFiches(supabase: SupabaseClient, fiches: FicheImport[], utilisateurId: string): Promise<BilanEcriture> {
+export async function ecrireFiches(
+  supabase: SupabaseClient,
+  fiches: FicheImport[],
+  utilisateurId: string | null,
+  options: { excelFaitFoi?: boolean } = {},
+): Promise<BilanEcriture> {
   const bilan: BilanEcriture = { crees: 0, misAJour: 0, alertes: 0, erreurs: [] };
   const existants: { id: string; prenom: string; nom: string; email: string | null; telephone_e164: string | null; [k: string]: unknown }[] = [];
   for (let debut = 0; ; debut += 1000) {
@@ -77,8 +82,13 @@ export async function ecrireFiches(supabase: SupabaseClient, fiches: FicheImport
       const modifications: Record<string, { avant: unknown; apres: unknown }> = {};
       const maj: Record<string, unknown> = {};
       for (const [k, v] of Object.entries(valeurs)) {
-        if (k === "statut" || v === null || v === "") continue;
-        if (existant[k] === null || existant[k] === undefined || existant[k] === "") {
+        if (v === null || v === "") continue;
+        if (k === "statut" && !options.excelFaitFoi) continue;
+        const vide = existant[k] === null || existant[k] === undefined || existant[k] === "";
+        // Synchronisation pendant la transition : l'Excel fait foi, ses valeurs remplacent celles de la fiche.
+        const remplace = options.excelFaitFoi && String(existant[k] ?? "") !== String(v);
+        if (k === "email" && remplace && parEmail.get(String(v)) && parEmail.get(String(v))!.id !== existant.id) continue; // email déjà pris
+        if (vide || remplace) {
           maj[k] = v;
           modifications[k] = { avant: existant[k] ?? null, apres: v };
         }
@@ -93,7 +103,7 @@ export async function ecrireFiches(supabase: SupabaseClient, fiches: FicheImport
         else {
           bilan.misAJour++;
           await supabase.from("consultants_historique").insert({
-            consultant_id: existant.id, source: "import_excel", modifications, par: utilisateurId,
+            consultant_id: existant.id, source: options.excelFaitFoi ? "synchro_excel" : "import_excel", modifications, par: utilisateurId,
           });
         }
       }

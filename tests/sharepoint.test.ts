@@ -10,6 +10,8 @@ import { listerFichiersCV, lireDelta, obtenirJeton } from "@/lib/sharepoint/grap
 describe("analyse des noms de fichiers", () => {
   it.each([
     ["Unitech Solution, Jean Dupont, Développeur Java.docx", "Jean", "Dupont", "JDU", "Développeur Java"],
+    ["UNITECH SOLUTIONS - CV Soukaina Najihi - Chef de projet MOE.docx", "Soukaina", "Najihi", "SNA", "Chef de projet MOE"],
+    ["UNITECH SOLUTIONS - CV Mouad OUAGAG - UX UI designer.docx", "Mouad", "OUAGAG", "MOU", "UX UI designer"],
     ["Unitech Solution, Jean-Marc Le Goff, Chef de projet.docx", "Jean-Marc", "Le Goff", "JLE", "Chef de projet"],
     ["Unitech Solution, Éloïse Gérard, Data Analyst.docx", "Éloïse", "Gérard", "EGE", "Data Analyst"],
     ["Unitech Solution, Marie DE LA TOUR, PMO.docx", "Marie", "DE LA TOUR", "MLA", "PMO"],
@@ -21,6 +23,8 @@ describe("analyse des noms de fichiers", () => {
 
   it.each([
     ["Unitech Solution, JDU, Développeur Java.pdf", "JDU", "Développeur Java"],
+    ["UNITECH SOLUTIONS - CV DKH - Test Lead.pdf", "DKH", "Test Lead"],
+    ["UNITECH SOLUTIONS - CV HMO - Ingénieur QA.pdf", "HMO", "Ingénieur QA"],
     ["Unitech Solution, jle, Chef de projet.pdf", "JLE", "Chef de projet"],
   ])("PDF anonymisé %s", (nom, tri, fonction) => {
     expect(analyserNomFichier(nom)).toMatchObject({ type: "pdf_anonyme", trigramme: tri, fonction, conforme: true });

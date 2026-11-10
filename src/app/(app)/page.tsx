@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { exigerUtilisateur } from "@/lib/acces";
+import { resumerRapport } from "@/lib/sync/resume";
+import { TACHES } from "@/lib/sync/taches";
 import { IconeAlerte, IconeMallette, IconePersonnes, IconePlus, IconeTableau } from "./icones";
 
 export default async function Accueil() {
@@ -16,6 +18,10 @@ export default async function Accueil() {
     compter("documents", ["type", "word_nominatif"]),
   ]);
   const prenom = (utilisateur.nomAffiche ?? "").split(" ")[0];
+  // Rapport du matin : traitements des dernières 24 heures.
+  const { data: nuit } = await supabase.from("executions").select("type, debut, statut, rapport")
+    .in("type", Object.values(TACHES).map((t) => t.type)).gte("debut", ilYa24h())
+    .order("debut", { ascending: false }).limit(10);
 
   return (
     <div className="space-y-8">
@@ -37,8 +43,22 @@ export default async function Accueil() {
         <Tuile titre="Consultants" valeur={consultants} lien="/consultants" Icone={IconePersonnes} teinte="from-marque-500 to-marque-700" />
         <Tuile titre="CV Unitech reliés (SharePoint)" valeur={lignes} lien="/cv" Icone={IconeTableau} teinte="from-sky-500 to-cyan-600" />
         <Tuile titre="Missions ouvertes" valeur={missions} lien="/missions" Icone={IconeMallette} teinte="from-violet-500 to-fuchsia-600" />
-        <Tuile titre="Cas à vérifier" valeur={alertes} Icone={IconeAlerte} teinte="from-amber-400 to-orange-500" />
+        <Tuile titre="Cas à vérifier" valeur={alertes} lien="/alertes" Icone={IconeAlerte} teinte="from-amber-400 to-orange-500" />
       </div>
+
+      <section className="carte p-5">
+        <h2 className="font-semibold">Rapport des dernières 24 heures</h2>
+        <ul className="mt-2 space-y-1 text-sm">
+          {(nuit ?? []).map((e, k) => (
+            <li key={k} className={e.statut === "echec" ? "text-red-700" : "text-zinc-600"}>
+              <span className="text-zinc-400">{new Date(e.debut).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>{" "}
+              {resumerRapport(e.type, e.rapport as Record<string, unknown>)}
+            </li>
+          ))}
+          {!nuit?.length && <li className="text-zinc-500">Aucun traitement automatique depuis hier.</li>}
+        </ul>
+        {alertes > 0 && <Link href="/alertes" className="mt-3 inline-block text-sm font-medium text-marque-700 hover:underline">{alertes} cas à vérifier →</Link>}
+      </section>
     </div>
   );
 }
@@ -58,4 +78,9 @@ function Tuile({ titre, valeur, lien, Icone, teinte }: {
     </div>
   );
   return lien ? <Link href={lien}>{contenu}</Link> : contenu;
+}
+
+/** Date d'il y a 24 heures (rapport du matin). */
+function ilYa24h(): string {
+  return new Date(Date.now() - 86_400_000).toISOString();
 }

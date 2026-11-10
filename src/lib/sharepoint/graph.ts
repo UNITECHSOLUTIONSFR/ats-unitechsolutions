@@ -13,6 +13,7 @@ export interface ElementDrive {
   size?: number;
   webUrl?: string;
   lastModifiedDateTime?: string;
+  createdDateTime?: string;
   parentReference?: { driveId?: string; id?: string; path?: string };
   file?: { mimeType?: string; hashes?: Record<string, string> };
   folder?: { childCount?: number };
@@ -81,7 +82,7 @@ export async function listerEnfants(driveId: string, cheminDossier: string, fetc
   const elements: ElementDrive[] = [];
   let url: string | undefined =
     `drives/${driveId}/root:/${encoderChemin(cheminDossier)}:/children?$top=999` +
-    `&$select=id,name,size,webUrl,lastModifiedDateTime,parentReference,file,folder`;
+    `&$select=id,name,size,webUrl,lastModifiedDateTime,createdDateTime,parentReference,file,folder`;
   while (url) {
     const page: { value: ElementDrive[]; "@odata.nextLink"?: string } = await graphGet(url, { fetchFn });
     elements.push(...page.value);

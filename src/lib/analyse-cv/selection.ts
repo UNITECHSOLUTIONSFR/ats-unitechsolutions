@@ -13,6 +13,7 @@ export async function cvAAnalyser(supabase: SupabaseClient) {
       .from("documents")
       .select("id, consultant_id, sharepoint_drive_id, sharepoint_item_id, nom_fichier")
       .eq("type", "word_nominatif").eq("supprime_sharepoint", false).not("consultant_id", "is", null)
+      .not("sharepoint_drive_id", "like", "boite:%") // CV reçus par email : déjà analysés à la réception
       .order("modifie_sharepoint_le", { ascending: false })
       .range(debut, debut + 999);
     words.push(...((data ?? []) as typeof words));
