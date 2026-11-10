@@ -1,12 +1,15 @@
 import { exigerAdmin } from "@/lib/acces-admin";
 import { COUT_ESTIME_PAR_CV, cvAAnalyser } from "@/lib/analyse-cv/selection";
 import Boutons from "./boutons";
+import { changerDepotCVUnitech } from "@/lib/cv-unitech/actions";
 
 // Téléchargement et envoi d'environ 500 CV : jusqu'à 5 minutes.
 export const maxDuration = 300;
 
 export default async function AnalyseCV() {
   const { supabase } = await exigerAdmin();
+  const { data: reglage } = await supabase.from("reglages").select("valeur").eq("cle", "cv_unitech_depot_metier").maybeSingle();
+  const depotMetier = reglage?.valeur === true;
   const [aFaire, { count: analyses }, { data: enCours }, { data: derniere }] = await Promise.all([
     cvAAnalyser(supabase),
     supabase.from("profils").select("*", { count: "exact", head: true }),
@@ -32,6 +35,18 @@ export default async function AnalyseCV() {
         </p>
       )}
       <Boutons enCours={!!enCours?.length} aFaire={aFaire.length} />
+      <form action={changerDepotCVUnitech} className="carte flex flex-wrap items-center justify-between gap-4 p-5 text-sm">
+        <input type="hidden" name="actif" value={depotMetier ? "0" : "1"} />
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold text-nuit">CV Unitech (Word + PDF anonymisé)</div>
+          <p className="text-slate-500">
+            {depotMetier
+              ? "Les CV générés sont déposés dans le dossier métier de SharePoint, et les CV reçus par email sont traités chaque nuit."
+              : "Mode essai : les CV générés vont dans « Sauvegardes ATS / Essais CV Unitech ». Validez le rendu, puis activez le dépôt."}
+          </p>
+        </div>
+        <button className={depotMetier ? "bouton-secondaire" : "bouton-primaire"}>{depotMetier ? "Revenir au mode essai" : "Activer le dépôt dans les dossiers métier"}</button>
+      </form>
     </div>
   );
 }

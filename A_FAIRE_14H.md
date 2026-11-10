@@ -1,21 +1,18 @@
-# À voir ensemble à 14 h (actions de l'utilisatrice)
+# Actions de l'utilisatrice (à voir ensemble)
 
-1. **Relance automatique des synchronisations (GitHub)** — 3 minutes
-   - Pourquoi : les synchros Excel, CV et emails tournent seules la nuit et toutes les heures, sans moi.
-   - Vercel → projet → Settings → Environment Variables : créer une nouvelle valeur pour `CRON_SECRET` (une longue suite aléatoire), enregistrer, puis redéployer.
-   - GitHub → dépôt `ats-unitechsolutions` → Settings → Secrets and variables → Actions → New repository secret : nom `CRON_SECRET`, même valeur.
-   - Mettre la même valeur dans le secret réseau de la session Claude (hôte ats-unitechsolutions.vercel.app).
-   - Je vérifie ensuite le premier passage (onglet Actions du dépôt).
+1. **CV Unitech : valider le rendu** — 10 minutes
+   - Ouvrir SharePoint → General → 0 - Recrutement → **Sauvegardes ATS → Essais CV Unitech** : 10 essais (Word + PDF), dont 5 avec l'« Adéquation à la mission » (RATP, BPCE).
+   - Vérifier : mise en page, fidélité au CV d'origine (rien d'inventé), anonymisation du PDF.
+   - Si c'est bon : Paramètres → Analyse des CV → **« Activer le dépôt dans les dossiers métier »**. Les CV générés iront alors dans le bon dossier métier, et les CV reçus par email seront traités chaque nuit (10 par nuit, ≈ 0,005 $ chacun).
 
-2. **Module Email (prêt, envoi coupé)** — menu « Emails » — à valider avant tout envoi
-   - Relire le modèle « Mise à jour de disponibilité » et tester la sélection des destinataires.
-   - Exchange : autoriser l'outil à **envoyer** des emails depuis la seule boîte `ats-candidatures@` (rôle « Application Mail.Send » + « Application Mail.ReadWrite », limité à cette boîte, comme pour la lecture). Je fournis les commandes.
-   - Fonctionnement : **seul un administrateur déclenche un envoi**, dans l'application (Paramètres → Relance des disponibilités → « Lancer l'envoi »). L'envoi part aussitôt, par lots, jusqu'au bout. Rien n'est planifié et je ne peux lancer aucune campagne (une campagne non lancée par un admin n'est jamais envoyée).
-   - Ensuite : variable `EMAILS_ENVOI_ACTIF=1` dans Vercel (tables déjà créées), puis un **envoi test à 10 consultants**, lancé par toi.
+2. **Module Emails : brancher l'envoi** (quand tu le décides)
+   - Exchange : autoriser l'outil à **envoyer** depuis la seule boîte `ats-candidatures@` (je fournis les commandes, comme pour la lecture).
+   - Vercel : variable `EMAILS_ENVOI_ACTIF=1`, puis un **envoi test à 10 consultants**, lancé par toi.
 
-3. **Décisions à confirmer**
-   - Téléphones : une lettre « O » tapée à la place du zéro et « 33… » sans « + » sont désormais corrigés automatiquement (68 numéros corrigés).
-   - Les 32 candidatures en erreur de l'historique du groupe ne peuvent plus être relues (droit Group.Read.All retiré, comme prévu) : on les laisse.
+3. **Double authentification** : Paramètres → Double authentification (2 minutes).
 
-4. **Avant d'inviter l'équipe**
-   - Test avec un compte recruteur : inviter une adresse de test (rôle recruteur) et vérifier ensemble ce qu'elle voit.
+4. **Décision à confirmer** : correction automatique des téléphones (« 33… » sans « + », lettre O au lieu du zéro) — 68 numéros corrigés.
+
+5. **Avant d'inviter l'équipe** : inviter une adresse de test (rôle recruteur) et vérifier ensemble ce qu'elle voit.
+
+6. **Jalons** : C (3 missions passées pour valider le matching), D (relecture de la note RGPD, adresse de contact des candidats).

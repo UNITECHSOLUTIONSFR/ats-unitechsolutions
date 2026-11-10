@@ -22,3 +22,14 @@ export async function genererCVUnitechAction(_e: EtatCVUnitech, formData: FormDa
     return { erreur: (e as Error).message.slice(0, 300) };
   }
 }
+
+/** Interrupteur (administrateurs) : CV Unitech déposés dans les dossiers métier, ou dans le dossier d'essais. */
+export async function changerDepotCVUnitech(formData: FormData) {
+  const { exigerAdmin } = await import("@/lib/acces-admin");
+  const { utilisateur, supabase } = await exigerAdmin();
+  const actif = formData.get("actif") === "1";
+  await supabase.from("reglages").upsert({ cle: "cv_unitech_depot_metier", valeur: actif });
+  await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "modification", consultant_id: null, details: { reglage: "cv_unitech_depot_metier", valeur: actif } });
+  const { revalidatePath } = await import("next/cache");
+  revalidatePath("/parametres/analyse-cv");
+}
