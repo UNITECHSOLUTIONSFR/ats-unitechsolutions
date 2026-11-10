@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState, useTransition } from "react";
-import { chargerFiche, type FicheResume } from "@/lib/consultants/fiche";
+import type { FicheResume } from "@/lib/consultants/fiche";
 import { suivreProposition } from "@/lib/missions/actions";
 import { classePastille } from "@/lib/statuts";
 
@@ -14,14 +14,27 @@ const PROPOSITIONS: Record<string, string> = {
   propose: "Proposé", appele: "Appelé", envoye_client: "Envoyé au client", retenu: "Retenu", refuse: "Refusé",
 };
 
+// Fiches déjà ouvertes : réaffichées instantanément (puis rafraîchies en arrière-plan).
+const CACHE = new Map<string, FicheResume | null>();
+async function lireFiche(id: string, prechargement = false): Promise<FicheResume | null> {
+  const r = await fetch(`/api/fiche/${id}${prechargement ? "?prechargement" : ""}`, { cache: "no-store" });
+  const f = r.ok ? ((await r.json()) as FicheResume | null) : null;
+  CACHE.set(id, f);
+  return f;
+}
+/** Précharge une fiche (survol d'une ligne) pour qu'elle s'ouvre sans attente. */
+export function prechargerFiche(id: string) {
+  if (!CACHE.has(id)) lireFiche(id, true).catch(() => CACHE.delete(id));
+}
+
 /** Fiche complète dans un panneau à droite, sans quitter le tableau : contact, CV, compétences, missions. */
 export default function PanneauFiche({ id, onFermer }: { id: string; onFermer: () => void }) {
-  const [fiche, setFiche] = useState<FicheResume | null | undefined>(undefined);
+  const [fiche, setFiche] = useState<FicheResume | null | undefined>(() => CACHE.get(id));
   const [envoi, demarrer] = useTransition();
-  const recharger = useCallback(() => chargerFiche(id).then(setFiche), [id]);
+  const recharger = useCallback(() => lireFiche(id).then(setFiche), [id]);
   useEffect(() => {
     let actif = true;
-    chargerFiche(id).then((f) => { if (actif) setFiche(f); });
+    lireFiche(id).then((f) => { if (actif) setFiche(f); }).catch(() => { if (actif) setFiche(null); });
     return () => { actif = false; };
   }, [id]);
   useEffect(() => {

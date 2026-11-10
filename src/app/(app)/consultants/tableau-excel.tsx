@@ -9,7 +9,7 @@ import {
 } from "@/lib/tableau/modele";
 import { modifierCellules } from "@/lib/tableau/actions";
 import { classePastille } from "@/lib/statuts";
-import PanneauFiche from "./panneau-fiche";
+import PanneauFiche, { prechargerFiche } from "./panneau-fiche";
 import { IconeCopier, IconeCrayon, IconeExport, IconeFiche, IconeFiltre, IconeImport, IconePlus, IconeRecherche } from "../icones";
 
 const PAR_PAGE = 100;
@@ -185,24 +185,24 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
       )}
 
       <div className="carte max-h-[calc(100vh-15rem)] overflow-auto rounded-2xl">
-        <table className="w-max min-w-full border-separate border-spacing-0 text-sm">
+        <table className="w-max min-w-full border-separate border-spacing-0 text-[13px]">
           <thead>
             <tr>
-              <th className="sticky left-0 top-0 z-30 border-b border-slate-200/70 bg-white/90 px-3 py-2.5 text-left backdrop-blur-xl">
+              <th className="sticky left-0 top-0 z-30 bg-white/95 px-4 py-3 text-left backdrop-blur-xl">
                 <input type="checkbox" checked={toutesCochees} onChange={basculerPage} aria-label="Sélectionner la page" className="accent-marque-600" />
               </th>
               {entetes.map((e) => {
                 const actif = !!filtres[e] || tri?.colonne === e;
                 return (
-                  <th key={e} className={`${largeur(champs[e])} sticky top-0 z-20 border-b border-l border-slate-200/70 bg-white/90 p-0 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 backdrop-blur-xl`}>
+                  <th key={e} className={`${largeur(champs[e])} sticky top-0 z-20 bg-white/95 p-0 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400 backdrop-blur-xl`}>
                     <button
                       onClick={(ev) => {
                         const r = ev.currentTarget.getBoundingClientRect();
                         setFiltreOuvert(filtreOuvert?.colonne === e ? null : { colonne: e, x: Math.min(r.left, window.innerWidth - 300), y: r.bottom + 4 });
                       }}
-                      className="flex w-full items-center justify-between gap-3 px-3 py-3 hover:bg-white">
+                      className="group/entete flex w-full items-center justify-between gap-2 px-3 py-3 transition hover:text-nuit">
                       <span className="truncate" title={e}>{e}</span>
-                      <span className={`flex items-center gap-0.5 ${actif ? "text-marque-600" : "text-zinc-400"}`}>
+                      <span className={`flex items-center gap-0.5 transition ${actif ? "text-marque-600" : "text-slate-300 opacity-0 group-hover/entete:opacity-100"}`}>
                         {tri?.colonne === e && <span className="text-xs">{tri.sens === "asc" ? "▲" : "▼"}</span>}
                         <IconeFiltre className="h-3.5 w-3.5" />
                       </span>
@@ -217,15 +217,16 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
               const cochee = selection.has(l.id);
               return (
                 <tr key={l.id}
+                  onMouseEnter={l.consultant_id ? () => prechargerFiche(l.consultant_id!) : undefined}
                   onClick={(ev) => {
                     // Clic sur la ligne : fiche dans le panneau de droite (sauf case à cocher, lien ou cellule en édition).
                     if (l.consultant_id && !(ev.target as HTMLElement).closest("input, a, button")) setFicheOuverte(l.consultant_id);
                   }}
-                  className={`group cursor-pointer ${cochee ? "bg-marque-50" : "bg-white/80 even:bg-[#f6f8fd]/90 hover:bg-marque-50"}`}>
-                  <td className={`sticky left-0 z-10 border-b border-slate-100 px-3 py-2 ${cochee ? "bg-marque-50" : "bg-white group-even:bg-[#f6f8fd] group-hover:bg-marque-50"}`}>
+                  className={`group cursor-pointer ${cochee ? "bg-marque-50" : "bg-white/90 hover:bg-marque-50/70"}`}>
+                  <td className={`sticky left-0 z-10 border-t border-slate-100/80 px-4 py-2.5 ${cochee ? "bg-marque-50" : "bg-white group-hover:bg-[#f3f6fc]"}`}>
                     <div className="flex items-center gap-2">
                       <input type="checkbox" checked={cochee} onChange={() => basculer(l.id)} className="accent-marque-600" aria-label={`Ligne ${l.position}`} />
-                      <span className="w-9 text-right text-xs tabular-nums text-zinc-400">{l.position}</span>
+                      <span className="w-9 text-right text-[11px] tabular-nums text-slate-300">{l.position}</span>
                       {l.consultant_id ? (
                         <button type="button" onClick={() => setFicheOuverte(l.consultant_id)} title="Ouvrir la fiche" className="text-zinc-400 hover:text-marque-600">
                           <IconeFiche className="h-4 w-4" />
@@ -233,11 +234,11 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
                       ) : <span className="w-4" />}
                       {l.consultant_id && documents[l.consultant_id]?.word && (
                         <a href={documents[l.consultant_id].word} target="_blank" rel="noreferrer" title="CV Word Unitech (SharePoint)"
-                          className="rounded px-1 text-xs font-semibold text-marque-700 ring-1 ring-marque-200 hover:bg-marque-50">W</a>
+                          className="rounded-md bg-marque-50 px-1.5 py-0.5 text-[10px] font-bold text-marque-700 hover:bg-marque-100">W</a>
                       )}
                       {l.consultant_id && documents[l.consultant_id]?.pdf && (
                         <a href={documents[l.consultant_id].pdf} target="_blank" rel="noreferrer" title="PDF anonymisé (SharePoint)"
-                          className="rounded px-1 text-xs font-semibold text-marque-700 ring-1 ring-marque-200 hover:bg-marque-50">PDF</a>
+                          className="rounded-md bg-marque-50 px-1.5 py-0.5 text-[10px] font-bold text-marque-700 hover:bg-marque-100">PDF</a>
                       )}
                     </div>
                   </td>
@@ -246,7 +247,7 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
                     const v = affiche(e, l.valeurs[e]);
                     return (
                       <td key={e} onDoubleClick={() => setEdition({ id: l.id, colonne: e })}
-                        className={`${largeur(champs[e])} cursor-default border-b border-l border-slate-100 px-3 py-1.5 text-slate-700`}>
+                        className={`${largeur(champs[e])} cursor-default border-t border-slate-100/80 px-3 py-2.5 text-slate-700`}>
                         {enEdition ? (
                           <EditeurCellule valeur={l.valeurs[e] ?? ""}
                             onValider={(nv) => { setEdition(null); if (nv.trim() !== (l.valeurs[e] ?? "")) enregistrer([l.id], e, nv); }}
@@ -314,12 +315,14 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
 }
 
 function Cellule({ valeur, champ }: { valeur: string; champ?: ChampFiche }) {
-  if (!valeur) return <span className="text-zinc-300">—</span>;
+  if (!valeur) return null; // case vide : laissée blanche, plus lisible qu'un tiret
   if (champ === "email") return <a href={`mailto:${valeur}`} className="block truncate text-marque-700 hover:underline" title={valeur}>{valeur}</a>;
   if (/^https?:\/\//i.test(valeur)) {
     return <a href={valeur} target="_blank" rel="noreferrer" className="block truncate text-marque-700 hover:underline" title={valeur}>{valeur.replace(/^https?:\/\/(www\.)?/i, "")}</a>;
   }
   if (champ === "statut" || champ === "disponibilite") return <span className={classePastille(valeur)}>{valeur}</span>;
+  if (champ === "prenom" || champ === "nom" || champ === "nom_complet") return <span className="block truncate font-semibold text-nuit" title={valeur}>{valeur}</span>;
+  if (champ === "trigramme") return <span className="font-mono text-xs text-slate-400">{valeur}</span>;
   return <span className="block truncate" title={valeur.length > 20 ? valeur : undefined}>{valeur}</span>;
 }
 

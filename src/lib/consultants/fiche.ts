@@ -1,6 +1,6 @@
-"use server";
-
-import { exigerUtilisateur, journaliser } from "@/lib/acces";
+import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { journaliser } from "@/lib/acces";
 import { formaterTelephone } from "@/lib/metier/telephone";
 
 export interface FicheResume {
@@ -29,20 +29,21 @@ export interface FicheResume {
   missionsOuvertes: { id: string; intitule: string; client: string | null }[];
 }
 
-/** Fiche complète d'un consultant, pour le panneau latéral de l'écran Consultants. La consultation est journalisée. */
-export async function chargerFiche(id: string): Promise<FicheResume | null> {
-  const { utilisateur, supabase } = await exigerUtilisateur();
-  const [{ data: c }, { data: profil }, { data: comp }, { data: docs }, { data: props }, { data: alertes }] = await Promise.all([
+/** Fiche complète d'un consultant, pour le panneau latéral de l'écran Consultants (servie par /api/fiche/[id]). La consultation est journalisée. */
+export async function chargerFiche(supabase: SupabaseClient, utilisateurId: string | null, id: string): Promise<FicheResume | null> {
+  // Toutes les lectures en même temps.
+  const [{ data: c }, { data: profil }, { data: comp }, { data: docs }, { data: props }, { data: alertes }, { data: ouvertes }] = await Promise.all([
     supabase.from("consultants").select("*").eq("id", id).maybeSingle(),
     supabase.from("profils").select("resume, annees_experience, seniorite").eq("consultant_id", id).maybeSingle(),
     supabase.from("consultant_competences").select("annees, competences(nom_canonique)").eq("consultant_id", id).order("annees", { ascending: false, nullsFirst: false }),
     supabase.from("documents").select("type, nom_fichier, url_web, modifie_sharepoint_le").eq("consultant_id", id).eq("supprime_sharepoint", false).order("modifie_sharepoint_le", { ascending: false }),
     supabase.from("propositions").select("mission_id, statut, score, missions(intitule)").eq("consultant_id", id).order("updated_at", { ascending: false }),
     supabase.from("alertes").select("type").eq("consultant_id", id).eq("statut", "ouverte"),
+    supabase.from("missions").select("id, intitule, client").eq("statut", "ouverte").order("created_at", { ascending: false }),
   ]);
-  const { data: ouvertes } = await supabase.from("missions").select("id, intitule, client").eq("statut", "ouverte").order("created_at", { ascending: false });
+
   if (!c) return null;
-  await journaliser(supabase, utilisateur.id, "consultation", id, { ecran: "panneau" });
+  if (utilisateurId) await journaliser(supabase, utilisateurId, "consultation", id, { ecran: "panneau" });
   return {
     id: c.id, prenom: c.prenom, nom: c.nom, trigramme: c.trigramme, statut: c.statut,
     intitule_poste: c.intitule_poste, telephone: formaterTelephone(c.telephone_e164) || c.telephone_brut || "",
