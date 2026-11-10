@@ -31,7 +31,11 @@ export default function TableauExcel({ vues, vueActive, ongletId, entetes, champ
   const [lignes, setLignes] = useState(initiales);
   const [filtres, setFiltres] = useState<Filtres>({});
   const [recherche, setRecherche] = useState("");
-  const [tri, setTri] = useState<Tri | null>(null);
+  // Tri par défaut : ordre alphabétique des prénoms.
+  const [tri, setTri] = useState<Tri | null>(() => {
+    const colonnePrenom = Object.entries(champs).find(([, c]) => c === "prenom")?.[0];
+    return colonnePrenom ? { colonne: colonnePrenom, sens: "asc" } : null;
+  });
   const [page, setPage] = useState(0);
   const [selection, setSelection] = useState<Set<string>>(new Set());
   const [filtreOuvert, setFiltreOuvert] = useState<{ colonne: string; x: number; y: number } | null>(null);

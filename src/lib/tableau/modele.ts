@@ -118,8 +118,10 @@ export function filtrerEtTrier(
       if (!vals.has(v === "" ? VIDE : v)) return false;
     }
     if (!mots.length) return true;
+    // Recherche sur toutes les colonnes, sans accents ni majuscules ; un numéro se retrouve quel que soit son format.
     const tout = pli(Object.entries(l.valeurs).map(([c, v]) => `${v} ${affiche(c, v)}`).join(" "));
-    return mots.every((m) => tout.includes(m));
+    const chiffres = tout.replace(/\D/g, "");
+    return mots.every((m) => tout.includes(m) || (/^\+?\d[\d\s.]{3,}$/.test(m) && chiffres.includes(m.replace(/\D/g, "").replace(/^0/, ""))));
   });
   if (tri) {
     const f = tri.sens === "asc" ? 1 : -1;

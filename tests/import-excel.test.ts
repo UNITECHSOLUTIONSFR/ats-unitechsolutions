@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import ExcelJS from "exceljs";
 import { lignesHorsExcel } from "@/lib/tableau/hors-excel";
+import { filtrerEtTrier, type LigneTableau } from "@/lib/tableau/modele";
 import { analyserCaseEmail, fusionnerOnglets, corrigerOngletPrincipal, detecterColonnes, lireClasseur, preparerImport } from "@/lib/import/excel";
 
 async function classeurDeTest(): Promise<ArrayBuffer> {
@@ -107,5 +108,19 @@ describe("import Excel", () => {
     }], ["Prénoms", "Nom", "Trigramme", "Email", "Téléphone", "Métier", "Statut", "Domaine"], 4019);
     expect(l).toMatchObject({ id: "fiche:c1", position: 4019, consultant_id: "c1" });
     expect(l.valeurs).toEqual({ "Prénoms": "Ana", Nom: "Roux", Trigramme: "ARO", Email: "ana@x.fr", "Téléphone": "06 12 34 56 78", "Métier": "Dev", Statut: "candidat", Domaine: "Ajoutés par email" });
+  });
+
+  it("recherche sur toutes les colonnes, sans accents, et numéros dans tous les formats", () => {
+    const lignes: LigneTableau[] = [
+      { id: "1", position: 2, consultant_id: null, valeurs: { "Prénoms": "Éloïse", Nom: "Gérard", "Téléphone": "06 12 34 56 78", Notes: "Expert SAP" } },
+      { id: "2", position: 3, consultant_id: null, valeurs: { "Prénoms": "Jean", Nom: "Dupont", "Téléphone": "0698765432" } },
+    ];
+    const ids = (q: string) => filtrerEtTrier(lignes, {}, q, null).map((l) => l.id);
+    expect(ids("eloise")).toEqual(["1"]);
+    expect(ids("sap")).toEqual(["1"]);
+    expect(ids("0612345678")).toEqual(["1"]);
+    expect(ids("06 98 76")).toEqual(["2"]);
+    expect(ids("jean dupont")).toEqual(["2"]);
+    expect(filtrerEtTrier(lignes, {}, "", { colonne: "Prénoms", sens: "asc" }).map((l) => l.id)).toEqual(["1", "2"]);
   });
 });
