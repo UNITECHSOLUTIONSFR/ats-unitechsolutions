@@ -9,6 +9,7 @@ on:
     - cron: "0 1 * * *"    # fichier Excel de suivi
     - cron: "30 1 * * *"   # CV SharePoint (association, fiches, analyse)
     - cron: "17 * * * *"   # candidatures email (toutes les heures)
+    - cron: "40 2 * * 1"   # sauvegarde Excel dans SharePoint (le lundi)
     # La relance des disponibilités n'est jamais planifiée : seul un administrateur la lance, depuis l'application.
   workflow_dispatch:
     inputs:
@@ -17,7 +18,7 @@ on:
         required: true
         default: emails
         type: choice
-        options: [excel, cv, emails]
+        options: [excel, cv, emails, sauvegarde]
 
 permissions: {}
 
@@ -37,6 +38,7 @@ jobs:
             "0 1 * * *") T=excel ;;
             "30 1 * * *") T=cv ;;
             "17 * * * *") T=emails ;;
+            "40 2 * * 1") T=sauvegarde ;;
             *) T="$MANUELLE" ;;
           esac
           echo "Tâche : $T"

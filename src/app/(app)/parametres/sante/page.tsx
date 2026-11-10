@@ -4,7 +4,7 @@ import { etatBudgetMois } from "@/lib/ai/journal";
 import { TACHES } from "@/lib/sync/taches";
 
 /** Délai au-delà duquel un traitement automatique est considéré « en retard ». */
-const ATTENDU_HEURES: Record<string, number> = { synchro_excel: 26, synchro_cv: 26, synchro_emails: 2 };
+const ATTENDU_HEURES: Record<string, number> = { synchro_excel: 26, synchro_cv: 26, synchro_emails: 2, sauvegarde_hebdo: 8 * 24 };
 
 /** Bilan de santé : tout tourne-t-il ? Dernier passage de chaque traitement, erreurs, coûts, cas à vérifier. */
 export default async function Sante() {

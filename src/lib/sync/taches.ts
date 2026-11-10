@@ -5,12 +5,14 @@ import { traiterEmails } from "@/lib/emails/traitement";
 import { envoiActif } from "@/lib/relance/modele";
 import { envoyerLot } from "@/lib/relance/envoi";
 import { synchroniserCV } from "./cv";
+import { sauvegarderDansSharePoint } from "./sauvegarde";
 import { synchroniserExcel } from "./excel";
 
 export const TACHES = {
   excel: { type: "synchro_excel", libelle: "Fichier Excel de suivi" },
   cv: { type: "synchro_cv", libelle: "CV SharePoint (association, fiches, analyse)" },
   emails: { type: "synchro_emails", libelle: "Candidatures email" },
+  sauvegarde: { type: "sauvegarde_hebdo", libelle: "Sauvegarde Excel dans SharePoint (chaque semaine)" },
   relance: { type: "relance_disponibilite", libelle: "Relance des disponibilités (envoi du lot suivant)" },
 } as const;
 export type NomTache = keyof typeof TACHES;
@@ -30,6 +32,7 @@ export async function executerTache(nom: NomTache, supabase: SupabaseClient): Pr
       rapport = { synchro, resultatsAnalyse: resultats.message ?? resultats.erreur, envoiAnalyse: envoi.message ?? envoi.erreur };
     }
     if (nom === "emails") rapport = { ...(await traiterEmails(supabase)) };
+    if (nom === "sauvegarde") rapport = { ...(await sauvegarderDansSharePoint(supabase)) };
     if (nom === "relance") {
       if (!envoiActif()) throw new Error("envoi des emails non branché (Exchange)");
       // Un appel = jusqu'à 4 lots espacés d'une minute (rythme toléré par Exchange), dans la limite des 5 minutes.

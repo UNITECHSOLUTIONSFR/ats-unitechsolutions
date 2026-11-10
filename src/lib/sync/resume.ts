@@ -17,5 +17,6 @@ export function resumerRapport(type: string, r: Record<string, unknown> | null):
   if (type === "synchro_emails") {
     return `Emails : ${n(r.lus)} lu(s), ${n(r.candidatures)} candidature(s), ${n(r.ignores)} ignoré(s), coût ${n(r.coutUSD).toFixed(3)} $.`;
   }
+  if (type === "sauvegarde_hebdo") return `Sauvegarde déposée dans SharePoint : ${String(r.fichier ?? "")} (${n(r.consultants)} consultants).`;
   return JSON.stringify(r).slice(0, 200);
 }
