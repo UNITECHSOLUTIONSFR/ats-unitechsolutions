@@ -14,7 +14,7 @@ export const MODELES = {
 
 export const MAX_TOKENS = {
   ficheCV: 1500,
-  mission: 600,
+  mission: 1500, // fiches longues (beaucoup de technologies) : 600 coupait la réponse
   triEmail: 300,
   analyseApprofondie: 1500,
   reponseDisponibilite: 250,

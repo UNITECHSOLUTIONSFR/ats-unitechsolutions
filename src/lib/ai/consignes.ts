@@ -55,6 +55,10 @@ Consignes de remplissage :
   « maîtrise impérative », « requis ») ; les « souhaitée », « un plus », « apprécié » sont false.
   importance : 3 = cœur du poste, 2 = important, 1 = secondaire. annees_min si une durée est précisée pour
   cette compétence, sinon null.
+  25 compétences au maximum : garde les plus importantes pour le poste (une liste « Expertise avérée sur »
+  ou « très bon, voire excellent » désigne des compétences obligatoires d'importance 3) ; regroupe les variantes
+  (« Spring Boot 3.3+ » et « Spring MVC » => « Spring Boot » ; « Angular 11 » et « Angular 18+ » => « Angular »).
+  Les savoir-être (autonomie, communication…) ne sont pas des compétences : ignore-les.
 - resume : 2 phrases au maximum décrivant la mission.
 N'invente rien : en cas de doute, null ou liste vide.
 
