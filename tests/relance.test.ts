@@ -35,3 +35,25 @@ describe("relance des disponibilités", () => {
     expect(miseAJourDepuisReponse({ situation: "disponible", disponible_le: null, texte_disponibilite: null, confiance: 0.3 }, maintenant).fiche).toBeNull();
   });
 });
+
+describe("module Email : choix des destinataires", () => {
+  const maintenant = Date.parse("2026-11-10T12:00:00Z");
+  const c = (id: string, o: Partial<import("@/lib/relance/modele").CandidatEnvoi>) => ({ id, statut: "candidat", intitule_poste: null, disponibilite: null, disponible_le: null, disponibilite_maj_le: null, ...o });
+  const liste = [
+    c("a", { intitule_poste: "Développeur Java", disponibilite_maj_le: "2026-01-01T00:00:00Z" }),
+    c("b", { intitule_poste: "Chef de projet", statut: "consultant", disponibilite: "Immédiate", disponibilite_maj_le: "2026-11-01T00:00:00Z" }),
+    c("c", { intitule_poste: "Data engineer", disponible_le: "2026-12-15" }),
+  ];
+  it("filtre par fonction ou compétence, sans accents", async () => {
+    const { filtrerDestinataires } = await import("@/lib/relance/modele");
+    expect(filtrerDestinataires(liste, new Map([["c", "Kafka · Spark"]]), { fonction: "kafka" }, maintenant).map((x) => x.id)).toEqual(["c"]);
+    expect(filtrerDestinataires(liste, new Map(), { fonction: "développeur java" }, maintenant).map((x) => x.id)).toEqual(["a"]);
+  });
+  it("filtre par statut, disponibilité ancienne, disponible avant une date, et exclusions", async () => {
+    const { filtrerDestinataires } = await import("@/lib/relance/modele");
+    expect(filtrerDestinataires(liste, new Map(), { statuts: ["consultant"] }, maintenant).map((x) => x.id)).toEqual(["b"]);
+    expect(filtrerDestinataires(liste, new Map(), { dispoPlusVieilleQueJours: 90 }, maintenant).map((x) => x.id)).toEqual(["a", "c"]);
+    expect(filtrerDestinataires(liste, new Map(), { disponibleAvant: "2026-12-31" }, maintenant).map((x) => x.id)).toEqual(["b", "c"]);
+    expect(filtrerDestinataires(liste, new Map(), { exclus: ["a", "b"] }, maintenant).map((x) => x.id)).toEqual(["c"]);
+  });
+});

@@ -83,3 +83,29 @@ export function miseAJourDepuisReponse(r: ReponseDisponibilite, maintenant: Date
     texte,
   };
 }
+
+export interface CandidatEnvoi { id: string; statut: string; intitule_poste: string | null; disponibilite: string | null; disponible_le: string | null; disponibilite_maj_le: string | null }
+export interface CriteresEnvoi { statuts?: string[]; fonction?: string; dispoPlusVieilleQueJours?: number; disponibleAvant?: string; exclus?: string[] }
+
+const sansAccents = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+/** Critères du module Email : statut, fonction ou compétence (tous les mots), disponibilité ancienne ou avant une date, exclusions. */
+export function filtrerDestinataires<T extends CandidatEnvoi>(liste: T[], competences: Map<string, string>, f: CriteresEnvoi, maintenant: number): T[] {
+  const mots = f.fonction ? sansAccents(f.fonction).split(/\s+/).filter(Boolean) : [];
+  const limite = f.dispoPlusVieilleQueJours ? maintenant - f.dispoPlusVieilleQueJours * 86_400_000 : null;
+  const exclus = new Set(f.exclus ?? []);
+  return liste.filter((c) => {
+    if (exclus.has(c.id)) return false;
+    if (f.statuts?.length && !f.statuts.includes(c.statut)) return false;
+    if (mots.length) {
+      const texte = `${sansAccents(c.intitule_poste ?? "")} ${sansAccents(competences.get(c.id) ?? "")}`;
+      if (!mots.every((m) => texte.includes(m))) return false;
+    }
+    if (limite && c.disponibilite_maj_le && Date.parse(c.disponibilite_maj_le) >= limite) return false;
+    if (f.disponibleAvant) {
+      const immediat = /imm[ée]diat|asap|^disponible$/i.test((c.disponibilite ?? "").trim());
+      if (!immediat && !(c.disponible_le && c.disponible_le <= f.disponibleAvant)) return false;
+    }
+    return true;
+  });
+}

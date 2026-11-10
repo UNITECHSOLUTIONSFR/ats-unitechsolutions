@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { BOITE_CANDIDATURES } from "@/lib/emails/boite";
 import { graphEnvoyer } from "@/lib/sharepoint";
 import { lireTout } from "@/lib/supabase/pages";
-import { rendreMessage, versHTML } from "./modele";
+import { filtrerDestinataires, rendreMessage, versHTML } from "./modele";
 
 /** Nom affiché de l'expéditeur. Les réponses reviennent dans la boîte de l'outil, qui les lit. */
 export const EXPEDITEUR = { nom: "Unitech Solutions – Recrutement", adresse: BOITE_CANDIDATURES };
@@ -18,7 +18,6 @@ export interface FiltreCampagne {
   exclus?: string[];                 // consultants décochés à la main
 }
 
-const sansAccents = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 /** Consultants à contacter : email valide, pas désinscrits, pas inactifs, critères appliqués. */
 export async function destinatairesCampagne(supabase: SupabaseClient, filtre: FiltreCampagne) {
@@ -28,24 +27,7 @@ export async function destinatairesCampagne(supabase: SupabaseClient, filtre: Fi
         .not("email", "is", null).eq("ne_plus_contacter", false).neq("statut", "inactif").order("nom").range(a, b)),
     filtre.fonction ? lireTout<{ consultant_id: string; competences: string }>((a, b) => supabase.from("competences_par_consultant").select("consultant_id, competences").range(a, b)) : Promise.resolve([]),
   ]);
-  const comp = new Map(competences.map((c) => [c.consultant_id, sansAccents(c.competences)]));
-  const mots = filtre.fonction ? sansAccents(filtre.fonction).split(/\s+/).filter(Boolean) : [];
-  const limite = filtre.dispoPlusVieilleQueJours ? Date.now() - filtre.dispoPlusVieilleQueJours * 86_400_000 : null;
-  const exclus = new Set(filtre.exclus ?? []);
-  return tous.filter((c) => {
-    if (exclus.has(c.id)) return false;
-    if (filtre.statuts?.length && !filtre.statuts.includes(c.statut)) return false;
-    if (mots.length) {
-      const texte = `${sansAccents(c.intitule_poste ?? "")} ${comp.get(c.id) ?? ""}`;
-      if (!mots.every((m) => texte.includes(m))) return false;
-    }
-    if (limite && c.disponibilite_maj_le && Date.parse(c.disponibilite_maj_le) >= limite) return false;
-    if (filtre.disponibleAvant) {
-      const immediat = /imm[ée]diat|asap|disponible$/i.test(c.disponibilite ?? "");
-      if (!immediat && !(c.disponible_le && c.disponible_le <= filtre.disponibleAvant)) return false;
-    }
-    return true;
-  });
+  return filtrerDestinataires(tous, new Map(competences.map((c) => [c.consultant_id, c.competences])), filtre, Date.now());
 }
 
 /** Prépare une campagne : un envoi « à envoyer » par destinataire. Rien n'est envoyé ici. */
