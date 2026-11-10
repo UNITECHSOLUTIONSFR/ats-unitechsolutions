@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { exigerUtilisateur } from "@/lib/acces";
+import { exigerAdmin } from "@/lib/acces-admin";
 import { extraireExigencesMission, ErreurIA, type UsageIA } from "@/lib/ai";
 import { enregistrerUsages } from "@/lib/ai/journal";
 import { resoudreCompetences } from "@/lib/matching/competences";
@@ -133,4 +134,19 @@ export async function suivreProposition(formData: FormData) {
     details: { proposition: { mission_id: missionId, statut } },
   });
   revalidatePath(`/missions/${missionId}`);
+}
+
+/** Assigne (ou réassigne) une mission à une personne invitée. Réservé aux administrateurs (également vérifié par la base). */
+export async function assignerMission(formData: FormData) {
+  const { utilisateur, supabase } = await exigerAdmin();
+  const missionId = String(formData.get("mission_id"));
+  const responsable = String(formData.get("responsable_id") ?? "") || null;
+  const { error } = await supabase.from("missions").update({ responsable_id: responsable }).eq("id", missionId);
+  if (error) throw new Error(error.message);
+  await supabase.from("journal_acces").insert({
+    utilisateur_id: utilisateur.id, action: "modification", consultant_id: null, details: { mission_assignee: { mission_id: missionId, responsable_id: responsable } },
+  });
+  revalidatePath(`/missions/${missionId}`);
+  revalidatePath("/missions");
+  revalidatePath("/");
 }

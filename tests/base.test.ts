@@ -223,4 +223,15 @@ describe("tableau de suivi", () => {
     expect(await commeUtilisateur(ADMIN, `delete from emails_entrants where consultant_id=$1 returning id`, [c.id])).toHaveLength(1);
     expect(await commeUtilisateur(ADMIN, `delete from consultants where id=$1 returning id`, [c.id])).toHaveLength(1);
   });
+  it("responsable de mission : seul un administrateur assigne ; tout invité voit la liste des responsables possibles", async () => {
+    const [m] = await commeUtilisateur<{ id: string }>(RECRUTEUR, "insert into missions (intitule, texte_besoin) values ('M resp', 'besoin') returning id");
+    await expect(commeUtilisateur(RECRUTEUR, "update missions set responsable_id = $1 where id = $2", [RECRUTEUR, m.id])).rejects.toThrow(/administrateur/);
+    await commeUtilisateur(RECRUTEUR, "update missions set statut = 'pourvue' where id = $1", [m.id]); // le reste reste modifiable
+    await commeUtilisateur(ADMIN, "update missions set responsable_id = $1 where id = $2", [RECRUTEUR, m.id]);
+    const [r] = await commeUtilisateur<{ responsable_id: string }>(RECRUTEUR, "select responsable_id from missions where id = $1", [m.id]);
+    expect(r.responsable_id).toBe(RECRUTEUR);
+    const liste = await commeUtilisateur<{ id: string }>(RECRUTEUR, "select id from responsables_possibles()");
+    expect(liste.map((x) => x.id).sort()).toEqual([ADMIN, RECRUTEUR].sort()); // les comptes désactivés n'y sont pas
+    expect(await commeUtilisateur(INCONNU, "select id from responsables_possibles()")).toEqual([]);
+  });
 });

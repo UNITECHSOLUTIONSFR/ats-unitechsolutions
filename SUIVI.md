@@ -31,6 +31,8 @@ Toutes les tâches réalisables sans action de l'utilisatrice sont **terminées 
 - **À rappeler plus tard** : dépôt dans SharePoint (dossier métier) des CV reçus par email (nécessite l'accord pour écrire dans SharePoint).
 - **Proposés, pas encore lancés** : tri des alertes, relance automatique des synchronisations (planificateur externe), test de l'écran avec un compte recruteur.
 
+- **Responsable de mission** (prêt, en attente du go car il modifie la base) : colonne `missions.responsable_id`, assignation réservée aux admins (vérifiée aussi par la base), « Mes missions » par défaut (miennes + à assigner) dans Missions et sur le tableau de bord, filtre « Toutes les missions ». Décision appliquée : une nouvelle mission est créée « À assigner » (à confirmer : la donner d'office à la personne qui la crée ?).
+
 ## En attente de l'utilisatrice
 1. Copier l'historique des emails (2-3 semaines) du groupe recrutement dans la boîte ATS Candidatures, puis Paramètres → Candidatures email → « Traiter les nouveaux emails » (relancer tant qu'il en reste).
 2. Jalon C : 3 missions passées avec les bons profils.

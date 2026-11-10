@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { exigerUtilisateur } from "@/lib/acces";
 import { classementMission, type LigneClassement } from "@/lib/matching/classement";
 import { formaterTelephone } from "@/lib/metier/telephone";
+import { responsablesPossibles } from "@/lib/missions/responsables";
+import ChoixResponsable from "../responsable";
 import { changerStatutMission, modifierExigence, suivreProposition } from "@/lib/missions/actions";
 
 const STATUTS_PROPOSITION: Record<string, string> = {
@@ -12,17 +14,18 @@ const IMPORTANCE = ["", "secondaire", "importante", "essentielle"];
 
 export default async function PageMission({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { supabase } = await exigerUtilisateur();
+  const { utilisateur, supabase } = await exigerUtilisateur();
   const { data: mission } = await supabase
     .from("missions")
-    .select("id, client, intitule, texte_besoin, statut, localisation, date_debut, annees_min, seniorite, exigences, mission_competences(competence_id, obligatoire, importance, annees_min, competences(nom_canonique))")
+    .select("id, client, intitule, texte_besoin, statut, responsable_id, localisation, date_debut, annees_min, seniorite, exigences, mission_competences(competence_id, obligatoire, importance, annees_min, competences(nom_canonique))")
     .eq("id", id)
     .maybeSingle();
   if (!mission) notFound();
 
-  const [classement, { data: propositions }] = await Promise.all([
+  const [classement, { data: propositions }, responsables] = await Promise.all([
     classementMission(supabase, id),
     supabase.from("propositions").select("consultant_id, statut").eq("mission_id", id),
+    responsablesPossibles(supabase),
   ]);
   const suivi = new Map((propositions ?? []).map((p) => [p.consultant_id, p.statut as string]));
   const exigences = (mission.mission_competences ?? []) as unknown as {
@@ -40,6 +43,11 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
               mission.annees_min && `${mission.annees_min} ans min.`, mission.seniorite].filter(Boolean).join(" · ")}
           </p>
         </div>
+        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-slate-500">Responsable</span>
+          <ChoixResponsable missionId={id} responsableId={mission.responsable_id} responsables={responsables} estAdmin={utilisateur.role === "admin"} />
+        </div>
         <form action={changerStatutMission} className="flex items-center gap-2 text-sm">
           <input type="hidden" name="mission_id" value={id} />
           <select name="statut" defaultValue={mission.statut} className="champ py-1.5">
@@ -47,6 +55,7 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
           </select>
           <button className="bouton-secondaire">Enregistrer</button>
         </form>
+        </div>
       </div>
 
       <section className="carte p-6">

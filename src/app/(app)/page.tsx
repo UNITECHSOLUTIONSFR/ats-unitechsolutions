@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { exigerUtilisateur } from "@/lib/acces";
 import { classementMission } from "@/lib/matching/classement";
+import { FILTRE_MES_MISSIONS } from "@/lib/missions/responsables";
 import { resumerRapport } from "@/lib/sync/resume";
 import { TACHES } from "@/lib/sync/taches";
 import { IconeAlerte, IconeMallette, IconePersonnes, IconePlus, IconeTableau } from "./icones";
@@ -19,14 +20,17 @@ export default async function Accueil() {
   };
   const depuis = ilYa(24);
   // Tout est lu en même temps : l'accueil s'affiche en une fois.
-  const [consultants, cvs, alertes, { data: nouveaux }, { data: typesAlertes }, { data: missions }, { data: nuit }] = await Promise.all([
+  const [consultants, cvs, alertes, { data: nouveaux }, { data: typesAlertes }, { data: missions }, missionsOuvertes, { data: nuit }] = await Promise.all([
     compter("consultants"),
     compter("documents", ["type", "word_nominatif"]),
     compter("alertes", ["statut", "ouverte"]),
     supabase.from("consultants").select("id, prenom, nom, intitule_poste, source, created_at").neq("source", "import_excel").gte("created_at", ilYa(24 * 7))
       .order("created_at", { ascending: false }).limit(6),
     supabase.from("alertes").select("type").eq("statut", "ouverte").limit(5000),
-    supabase.from("missions").select("id, intitule, client, created_at").eq("statut", "ouverte").order("created_at", { ascending: false }).limit(4),
+    // Mes missions ouvertes (et celles à assigner), les plus récentes d'abord.
+    supabase.from("missions").select("id, intitule, client, created_at, responsable_id").eq("statut", "ouverte").or(FILTRE_MES_MISSIONS(utilisateur.id))
+      .order("created_at", { ascending: false }).limit(4),
+    compter("missions", ["statut", "ouverte"]),
     supabase.from("executions").select("type, debut, statut, rapport").in("type", Object.values(TACHES).map((t) => t.type)).gte("debut", depuis)
       .order("debut", { ascending: false }).limit(6),
   ]);
@@ -58,20 +62,20 @@ export default async function Accueil() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Tuile titre="Consultants" valeur={consultants} lien="/consultants" Icone={IconePersonnes} />
         <Tuile titre="CV Unitech (SharePoint)" valeur={cvs} lien={utilisateur.role === "admin" ? "/parametres/cv" : "/consultants"} Icone={IconeTableau} />
-        <Tuile titre="Missions ouvertes" valeur={missions?.length ?? 0} lien="/missions" Icone={IconeMallette} />
+        <Tuile titre="Missions ouvertes" valeur={missionsOuvertes} lien="/missions?vue=toutes" Icone={IconeMallette} />
         <Tuile titre="Cas à vérifier" valeur={alertes} lien="/alertes" Icone={IconeAlerte} attention={alertes > 0} />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
         {/* Missions ouvertes et meilleurs profils */}
         <section className="carte p-6 xl:col-span-2">
-          <EnTete titre="Missions ouvertes" lien="/missions" libelle="Toutes les missions" />
+          <EnTete titre="Mes missions" lien="/missions?vue=toutes" libelle="Voir aussi celles des autres" />
           <div className="mt-4 space-y-3">
             {(missions ?? []).map((m, i) => (
               <div key={m.id} className="rounded-2xl bg-white/60 p-4 ring-1 ring-white/80">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <Link href={`/missions/${m.id}`} className="font-semibold text-nuit hover:text-marque-600">{m.intitule}</Link>
-                  <span className="text-xs text-slate-500">{m.client ?? ""}</span>
+                  <span className="flex items-center gap-2 text-xs text-slate-500">{m.client ?? ""}{!m.responsable_id && <span className="pastille pastille-orange">À assigner</span>}</span>
                 </div>
                 <div className="mt-3 grid gap-2 sm:grid-cols-3">
                   {meilleurs[i].map((c) => (
@@ -89,7 +93,7 @@ export default async function Accueil() {
               </div>
             ))}
             {!missions?.length && (
-              <p className="text-sm text-slate-500">Aucune mission ouverte. <Link href="/missions/nouvelle" className="lien">Saisir un besoin client</Link></p>
+              <p className="text-sm text-slate-500">Aucune mission ouverte pour vous. <Link href="/missions/nouvelle" className="lien">Saisir un besoin client</Link></p>
             )}
           </div>
         </section>
