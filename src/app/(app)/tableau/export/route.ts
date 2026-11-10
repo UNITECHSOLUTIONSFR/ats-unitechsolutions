@@ -15,7 +15,8 @@ export async function POST(requete: Request) {
   const ongletId = String(form.get("onglet") ?? "");
   let ids: string[] = [];
   try {
-    ids = JSON.parse(String(form.get("ids") ?? "[]"));
+    // Les fiches ajoutées hors Excel ne sont pas des lignes du tableau : elles ne font pas partie de l'export de l'onglet.
+    ids = (JSON.parse(String(form.get("ids") ?? "[]")) as string[]).filter((id) => !id.startsWith("fiche:"));
   } catch {
     return new NextResponse("Demande invalide.", { status: 400 });
   }

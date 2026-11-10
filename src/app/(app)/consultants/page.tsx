@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { exigerUtilisateur } from "@/lib/acces";
 import { COLONNE_DOMAINE, champsParEntete } from "@/lib/import/excel";
+import { lignesHorsExcel, type FicheHorsExcel } from "@/lib/tableau/hors-excel";
 import type { LigneTableau } from "@/lib/tableau/modele";
 import TableauExcel from "./tableau-excel";
 
@@ -43,6 +44,15 @@ export default async function TableauDeSuivi({ searchParams }: { searchParams: P
     lignes.push(...(data ?? []));
     if (!data || data.length < 1000) break;
   }
+
+  // Fiches créées hors Excel (emails, CV SharePoint) : ajoutées en fin de tableau, sous l'onglet de leur origine.
+  const relies = new Set(lignes.map((l) => l.consultant_id).filter(Boolean));
+  const { data: horsExcel } = await supabase.from("consultants").select("*").neq("source", "import_excel").order("created_at");
+  lignes.push(...lignesHorsExcel(
+    (horsExcel ?? []).filter((c) => !relies.has(c.id)) as FicheHorsExcel[],
+    onglet.entetes,
+    Math.max(0, ...lignes.map((l) => l.position)) + 1,
+  ));
 
   const domaines = [...new Set(lignes.flatMap((l) => (l.valeurs[COLONNE_DOMAINE] ?? "").split(" ; ").filter(Boolean)))].sort((a, b) => a.localeCompare(b, "fr"));
   const affichees = domaine ? lignes.filter((l) => (l.valeurs[COLONNE_DOMAINE] ?? "").split(" ; ").includes(domaine)) : lignes;

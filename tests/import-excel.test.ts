@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import ExcelJS from "exceljs";
+import { lignesHorsExcel } from "@/lib/tableau/hors-excel";
 import { analyserCaseEmail, fusionnerOnglets, corrigerOngletPrincipal, detecterColonnes, lireClasseur, preparerImport } from "@/lib/import/excel";
 
 async function classeurDeTest(): Promise<ArrayBuffer> {
@@ -96,5 +97,15 @@ describe("import Excel", () => {
     expect(onglet.lignes.map((l) => [l[1], l[4]])).toEqual([["Dupont", "Dev"], ["Roux", "Data"], ["Neuve", "Dev"]]);
     expect([lignesAjoutees, lignesRetrouvees]).toEqual([1, 2]);
     expect(onglet.numeros).toEqual([2, 3, 4]);
+  });
+
+  it("présente une fiche créée par email comme une ligne du tableau", () => {
+    const [l] = lignesHorsExcel([{
+      id: "c1", source: "email", prenom: "Ana", nom: "Roux", trigramme: "ARO", email: "ana@x.fr", email_2: null, telephone_e164: "+33612345678",
+      telephone_brut: null, intitule_poste: "Dev", disponibilite: null, disponible_le: null, disponibilite_maj_le: null, localisation: "Paris",
+      notes: null, statut: "candidat", experience: null, tjm_salaire: null, linkedin: null, cv_lien: null, commentaire_email: null,
+    }], ["Prénoms", "Nom", "Trigramme", "Email", "Téléphone", "Métier", "Statut", "Domaine"], 4019);
+    expect(l).toMatchObject({ id: "fiche:c1", position: 4019, consultant_id: "c1" });
+    expect(l.valeurs).toEqual({ "Prénoms": "Ana", Nom: "Roux", Trigramme: "ARO", Email: "ana@x.fr", "Téléphone": "06 12 34 56 78", "Métier": "Dev", Statut: "candidat", Domaine: "Ajoutés par email" });
   });
 });
