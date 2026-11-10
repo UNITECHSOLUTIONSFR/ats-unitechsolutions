@@ -8,23 +8,25 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
 import { LONGUEUR_MAX_TEXTE, MAX_TOKENS, MODELES, estimerCoutUSD } from "./config";
-import { CONSIGNES_MISSION, CONSIGNES_PROFIL_CV } from "./consignes";
+import { CONSIGNES_MISSION, CONSIGNES_PROFIL_CV, CONSIGNES_REPONSE_DISPO } from "./consignes";
 import {
   PROMPT_VERSION,
   SchemaExigencesMission,
   SchemaProfilCV,
+  SchemaReponseDisponibilite,
   borner,
   bornerMission,
   ficheCVValide,
   type ExigencesMission,
   type ProfilCV,
+  type ReponseDisponibilite,
 } from "./schemas";
 
 export { PROMPT_VERSION };
-export type { ExigencesMission, ProfilCV };
+export type { ExigencesMission, ProfilCV, ReponseDisponibilite };
 
 export interface UsageIA {
-  usage: "fiche_cv" | "mission" | "tri_email" | "analyse_approfondie";
+  usage: "fiche_cv" | "mission" | "tri_email" | "analyse_approfondie" | "reponse_disponibilite";
   modele: string;
   mode: "standard" | "batch";
   tokens_entree: number;
@@ -150,6 +152,17 @@ export async function extraireExigencesMission(texteBesoin: string): Promise<Res
   const r = await appeler(MODELES.mission, CONSIGNES_MISSION, SchemaExigencesMission, texteBesoin, MAX_TOKENS.mission, "mission");
   if (!r.donnees) throw Object.assign(new ErreurIA("Exigences de la mission impossibles à extraire."), { usages: [r.usage] });
   return { donnees: bornerMission(r.donnees), modele: MODELES.mission, promptVersion: PROMPT_VERSION, usages: [r.usage] };
+}
+
+/**
+ * Lit la réponse d'un consultant à la relance des disponibilités (Haiku, réponse courte, réflexion coupée).
+ * `aujourdhui` (AAAA-MM-JJ) sert à convertir « dans un mois », « début janvier », etc.
+ */
+export async function lireReponseDisponibilite(texteReponse: string, aujourdhui: string): Promise<ResultatIA<ReponseDisponibilite>> {
+  const texte = `Date du jour : ${aujourdhui}\n\nRéponse du consultant :\n${texteReponse.slice(0, 4000)}`;
+  const r = await appeler(MODELES.reponseDisponibilite, CONSIGNES_REPONSE_DISPO, SchemaReponseDisponibilite, texte, MAX_TOKENS.reponseDisponibilite, "reponse_disponibilite");
+  if (!r.donnees) throw Object.assign(new ErreurIA("Réponse impossible à lire."), { usages: [r.usage] });
+  return { donnees: r.donnees, modele: MODELES.reponseDisponibilite, promptVersion: PROMPT_VERSION, usages: [r.usage] };
 }
 
 /** Requête de lot (Batch API, 50 % moins cher) pour structurer un CV : import initial et synchronisation de nuit. */

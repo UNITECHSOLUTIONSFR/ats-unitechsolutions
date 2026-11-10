@@ -234,4 +234,13 @@ describe("tableau de suivi", () => {
     expect(liste.map((x) => x.id).sort()).toEqual([ADMIN, RECRUTEUR].sort()); // les comptes désactivés n'y sont pas
     expect(await commeUtilisateur(INCONNU, "select id from responsables_possibles()")).toEqual([]);
   });
+  it("relance des disponibilités : préparation et envoi réservés aux administrateurs, suivi lisible par tous", async () => {
+    await expect(commeUtilisateur(RECRUTEUR, "insert into campagnes_relance (objet, corps) values ('o', 'c')")).rejects.toThrow();
+    const [c] = await commeUtilisateur<{ id: string }>(ADMIN, "insert into campagnes_relance (objet, corps) values ('o', 'c') returning id");
+    const [f] = await commeUtilisateur<{ id: string }>(ADMIN, "insert into consultants (prenom, nom, trigramme, email) values ('R', 'Elance', 'REL', 'r@x.fr') returning id");
+    await commeUtilisateur(ADMIN, "insert into envois_relance (campagne_id, consultant_id, email) values ($1, $2, 'r@x.fr')", [c.id, f.id]);
+    expect(await commeUtilisateur(RECRUTEUR, "select statut from envois_relance where campagne_id = $1", [c.id])).toEqual([{ statut: "a_envoyer" }]);
+    await expect(commeUtilisateur(RECRUTEUR, "update envois_relance set statut = 'envoye' where campagne_id = $1 returning id", [c.id])).resolves.toEqual([]);
+    expect(await commeUtilisateur(INCONNU, "select id from envois_relance")).toEqual([]);
+  });
 });

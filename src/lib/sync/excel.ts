@@ -4,13 +4,15 @@ import { corrigerOngletPrincipal, fusionnerOnglets, lireOnglets, preparerImport 
 import { ecrireFiches, type BilanEcriture } from "@/lib/import/ecriture";
 import { ecrireTableau } from "@/lib/tableau/ecriture";
 import { graphGet, SHAREPOINT, trouverBibliotheque } from "@/lib/sharepoint";
-import { ajouterFichesAuFichierExcel, type BilanVersExcel } from "./vers-excel";
+import { relanceActive } from "@/lib/relance/modele";
+import { ajouterFichesAuFichierExcel, recopierDisponibilitesDansExcel, type BilanVersExcel } from "./vers-excel";
 
 const ETAT = "excel:suivi";
 
 export interface BilanSynchroExcel {
   inchange: boolean;
   versExcel?: BilanVersExcel;
+  disponibilites?: { recopiees: number; introuvables: number };
   modifieLe?: string;
   fiches?: BilanEcriture;
   lignesTableau?: number;
@@ -24,11 +26,13 @@ export interface BilanSynchroExcel {
  */
 export async function synchroniserExcel(supabase: SupabaseClient): Promise<BilanSynchroExcel> {
   const versExcel = await ajouterFichesAuFichierExcel(supabase);
+  // Relance des disponibilités (si activée) : les réponses reçues sont recopiées dans l'Excel avant sa relecture.
+  const disponibilites = relanceActive() ? await recopierDisponibilitesDansExcel(supabase) : undefined;
   const driveId = await trouverBibliotheque();
   const chemin = SHAREPOINT.fichierSuivi.split("/").map(encodeURIComponent).join("/");
   const meta = await graphGet<{ lastModifiedDateTime: string }>(`drives/${driveId}/root:/${chemin}?$select=lastModifiedDateTime`);
   const { data: etat } = await supabase.from("sharepoint_etat").select("lien_delta").eq("drive_id", ETAT).maybeSingle();
-  if (etat?.lien_delta === meta.lastModifiedDateTime) return { inchange: true, versExcel, modifieLe: meta.lastModifiedDateTime };
+  if (etat?.lien_delta === meta.lastModifiedDateTime) return { inchange: true, versExcel, disponibilites, modifieLe: meta.lastModifiedDateTime };
 
   const contenu = await graphGet<Buffer>(`drives/${driveId}/root:/${chemin}:/content`, { brut: true });
   const onglets = await lireOnglets(new Uint8Array(contenu));
@@ -39,5 +43,5 @@ export async function synchroniserExcel(supabase: SupabaseClient): Promise<Bilan
   const bilanTableau = await ecrireTableau(supabase, [principal], "Sourcing_General_par_metier.xlsx (synchronisation)");
 
   await supabase.from("sharepoint_etat").upsert({ drive_id: ETAT, lien_delta: meta.lastModifiedDateTime });
-  return { inchange: false, versExcel, modifieLe: meta.lastModifiedDateTime, fiches: bilanFiches, lignesTableau: bilanTableau.lignes };
+  return { inchange: false, versExcel, disponibilites, modifieLe: meta.lastModifiedDateTime, fiches: bilanFiches, lignesTableau: bilanTableau.lignes };
 }

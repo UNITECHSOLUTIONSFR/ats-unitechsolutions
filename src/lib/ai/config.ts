@@ -9,6 +9,7 @@ export const MODELES = {
   ficheCVRepli: "claude-sonnet-5-5", // une seule tentative si la fiche Haiku est invalide
   mission: "claude-haiku-5-5",
   analyseApprofondie: "claude-sonnet-5-5",
+  reponseDisponibilite: "claude-haiku-5-5", // lecture d'une réponse à la relance des disponibilités
 } as const;
 
 export const MAX_TOKENS = {
@@ -16,6 +17,7 @@ export const MAX_TOKENS = {
   mission: 600,
   triEmail: 300,
   analyseApprofondie: 1500,
+  reponseDisponibilite: 250,
 } as const;
 
 /** Texte envoyé à l'IA tronqué à cette longueur (règle 4 du brief). */

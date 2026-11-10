@@ -70,3 +70,12 @@ export function bornerMission(m: ExigencesMission): ExigencesMission {
     competences: m.competences.map((c) => ({ ...c, importance: Math.min(3, Math.max(1, Math.round(c.importance))) })),
   };
 }
+
+/** Lecture d'une réponse à la relance des disponibilités (consignes : CONSIGNES_REPONSE_DISPO). */
+export const SchemaReponseDisponibilite = z.object({
+  situation: z.enum(["disponible", "disponible_a_partir", "en_mission", "plus_interesse", "pas_une_reponse"]),
+  disponible_le: z.string().nullable(), // AAAA-MM-JJ
+  texte_disponibilite: z.string().nullable(), // court, pour la colonne Disponibilité (ex. « Disponible le 15/01/2027 »)
+  confiance: z.number(), // 0 à 1
+});
+export type ReponseDisponibilite = z.infer<typeof SchemaReponseDisponibilite>;

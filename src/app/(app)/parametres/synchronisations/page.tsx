@@ -1,6 +1,7 @@
 import { exigerAdmin } from "@/lib/acces-admin";
 import { resumerRapport } from "@/lib/sync/resume";
 import { TACHES } from "@/lib/sync/taches";
+import { relanceActive } from "@/lib/relance/modele";
 import { classePastille } from "@/lib/statuts";
 import BoutonTache from "./bouton";
 
@@ -18,7 +19,7 @@ export default async function Synchronisations() {
     <div className="max-w-5xl space-y-4">
       <p className="text-zinc-600">Ces traitements tournent seuls. Vous pouvez aussi les lancer tout de suite.</p>
       <div className="grid gap-3 md:grid-cols-3">
-        {(Object.keys(TACHES) as (keyof typeof TACHES)[]).map((nom) => (
+        {(Object.keys(TACHES) as (keyof typeof TACHES)[]).filter((nom) => nom !== "relance" || relanceActive()).map((nom) => (
           <div key={nom} className="carte space-y-2 p-4">
             <div className="font-semibold">{TACHES[nom].libelle}</div>
             <div className="text-sm text-zinc-500">Automatique : {QUAND[nom]}</div>

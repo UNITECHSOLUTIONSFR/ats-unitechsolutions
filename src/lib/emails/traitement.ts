@@ -10,6 +10,8 @@ import { normaliserTelephone } from "@/lib/metier/telephone";
 import { normaliserNomPersonne } from "@/lib/metier/texte";
 import { calculerTrigramme } from "@/lib/metier/trigramme";
 import { empreinteSHA256, extraireTexte } from "@/lib/sharepoint";
+import { envoiCorrespondant, traiterReponse } from "@/lib/relance/reponses";
+import { relanceActive } from "@/lib/relance/modele";
 import { BOITE_CANDIDATURES, estInterne, messagesDepuis, piecesJointesCV, type MessageBoite, type PieceJointe } from "./boite";
 
 export interface BilanEmails {
@@ -20,6 +22,8 @@ export interface BilanEmails {
   erreurs: string[];
   coutUSD: number;
   restants: boolean;
+  /** Réponses à la relance des disponibilités appliquées. */
+  reponsesRelance?: number;
 }
 
 type Statut = "candidature_traitee" | "non_candidature" | "sans_piece_jointe" | "erreur";
@@ -67,6 +71,15 @@ export async function traiterMessage(
   let consultantId: string | null = null;
   try {
     const expediteur = m.from?.emailAddress?.address?.toLowerCase();
+    // Réponse à une relance des disponibilités : la fiche est mise à jour automatiquement (puis un éventuel CV joint est traité).
+    if (relanceActive() && !estInterne(expediteur)) {
+      const envoi = await envoiCorrespondant(supabase, m);
+      if (envoi) {
+        await traiterReponse(supabase, m, envoi, usages);
+        consultantId = envoi.consultant_id;
+        bilan.reponsesRelance = (bilan.reponsesRelance ?? 0) + 1;
+      }
+    }
     const cvs = !estInterne(expediteur) && m.hasAttachments ? await piecesJointes() : [];
     if (estInterne(expediteur)) statut = "non_candidature";
     else if (!cvs.length) statut = "sans_piece_jointe";

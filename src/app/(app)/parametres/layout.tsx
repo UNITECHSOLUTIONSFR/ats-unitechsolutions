@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { exigerAdmin } from "@/lib/acces-admin";
+import { relanceActive } from "@/lib/relance/modele";
 
 export default async function LayoutParametres({ children }: { children: React.ReactNode }) {
   await exigerAdmin();
@@ -12,6 +13,7 @@ export default async function LayoutParametres({ children }: { children: React.R
         <Link href="/parametres/cv" className="rounded-full bg-white/60 px-3.5 py-1.5 font-medium text-slate-600 ring-1 ring-white/80 transition hover:bg-white hover:text-nuit">CV SharePoint</Link>
         <Link href="/parametres/analyse-cv" className="rounded-full bg-white/60 px-3.5 py-1.5 font-medium text-slate-600 ring-1 ring-white/80 transition hover:bg-white hover:text-nuit">Analyse des CV</Link>
         <Link href="/parametres/emails" className="rounded-full bg-white/60 px-3.5 py-1.5 font-medium text-slate-600 ring-1 ring-white/80 transition hover:bg-white hover:text-nuit">Candidatures email</Link>
+        {relanceActive() && <Link href="/parametres/relance" className="rounded-full bg-white/60 px-3.5 py-1.5 font-medium text-slate-600 ring-1 ring-white/80 transition hover:bg-white hover:text-nuit">Relance des disponibilités</Link>}
         <Link href="/parametres/synchronisations" className="rounded-full bg-white/60 px-3.5 py-1.5 font-medium text-slate-600 ring-1 ring-white/80 transition hover:bg-white hover:text-nuit">Synchronisations</Link>
         <Link href="/parametres/couts" className="rounded-full bg-white/60 px-3.5 py-1.5 font-medium text-slate-600 ring-1 ring-white/80 transition hover:bg-white hover:text-nuit">Coûts et réglages</Link>
         <Link href="/parametres/rgpd" className="rounded-full bg-white/60 px-3.5 py-1.5 font-medium text-slate-600 ring-1 ring-white/80 transition hover:bg-white hover:text-nuit">RGPD : purge à 24 mois</Link>

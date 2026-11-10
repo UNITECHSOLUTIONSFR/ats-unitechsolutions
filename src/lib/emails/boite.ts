@@ -13,6 +13,7 @@ export interface MessageBoite {
   receivedDateTime: string;
   hasAttachments: boolean;
   webLink: string;
+  conversationId?: string;
   from?: { emailAddress?: { address?: string; name?: string } };
 }
 
@@ -27,7 +28,7 @@ export interface PieceJointe {
 /** Messages reçus depuis une date (les plus anciens d'abord), en lecture seule. */
 export async function messagesDepuis(depuis: string, limite: number): Promise<MessageBoite[]> {
   const filtre = encodeURIComponent(`receivedDateTime ge ${depuis}`);
-  const champs = "id,internetMessageId,subject,receivedDateTime,hasAttachments,webLink,from";
+  const champs = "id,internetMessageId,subject,receivedDateTime,hasAttachments,webLink,from,conversationId";
   const r = await graphGet<{ value: MessageBoite[] }>(
     `users/${BOITE_CANDIDATURES}/messages?$filter=${filtre}&$orderby=receivedDateTime asc&$top=${limite}&$select=${champs}`,
   );

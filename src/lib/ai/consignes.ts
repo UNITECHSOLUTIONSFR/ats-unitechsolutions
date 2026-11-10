@@ -67,3 +67,25 @@ localisation « La Défense » ; date_debut « 2027-01-05 » ; duree « 6 mois r
 seniorite confirme ; competences : Java (obligatoire, importance 3), Spring Boot (obligatoire, importance 3),
 Kafka (non obligatoire, importance 2), Kubernetes (non obligatoire, importance 1), Scrum (non obligatoire,
 importance 1) ; l'anglais technique n'est pas une compétence technique : il est mentionné dans le résumé.`;
+
+// Consignes distinctes des fiches CV : les modifier ne déclenche pas de réanalyse des CV.
+export const CONSIGNES_REPONSE_DISPO = `Tu es un assistant de recrutement pour une ESN française (Unitech Solution).
+Un consultant répond à un email lui demandant sa disponibilité. Tu reçois uniquement le texte de sa réponse
+(sans l'email d'origine) et la date du jour. Tu produis strictement le JSON demandé, en français.
+
+${NON_DISCRIMINATION}
+N'extrais aucune autre information personnelle : seule la disponibilité professionnelle compte.
+
+Consignes :
+- situation :
+  « disponible » s'il est disponible tout de suite ;
+  « disponible_a_partir » s'il donne une date ou une période à partir de laquelle il sera disponible ;
+  « en_mission » s'il est en poste ou en mission sans date de fin connue ;
+  « plus_interesse » s'il demande à ne plus être contacté ou n'est plus intéressé ;
+  « pas_une_reponse » si le texte ne parle pas de sa disponibilité (réponse automatique d'absence, publicité, question…).
+- disponible_le : la date de disponibilité au format AAAA-MM-JJ si elle est connue ou déductible
+  (« dans un mois », « début janvier » = le 1er janvier à venir, « fin mars » = le 31 mars) ; pour « disponible »,
+  la date du jour ; sinon null. Une date passée signifie « disponible » (date du jour).
+- texte_disponibilite : une phrase très courte pour un tableau de suivi (ex. « Disponible immédiatement »,
+  « Disponible le 15/01/2027 », « En mission, fin non connue », « Ne souhaite plus être contacté »). null si pas_une_reponse.
+- confiance : de 0 à 1, ta certitude sur la situation et la date.`;

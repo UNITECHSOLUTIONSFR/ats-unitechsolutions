@@ -4,7 +4,7 @@ import { configSupabase } from "@/lib/supabase/config";
 
 /** Pages accessibles sans être connecté. */
 // /api/cron/ : tâches planifiées, protégées par CRON_SECRET (pas de session utilisateur).
-const PAGES_PUBLIQUES = ["/connexion", "/auth/", "/api/cron/"];
+const PAGES_PUBLIQUES = ["/connexion", "/desinscription/", "/auth/", "/api/cron/"];
 
 /**
  * Exécuté avant chaque page : rafraîchit la session Supabase et renvoie vers
