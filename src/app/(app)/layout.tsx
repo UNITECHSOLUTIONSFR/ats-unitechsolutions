@@ -2,7 +2,9 @@ import MenuLateral from "./menu-lateral";
 import BoutonRetour from "./bouton-retour";
 import { PrechargementConsultants } from "./consultants/chargeur";
 import { configSupabase } from "@/lib/supabase/config";
-import { utilisateurConnecte } from "@/lib/supabase/serveur";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { clientSupabaseServeur, codeAttendu, utilisateurConnecte } from "@/lib/supabase/serveur";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +16,8 @@ export default async function LayoutApplication({ children }: { children: React.
       </Message>
     );
   }
+  // Double authentification : un compte qui l'a activée doit saisir son code avant d'accéder à l'outil.
+  if (await codeAttendu()) redirect("/verification");
   const utilisateur = await utilisateurConnecte();
   if (!utilisateur) {
     return (
@@ -24,10 +28,21 @@ export default async function LayoutApplication({ children }: { children: React.
     );
   }
 
+  const supabase = await clientSupabaseServeur();
+  const aal = supabase ? (await supabase.auth.mfa.getAuthenticatorAssuranceLevel()).data : null;
+  const sans2FA = utilisateur.role === "admin" && aal?.nextLevel !== "aal2";
+
   return (
     <div className="flex min-h-screen flex-col lg:flex-row">
       <MenuLateral nom={utilisateur.nomAffiche ?? utilisateur.email.split("@")[0]} email={utilisateur.email} estAdmin={utilisateur.role === "admin"} />
-      <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:py-7 lg:pl-4 lg:pr-8"><BoutonRetour />{children}</main>
+      <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:py-7 lg:pl-4 lg:pr-8">
+        {sans2FA && (
+          <Link href="/parametres/securite" className="mb-4 flex items-center justify-between gap-3 rounded-2xl bg-amber-50/90 px-4 py-2.5 text-sm text-amber-800 ring-1 ring-amber-200 hover:bg-amber-50">
+            <span>🔐 Protégez votre compte administrateur : activez la double authentification.</span><span className="font-semibold">Activer →</span>
+          </Link>
+        )}
+        <BoutonRetour />{children}
+      </main>
       <PrechargementConsultants />
     </div>
   );

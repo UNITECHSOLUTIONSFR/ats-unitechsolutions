@@ -44,6 +44,8 @@ export const utilisateurConnecte = cache(async (): Promise<UtilisateurConnecte |
   const { data } = await supabase.auth.getClaims();
   const id = data?.claims?.sub;
   if (!id) return null;
+  // Double authentification activée mais code pas encore saisi : aucun accès aux données.
+  if (await codeAttendu()) return null;
   const { data: fiche } = await supabase
     .from("utilisateurs")
     .select("id, email, nom_affiche, role, actif")
@@ -51,4 +53,12 @@ export const utilisateurConnecte = cache(async (): Promise<UtilisateurConnecte |
     .maybeSingle();
   if (!fiche || !fiche.actif) return null;
   return { id: fiche.id, email: fiche.email, nomAffiche: fiche.nom_affiche, role: fiche.role };
+});
+
+/** Vrai si le compte a activé la double authentification et n'a pas encore saisi son code dans cette session. */
+export const codeAttendu = cache(async (): Promise<boolean> => {
+  const supabase = await clientSupabaseServeur();
+  if (!supabase) return false;
+  const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  return !!data && data.nextLevel === "aal2" && data.currentLevel !== "aal2";
 });
