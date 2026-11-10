@@ -124,3 +124,13 @@ describe("import Excel", () => {
     expect(filtrerEtTrier(lignes, {}, "", { colonne: "Prénoms", sens: "asc" }).map((l) => l.id)).toEqual(["1", "2"]);
   });
 });
+
+describe("recherche dans le texte des CV", () => {
+  it("une ligne trouvée dans le CV est retenue même sans le mot dans les colonnes", () => {
+    const lignes: LigneTableau[] = [
+      { id: "1", position: 2, consultant_id: "c1", valeurs: { Nom: "Gérard" } },
+      { id: "2", position: 3, consultant_id: "c2", valeurs: { Nom: "Dupont" } },
+    ];
+    expect(filtrerEtTrier(lignes, {}, "kafka", null, undefined, new Set(["c2"])).map((l) => l.id)).toEqual(["2"]);
+  });
+});

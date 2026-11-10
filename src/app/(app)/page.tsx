@@ -112,6 +112,13 @@ export default async function Accueil() {
             </ul>
           </section>
 
+          {/* Relances à faire */}
+          <section className="carte p-6">
+            <h2 className="font-semibold text-nuit">À relancer</h2>
+            <p className="mt-0.5 text-xs text-slate-500">Consultants proposés, appelés ou envoyés au client sur vos missions, sans suite depuis plus de 7 jours.</p>
+            <Suspense fallback={<div className="squelette mt-3 h-20" />}><RelancesAFaire moi={utilisateur.id} /></Suspense>
+          </section>
+
           {/* Alertes à traiter */}
           <section className="carte p-6">
             <EnTete titre="À vérifier" lien="/alertes" libelle="Traiter" />
@@ -148,8 +155,21 @@ export default async function Accueil() {
 /** Les 3 meilleurs profils d'une mission ouverte (même calcul que l'écran de la mission, sans IA). */
 async function MeilleursProfils({ missionId }: { missionId: string }) {
   const { supabase } = await exigerUtilisateur();
-  const meilleurs = await classementMission(supabase, missionId, 3).catch(() => []);
+  const [classement, { data: suivis }] = await Promise.all([
+    classementMission(supabase, missionId, 50).catch(() => []),
+    supabase.from("propositions").select("consultant_id").eq("mission_id", missionId),
+  ]);
+  const dejaSuivis = new Set((suivis ?? []).map((p) => p.consultant_id));
+  // Profils à appeler : très bien classés (80 et plus) et pas encore suivis sur cette mission.
+  const aAppeler = classement.filter((c) => !c.resultat.elimine && c.resultat.score >= 80 && !dejaSuivis.has(c.consultant_id)).length;
+  const meilleurs = classement.slice(0, 3);
   return (
+    <>
+    {aAppeler > 0 && (
+      <Link href={`/missions/${missionId}`} className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100">
+        📞 {aAppeler} profil(s) à 80 et plus à appeler
+      </Link>
+    )}
     <div className="mt-3 grid gap-2 sm:grid-cols-3">
       {meilleurs.map((c) => (
         <Link key={c.consultant_id} href={`/consultants/${c.consultant_id}`}
@@ -163,7 +183,45 @@ async function MeilleursProfils({ missionId }: { missionId: string }) {
       ))}
       {!meilleurs.length && <p className="text-sm text-slate-500">Aucun profil classé pour l&apos;instant.</p>}
     </div>
+    </>
   );
+}
+
+const SUIVIS: Record<string, string> = { propose: "Proposé", appele: "Appelé", envoye_client: "Envoyé au client" };
+
+/** Relances à faire : propositions sur mes missions restées sans suite depuis plus de 7 jours. */
+async function RelancesAFaire({ moi }: { moi: string }) {
+  const { supabase } = await exigerUtilisateur();
+  const { data } = await supabase.from("propositions")
+    .select("updated_at, statut, mission_id, consultant_id, consultants(prenom, nom), missions!inner(intitule, responsable_id, statut)")
+    .in("statut", ["propose", "appele", "envoye_client"]).lt("updated_at", depuisJours(7))
+    .eq("missions.responsable_id", moi).eq("missions.statut", "ouverte").order("updated_at").limit(8);
+  return (
+    <ul className="mt-3 space-y-2 text-sm">
+      {(data ?? []).map((p) => {
+        const c = p.consultants as unknown as { prenom: string; nom: string } | null;
+        const m = p.missions as unknown as { intitule: string } | null;
+        const jours = Math.floor((Date.parse(new Date().toISOString()) - Date.parse(p.updated_at)) / 86_400_000);
+        return (
+          <li key={`${p.mission_id}-${p.consultant_id}`}>
+            <Link href={`/missions/${p.mission_id}`} className="flex items-center justify-between gap-3 rounded-xl p-1.5 transition hover:bg-white/70">
+              <div className="min-w-0">
+                <div className="truncate font-semibold text-nuit">{c?.prenom} {c?.nom}</div>
+                <div className="truncate text-xs text-slate-500">{m?.intitule} · {SUIVIS[p.statut]}</div>
+              </div>
+              <span className="pastille pastille-orange shrink-0">{jours} j</span>
+            </Link>
+          </li>
+        );
+      })}
+      {!data?.length && <li className="text-slate-500">Rien à relancer : tout est à jour.</li>}
+    </ul>
+  );
+}
+
+/** Date d'il y a N jours (ISO). */
+function depuisJours(n: number): string {
+  return new Date(Date.now() - n * 86_400_000).toISOString();
 }
 
 function EnTete({ titre, lien, libelle }: { titre: string; lien: string; libelle: string }) {

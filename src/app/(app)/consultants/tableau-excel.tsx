@@ -71,7 +71,19 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
     () => (vueActive ? lignes.filter((l) => (l.valeurs[colonneDomaine] ?? "").split(" ; ").includes(vueActive)) : lignes),
     [lignes, vueActive, colonneDomaine],
   );
-  const visibles = useMemo(() => filtrerEtTrier(lignesVue, filtres, rechercheDifferee, tri, affiche), [lignesVue, filtres, rechercheDifferee, tri, affiche]);
+  // La recherche porte aussi sur le texte complet des CV (côté base, index plein texte).
+  const [dansCV, setDansCV] = useState<{ q: string; ids: Set<string> }>({ q: "", ids: new Set() });
+  useEffect(() => {
+    const q = rechercheDifferee.trim();
+    if (q.length < 3) return;
+    let actif = true;
+    const t = setTimeout(() => {
+      fetch(`/api/consultants/recherche-cv?q=${encodeURIComponent(q)}`).then((r) => (r.ok ? r.json() : [])).then((ids: string[]) => { if (actif) setDansCV({ q, ids: new Set(ids) }); }).catch(() => undefined);
+    }, 300);
+    return () => { actif = false; clearTimeout(t); };
+  }, [rechercheDifferee]);
+  const idsCV = dansCV.q === rechercheDifferee.trim() ? dansCV.ids : undefined;
+  const visibles = useMemo(() => filtrerEtTrier(lignesVue, filtres, rechercheDifferee, tri, affiche, idsCV), [lignesVue, filtres, rechercheDifferee, tri, affiche, idsCV]);
   const pages = Math.max(1, Math.ceil(visibles.length / PAR_PAGE));
   const pageCourante = Math.min(page, pages - 1);
   const affichees = visibles.slice(pageCourante * PAR_PAGE, (pageCourante + 1) * PAR_PAGE);
@@ -147,7 +159,7 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
           <label className="relative">
             <IconeRecherche className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
             <input value={recherche} onChange={(e) => { setRecherche(e.target.value); setPage(0); }}
-              placeholder="Nom, compétence, ville, téléphone…" className="champ w-full pl-9 sm:w-72" />
+              placeholder="Nom, compétence, ville, téléphone, mot du CV…" className="champ w-full pl-9 sm:w-72" />
           </label>
           {nbFiltres > 0 && (
             <button className="bouton-secondaire" onClick={() => { setFiltres({}); setRecherche(""); setTri(null); setPage(0); }}>

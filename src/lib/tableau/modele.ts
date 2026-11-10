@@ -129,6 +129,8 @@ export function filtrerEtTrier(
   recherche: string,
   tri: Tri | null,
   affiche: (colonne: string, valeur: string | undefined) => string = (_c, v) => v ?? "",
+  /** Lignes retenues par la recherche même si les mots ne sont pas dans les colonnes (ex. trouvés dans le texte du CV). */
+  trouveesAilleurs?: Set<string>,
 ): LigneTableau[] {
   const mots = pli(recherche).split(/\s+/).filter(Boolean);
   const actifs = Object.entries(filtres).map(([c, vals]) => [c, new Set(vals)] as const);
@@ -138,6 +140,7 @@ export function filtrerEtTrier(
       if (!vals.has(v === "" ? VIDE : v)) return false;
     }
     if (!mots.length) return true;
+    if (trouveesAilleurs && l.consultant_id && trouveesAilleurs.has(l.consultant_id)) return true;
     // Recherche sur toutes les colonnes, sans accents ni majuscules ; un numéro se retrouve quel que soit son format.
     const { tout, chiffres } = indexRecherche(l, affiche);
     return mots.every((m) => tout.includes(m) || (/^\+?\d[\d\s.]{3,}$/.test(m) && chiffres.includes(m.replace(/\D/g, "").replace(/^0/, ""))));
