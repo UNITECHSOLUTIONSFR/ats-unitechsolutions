@@ -34,3 +34,10 @@
 - **Droit à l'effacement** : fiche du consultant → saisir le trigramme → « Effacer définitivement ». Supprimer ensuite à la main les fichiers SharePoint listés.
 - **Purge à 24 mois** : Paramètres → « RGPD : purge à 24 mois » → vérifier la liste → saisir SUPPRIMER. À faire une fois par mois.
 - **Rectification** : directement dans la fiche ; chaque modification est historisée.
+
+## Mesures complémentaires (10/11/2026)
+- **Journal d'accès consultable** (Paramètres → Journal d'accès) : consultations, modifications, exports, suppressions, avec la personne et la date.
+- **Double authentification** disponible pour tous les comptes ; exigée dès qu'elle est activée.
+- **Emails aux consultants** (module Emails) : envoyés seulement à l'initiative d'un administrateur ; chaque email contient un **lien de désinscription** ; une personne désinscrite n'est plus jamais contactée. Le texte des réponses n'est pas conservé, seule la disponibilité lue est enregistrée.
+- **Fusion des doublons** : réservée aux administrateurs, historisée ; la fiche supprimée est tracée dans le journal.
+- **Shortlist client** : profils présentés de façon anonyme (trigramme et PDF anonymisé).

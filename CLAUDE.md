@@ -8,7 +8,7 @@
 - Existant : fichier Excel de suivi (M365), ~2 000 CV dans SharePoint (Word nominatif + PDF anonymisé), 200 à 500 candidatures/mois.
 - L'utilisatrice est **elle-même administratrice Microsoft 365** : les réglages Entra ID / Exchange / SharePoint se font avec elle, en pas-à-pas.
 - **Périmètre réalisé (10/11/2026)** : import Excel, CV SharePoint, synchronisations de nuit (Excel qui fait foi pendant la transition, CV, emails), missions + matching, interface, RGPD. Emails : le groupe `recrutement@` est copié (règle Exchange) dans la boîte partagée `ats-candidatures@`, seule boîte lisible par l'outil (RBAC Exchange « Application Mail.Read »). Accès SharePoint en **lecture seule**.
-- **Tâches planifiées** : Vercel Cron (`vercel.json`) → `/api/cron/excel` (2 h), `/api/cron/cv` (2 h 30), `/api/cron/emails` (toutes les heures), protégées par `CRON_SECRET`.
+- **Tâches planifiées** : GitHub Actions (`.github/workflows/taches-planifiees.yml`, les crons Vercel bloquaient les déploiements) → `/api/cron/excel` (2 h), `/api/cron/cv` (2 h 30), `/api/cron/emails` (toutes les heures), protégées par `CRON_SECRET` (même valeur dans Vercel et GitHub). La relance des emails n'est jamais planifiée : seul un admin la lance.
 - Les CV SharePoint sont rangés **par métier** (un dossier par métier) ; CV reçus par email déposés dans le dossier métier détecté, sinon `À classer`.
 - Connexion des équipes : **lien magique** (inscription libre fermée, invitation par un admin) ; connexion Microsoft possible plus tard.
 - Personne en interne ne maintiendra l'outil : **simple, robuste, documenté, peu coûteux**.

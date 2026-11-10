@@ -36,6 +36,8 @@ Toutes les tâches réalisables sans action de l'utilisatrice sont **terminées 
 - **Vitesse (10/11)** : classement d'une mission 15× plus rapide (1,5 s → 0,1 s, migration 15 appliquée), tableau de bord affiché sans attendre les classements, écrans déjà vus réaffichés immédiatement (2 min), fiche servie par une lecture directe et préchargée au survol.
 - **Module Email** (menu « Emails », admins) : sélection par fonction/compétence, disponibilité, statut ; modèles ; email « Disponibilité » (réponses appliquées automatiquement à la fiche, au tableau et à l'Excel) ou « libre » ; préparation puis lancement par l'admin. Tables créées (migrations 14 et 17). **Envoi réel coupé** tant qu'Exchange n'est pas branché (`EMAILS_ENVOI_ACTIF`).
 
+- **14 améliorations (10/11, après-midi)** : double authentification (Paramètres → Double authentification, exigée une fois activée) ; journal d'accès consultable ; comparaison et fusion des doublons (migration 18) ; recherche dans le texte des CV (migration 19) ; « À relancer » et « profils à 80+ à appeler » sur le tableau de bord ; filtres rapides Consultants ; shortlist client et export Excel d'une mission ; historique de la fiche en frise ; bilan de santé ; version téléphone ; tests (147) ; documentation (guides mis à jour + `docs/presentation-fonctionnelle.html`).
+
 ## En attente de l'utilisatrice
 1. Copier l'historique des emails (2-3 semaines) du groupe recrutement dans la boîte ATS Candidatures, puis Paramètres → Candidatures email → « Traiter les nouveaux emails » (relancer tant qu'il en reste).
 2. Jalon C : 3 missions passées avec les bons profils.

@@ -1,0 +1,403 @@
+<title>ATS Unitech Solutions</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+/* Mise en page : en-tête de présentation, sommaire des modules collant, puis une fiche par module (usage, accès, fonctionnalités, règles, en attente). */
+:root {
+  --fond: #f3f5fa;
+  --surface: #ffffff;
+  --encre: #0b1a3f;
+  --texte: #36425e;
+  --discret: #6b7591;
+  --trait: #dfe4ef;
+  --marque: #022179;
+  --marque-claire: #e8edf8;
+  --accent: #1f45a3;
+  --vert: #0f7a4f;
+  --vert-fond: #e6f5ee;
+  --orange: #9a5b00;
+  --orange-fond: #fdf1dc;
+  --titre: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --corps: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --fond: #0a1124; --surface: #111a33; --encre: #eef2fb; --texte: #c3cbe0; --discret: #8b95b2; --trait: #24304f;
+    --marque: #8fa8f0; --marque-claire: #1a2750; --accent: #a9bcf5; --vert: #5fd3a0; --vert-fond: #12302a; --orange: #f2b45c; --orange-fond: #3a2a12;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --fond: #0a1124; --surface: #111a33; --encre: #eef2fb; --texte: #c3cbe0; --discret: #8b95b2; --trait: #24304f;
+  --marque: #8fa8f0; --marque-claire: #1a2750; --accent: #a9bcf5; --vert: #5fd3a0; --vert-fond: #12302a; --orange: #f2b45c; --orange-fond: #3a2a12;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--fond); color: var(--texte); font-family: var(--corps); font-size: 15px; line-height: 1.6; margin: 0; }
+.cadre { max-width: 1080px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--titre); color: var(--encre); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+
+/* En-tête */
+.entete { background: linear-gradient(135deg, #022179 0%, #0b1a3f 70%); color: #fff; padding-block: 56px 44px; }
+.entete .surtitre { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #b6c4ee; font-weight: 600; }
+.entete h1 { color: #fff; font-size: clamp(32px, 5vw, 52px); line-height: 1.05; margin-top: 10px; }
+.entete p.chapo { max-width: 62ch; color: #d6def5; font-size: 17px; margin: 16px 0 0; }
+.chiffres { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 32px; }
+.chiffre { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.16); border-radius: 14px; padding: 14px 16px; }
+.chiffre b { display: block; font-family: var(--titre); font-size: 26px; color: #fff; font-variant-numeric: tabular-nums; }
+.chiffre span { font-size: 13px; color: #c7d2f2; }
+.date { margin-top: 18px; font-size: 12px; color: #9fb0e2; }
+
+/* Sommaire collant */
+.sommaire { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--fond); border-bottom: 1px solid var(--trait); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--fond); }
+.sommaire nav { display: flex; gap: 6px; overflow-x: auto; padding-block: 10px; scrollbar-width: thin; }
+.sommaire a { white-space: nowrap; text-decoration: none; color: var(--discret); font-size: 13px; font-weight: 500; padding: 6px 12px; border-radius: 999px; }
+.sommaire a:hover { background: var(--marque-claire); color: var(--encre); }
+
+/* Vue d'ensemble */
+.ensemble { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; padding-block: 36px 8px; }
+.ensemble > div { min-width: 0; }
+.ensemble h3 { font-size: 15px; margin-bottom: 6px; }
+.ensemble p { margin: 0; font-size: 14px; }
+
+/* Modules */
+.modules { display: grid; gap: 18px; padding-block: 28px 56px; }
+.module { background: var(--surface); border: 1px solid var(--trait); border-radius: 18px; padding: 24px; scroll-margin-top: 70px; }
+.module header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+.module h2 { font-size: 22px; }
+.module .role { font-size: 12px; font-weight: 600; color: var(--marque); background: var(--marque-claire); border-radius: 999px; padding: 3px 10px; }
+.module .but { margin: 8px 0 0; max-width: 70ch; }
+.grille { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 24px; margin-top: 18px; }
+@media (max-width: 760px) { .grille { grid-template-columns: 1fr; } }
+.etiquette { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; color: var(--discret); margin-bottom: 8px; }
+ul.specs { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+ul.specs li::marker { color: var(--accent); }
+ul.regles { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+ul.regles li { font-size: 14px; padding-left: 12px; border-left: 2px solid var(--trait); }
+.attente { margin-top: 16px; font-size: 13px; background: var(--orange-fond); color: var(--orange); border-radius: 10px; padding: 8px 12px; }
+.fait { color: var(--vert); background: var(--vert-fond); }
+code { font-size: 13px; background: var(--marque-claire); color: var(--encre); padding: 1px 6px; border-radius: 6px; }
+
+/* Tableau d'architecture */
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 9px 10px; border-top: 1px solid var(--trait); vertical-align: top; }
+th { color: var(--discret); font-weight: 600; font-size: 12px; }
+td:first-child { color: var(--encre); font-weight: 500; white-space: nowrap; }
+
+footer { border-top: 1px solid var(--trait); padding-block: 24px 40px; font-size: 13px; color: var(--discret); }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+html { scroll-behavior: smooth; }
+</style>
+
+<header class="entete">
+  <div class="cadre">
+    <div class="surtitre">Outil interne · Recrutement</div>
+    <h1>ATS Unitech Solutions</h1>
+    <p class="chapo">Le vivier de consultants d'Unitech réuni dans un seul outil : le fichier Excel de suivi, les CV SharePoint et les candidatures reçues sur recrutement@, avec un classement expliqué des profils pour chaque besoin client.</p>
+    <div class="chiffres">
+      <div class="chiffre"><b>≈ 4 300</b><span>fiches consultants</span></div>
+      <div class="chiffre"><b>1 923</b><span>fichiers CV SharePoint suivis</span></div>
+      <div class="chiffre"><b>3</b><span>synchronisations automatiques</span></div>
+      <div class="chiffre"><b>&lt; 15 $</b><span>de coût IA visé par mois</span></div>
+    </div>
+    <div class="date">État au 10 novembre 2026 · https://ats-unitechsolutions.vercel.app</div>
+  </div>
+</header>
+
+<div class="sommaire">
+  <div class="cadre">
+    <nav aria-label="Modules">
+      <a href="#acces">Accès</a><a href="#tableau-de-bord">Tableau de bord</a><a href="#consultants">Consultants</a><a href="#fiche">Fiche</a>
+      <a href="#missions">Missions</a><a href="#emails">Emails</a><a href="#candidatures">Candidatures email</a><a href="#cv">CV SharePoint</a>
+      <a href="#excel">Fichier Excel</a><a href="#verifier">Cas à vérifier</a><a href="#parametres">Paramètres</a><a href="#securite">Sécurité et RGPD</a>
+      <a href="#ia">IA et coûts</a><a href="#architecture">Architecture</a>
+    </nav>
+  </div>
+</div>
+
+<main class="cadre">
+  <section class="ensemble" aria-label="Vue d'ensemble">
+    <div><h3>Pour qui</h3><p>Deux rôles : <b>administrateur</b> (tout, plus paramètres, imports, exports, emails, fusions, suppressions) et <b>recruteur</b> (consulter, mettre à jour, suivre les missions). Accès uniquement sur invitation.</p></div>
+    <div><h3>D'où viennent les données</h3><p>Le fichier Excel (relu chaque nuit pendant la transition, il fait foi), les CV Word et PDF anonymisés de SharePoint, les candidatures copiées de recrutement@ vers la boîte de l'outil.</p></div>
+    <div><h3>Ce que l'outil apporte</h3><p>Une recherche instantanée sur tout le vivier, un score sur 100 expliqué pour chaque mission, le suivi des propositions et la mise à jour des disponibilités.</p></div>
+  </section>
+
+  <div class="modules">
+
+    <article class="module" id="acces">
+      <header><h2>Connexion et accès</h2><span class="role">Tous</span></header>
+      <p class="but">Ouvrir l'outil sans mot de passe, en toute sécurité.</p>
+      <div class="grille">
+        <div><div class="etiquette">Fonctionnalités</div><ul class="specs">
+          <li>Connexion par <b>lien magique</b> envoyé à l'adresse professionnelle ; aucune inscription libre.</li>
+          <li>Invitation, choix du rôle et retrait d'accès en un clic par un administrateur.</li>
+          <li><b>Double authentification</b> (code à 6 chiffres d'une application) : activée depuis Paramètres, puis exigée à chaque connexion ; aucune donnée n'est servie avant le code.</li>
+          <li>Bandeau d'invitation à l'activer pour les administrateurs qui ne l'ont pas encore fait.</li>
+        </ul></div>
+        <div><div class="etiquette">Règles</div><ul class="regles">
+          <li>Le message après demande de lien est le même que l'adresse soit invitée ou non.</li>
+          <li>Un compte désactivé perd l'accès immédiatement.</li>
+          <li>On ne peut pas retirer ses propres droits.</li>
+        </ul></div>
+      </div>
+      <div class="attente">En attente : activation de la double authentification par chaque administrateur ; connexion Microsoft possible plus tard.</div>
+    </article>
+
+    <article class="module" id="tableau-de-bord">
+      <header><h2>Tableau de bord</h2><span class="role">Tous</span></header>
+      <p class="but">Savoir en un coup d'œil quoi faire aujourd'hui.</p>
+      <div class="grille">
+        <div><div class="etiquette">Fonctionnalités</div><ul class="specs">
+          <li>Chiffres clés : consultants, CV Unitech, missions ouvertes, cas à vérifier.</li>
+          <li><b>Mes missions</b> ouvertes (et celles à assigner) avec leurs 3 meilleurs profils, chargés à part pour un affichage immédiat.</li>
+          <li>Pastille <b>« profils à 80+ à appeler »</b> : bien classés et pas encore suivis.</li>
+          <li><b>Nouveaux profils · 7 derniers jours</b> : emails, SharePoint, saisies.</li>
+          <li><b>À relancer</b> : proposés, appelés ou envoyés au client sans suite depuis plus de 7 jours.</li>
+          <li>À vérifier par type, et rapport des traitements des dernières 24 heures.</li>
+        </ul></div>
+        <div><div class="etiquette">Règles</div><ul class="regles">
+          <li>« Mes missions » = celles dont je suis responsable, plus celles sans responsable.</li>
+          <li>Le classement est le même que sur l'écran de la mission, sans IA.</li>
+        </ul></div>
+      </div>
+    </article>
+
+    <article class="module" id="consultants">
+      <header><h2>Consultants</h2><span class="role">Tous · export et import : admins</span></header>
+      <p class="but">Le tableau de suivi complet, aussi pratique qu'Excel et plus rapide.</p>
+      <div class="grille">
+        <div><div class="etiquette">Fonctionnalités</div><ul class="specs">
+          <li>Copie fidèle de l'onglet principal de l'Excel (en-têtes et ordre d'origine), plus les fiches créées hors Excel en haut.</li>
+          <li>Onglets par <b>domaine</b> (colonne Domaine, issue des onglets métier fusionnés), sans rechargement.</li>
+          <li><b>Recherche</b> sur toutes les colonnes, les compétences et le <b>texte complet des CV</b>, sans accents, téléphones dans tous les formats.</li>
+          <li><b>Filtres rapides</b> : disponibles maintenant, dispo à vérifier (&gt; 3 mois), ajoutés cette semaine, CV analysé ; filtres et tris par colonne comme Excel.</li>
+          <li>Modification d'une cellule par double-clic, ou d'une colonne sur plusieurs lignes ; copie des emails ou téléphones de la sélection.</li>
+          <li>Boutons <b>Word</b> (CV SharePoint), <b>Email</b> (candidature dans Outlook), <b>PDF</b> (CV anonymisé).</li>
+          <li>Bouton <b>+</b> : nouveau consultant, nouvelle mission, export Excel, import.</li>
+          <li>Ouverture instantanée : lignes préchargées dès l'ouverture de l'outil, 100 premières affichées tout de suite.</li>
+        </ul></div>
+        <div><div class="etiquette">Règles</div><ul class="regles">
+          <li>Tri par défaut : prénom, de A à Z.</li>
+          <li>Prénom et nom ne sont jamais fusionnés à l'affichage.</li>
+          <li>Une modification de l'onglet principal met la fiche à jour, avec historique.</li>
+          <li>Téléphones affichés au format 06 12 34 56 78.</li>
+        </ul></div>
+      </div>
+    </article>
+
+    <article class="module" id="fiche">
+      <header><h2>Fiche consultant</h2><span class="role">Tous · effacement RGPD : admins</span></header>
+      <p class="but">Tout savoir d'une personne et agir sans changer d'écran.</p>
+      <div class="grille">
+        <div><div class="etiquette">Fonctionnalités</div><ul class="specs">
+          <li>Panneau latéral depuis le tableau : appeler, écrire, CV Word ou email reçu, PDF anonymisé.</li>
+          <li>Coordonnées, disponibilité (avec date de mise à jour), profil et compétences lus dans le CV.</li>
+          <li><b>Proposer sur une mission</b> ouverte en un clic.</li>
+          <li>Fiche complète : modification des champs, informations du fichier de suivi, documents, propositions.</li>
+          <li><b>Historique en frise</b> : modifications, emails reçus, suivi des missions, CV, relances, création.</li>
+          <li>Export de toutes les données d'une personne et effacement définitif (administrateurs).</li>
+        </ul></div>
+        <div><div class="etiquette">Règles</div><ul class="regles">
+          <li>Disponibilité « à vérifier » au-delà de 3 mois sans mise à jour.</li>
+          <li>Chaque ouverture de fiche est notée dans le journal d'accès.</li>
+          <li>Trigramme : 1re lettre du prénom + 2 premières du nom, jamais un identifiant.</li>
+        </ul></div>
+      </div>
+    </article>
+
+    <article class="module" id="missions">
+      <header><h2>Missions et matching</h2><span class="role">Tous · assignation et export : admins</span></header>
+      <p class="but">Du besoin client à la liste de profils classés, en une minute.</p>
+      <div class="grille">
+        <div><div class="etiquette">Fonctionnalités</div><ul class="specs">
+          <li><b>Nouvelle mission en deux temps</b> : import de la fiche (PDF, Word) ou texte collé, lecture par l'IA, puis formulaire pré-rempli à relire.</li>
+          <li>Compétences demandées : un clic bascule obligatoire ou souhaitée ; ajout et retrait.</li>
+          <li><b>Classement sur 100</b> en cartes, avec l'évaluation critère par critère (✓ ◐ ✕) et les motifs d'écartement.</li>
+          <li>Suivi : Proposé → Appelé → Envoyé au client → Retenu / Refusé, historisé.</li>
+          <li><b>Responsable</b> par mission, enregistré dès la sélection ; filtres Mes missions / Toutes et par statut.</li>
+          <li><b>Préparer l'envoi au client</b> : profils anonymes, disponibilité, lien du PDF anonymisé, texte à copier.</li>
+          <li><b>Export Excel</b> du classement (administrateurs).</li>
+        </ul></div>
+        <div><div class="etiquette">Règles</div><ul class="regles">
+          <li>Filtres éliminatoires, puis score pondéré : compétences, années, séniorité, disponibilité, proximité du profil.</li>
+          <li>Matching sans IA, pondérations réglables.</li>
+          <li>Le score est une aide, jamais un refus automatique.</li>
+          <li>La personne qui crée une mission en est responsable ; un admin réassigne.</li>
+        </ul></div>
+      </div>
+      <div class="attente">En attente : jalon C, validation du matching sur 3 missions passées.</div>
+    </article>
+
+    <article class="module" id="emails">
+      <header><h2>Emails</h2><span class="role">Administrateurs</span></header>
+      <p class="but">Écrire à une sélection de consultants, en particulier pour mettre à jour leur disponibilité.</p>
+      <div class="grille">
+        <div><div class="etiquette">Fonctionnalités</div><ul class="specs">
+          <li>Critères : fonction ou compétence, disponibilité ancienne ou avant une date, statut ; exclusion à la main.</li>
+          <li><b>Aperçu des destinataires</b> : nombre et liste dans une fenêtre.</li>
+          <li><b>Modèles</b> réutilisables ; rédaction libre ; aperçu personnalisé ({prenom}).</li>
+          <li>Deux types : <b>Disponibilité</b> (réponses lues par l'IA et appliquées automatiquement à la fiche, au tableau et à l'Excel) et <b>Email libre</b> (réponses rattachées à la fiche).</li>
+          <li>Préparer, puis <b>Lancer l'envoi</b> : départ immédiat, par lots, depuis la boîte de l'outil ; suivi envoyés, réponses, à vérifier, désinscrits, erreurs.</li>
+        </ul></div>
+        <div><div class="etiquette">Règles</div><ul class="regles">
+          <li>Seul un administrateur lance un envoi ; rien n'est jamais planifié.</li>
+          <li>Lien de désinscription dans chaque email ; un désinscrit n'est plus contacté.</li>
+          <li>Seuls les cas incompréhensibles arrivent dans « Cas à vérifier ».</li>
+        </ul></div>
+      </div>
+      <div class="attente">En attente : autorisation d'envoi dans Exchange (boîte ats-candidatures@ seulement), puis envoi test à 10 consultants.</div>
+    </article>
+
+    <article class="module" id="candidatures">
+      <header><h2>Candidatures email</h2><span class="role">Automatique</span></header>
+      <p class="but">Chaque CV envoyé à recrutement@ devient une fiche, sans action de l'équipe.</p>
+      <div class="grille">
+        <div><div class="etiquette">Fonctionnalités</div><ul class="specs">
+          <li>Copie de recrutement@ vers la boîte de l'outil, lue toutes les heures.</li>
+          <li>Fiche créée ou complétée (email, puis téléphone), CV lu par l'IA, compétences enregistrées.</li>
+          <li>Historique des 3 derniers mois repris (487 candidatures, dont 430 nouvelles fiches).</li>
+        </ul></div>
+        <div><div class="etiquette">Règles</div><ul class="regles">
+          <li>Emails internes et sans CV ignorés, sans IA.</li>
+          <li>Un CV déjà connu (même empreinte) n'est pas réanalysé.</li>
+          <li>On garde expéditeur, date, objet et identifiant, pas le contenu.</li>
+        </ul></div>
+      </div>
+      <div class="attente">Plus tard : dépôt de ces CV dans le dossier métier SharePoint.</div>
+    </article>
+
+    <article class="module" id="cv">
+      <header><h2>CV SharePoint</h2><span class="role">Automatique · écran : admins</span></header>
+      <p class="but">Relier chaque CV Word Unitech à son PDF anonymisé et à la bonne fiche.</p>
+      <div class="grille">
+        <div><div class="etiquette">Fonctionnalités</div><ul class="specs">
+          <li>Lecture chaque nuit du dossier des CV (un sous-dossier par métier), en lecture seule.</li>
+          <li>Association Word ↔ PDF par métier et trigramme, PDF le plus récent d'abord.</li>
+          <li>Rattachement à la fiche par nom ; rattachement manuel dans Paramètres → CV SharePoint.</li>
+          <li>Analyse par lot (deux fois moins chère) ; un CV en échec est retenté une fois avec le modèle de secours.</li>
+        </ul></div>
+        <div><div class="etiquette">Règles</div><ul class="regles">
+          <li>La base garde la référence, le texte et l'empreinte, jamais le fichier.</li>
+          <li>Un seul appel par CV, sur le Word nominatif seulement.</li>
+          <li>CV scannés signalés, sans lecture d'image.</li>
+        </ul></div>
+      </div>
+    </article>
+
+    <article class="module" id="excel">
+      <header><h2>Fichier Excel de suivi</h2><span class="role">Automatique</span></header>
+      <p class="but">Garder l'Excel et l'outil identiques pendant la transition.</p>
+      <div class="grille">
+        <div><div class="etiquette">Fonctionnalités</div><ul class="specs">
+          <li>Relecture chaque nuit ; l'Excel fait foi et met les fiches à jour.</li>
+          <li>Les fiches créées dans l'outil sont <b>ajoutées à la fin</b> de l'onglet principal.</li>
+          <li>Les disponibilités mises à jour par les réponses aux emails sont recopiées dans l'Excel.</li>
+          <li>Import complet manuel et export Excel pour les administrateurs.</li>
+        </ul></div>
+        <div><div class="etiquette">Règles</div><ul class="regles">
+          <li>Seules de vraies différences modifient une fiche.</li>
+          <li>Une ligne déplacée ou modifiée retrouve sa fiche : pas de doublon.</li>
+          <li>Rien n'est supprimé dans le fichier.</li>
+        </ul></div>
+      </div>
+    </article>
+
+    <article class="module" id="verifier">
+      <header><h2>Cas à vérifier et doublons</h2><span class="role">Tous · fusion : admins</span></header>
+      <p class="but">Garder une base propre sans chercher les problèmes.</p>
+      <div class="grille">
+        <div><div class="etiquette">Fonctionnalités</div><ul class="specs">
+          <li>Doublons possibles, téléphones à vérifier, noms manquants, CV illisibles, réponses à vérifier.</li>
+          <li>Traitement ligne par ligne ou en masse (cases à cocher).</li>
+          <li><b>Comparer et fusionner</b> deux fiches : choix de la valeur par champ, tout réuni en une seule opération.</li>
+        </ul></div>
+        <div><div class="etiquette">Règles</div><ul class="regles">
+          <li>Dédoublonnage : email, puis téléphone ; même nom avec coordonnées différentes = alerte.</li>
+          <li>Téléphones : 9 chiffres ou 0 + 9 chiffres → +33 ; « 33… » sans « + » et lettre O corrigés.</li>
+        </ul></div>
+      </div>
+    </article>
+
+    <article class="module" id="parametres">
+      <header><h2>Paramètres</h2><span class="role">Administrateurs</span></header>
+      <p class="but">Piloter l'outil, par thème.</p>
+      <div class="grille">
+        <div><div class="etiquette">Sections</div><ul class="specs">
+          <li><b>Équipe</b> : utilisateurs et droits, double authentification.</li>
+          <li><b>Données</b> : import Excel, CV SharePoint, analyse des CV.</li>
+          <li><b>Automatisations</b> : candidatures email, bilan de santé, synchronisations, coûts et réglages.</li>
+          <li><b>Conformité</b> : purge à 24 mois, journal d'accès.</li>
+        </ul></div>
+        <div><div class="etiquette">Bilan de santé</div><ul class="regles">
+          <li>Dernier passage de chaque synchro, échecs sur 24 h, emails en erreur, coût IA du mois, cas à vérifier ; vert ou orange.</li>
+        </ul></div>
+      </div>
+    </article>
+
+    <article class="module" id="securite">
+      <header><h2>Sécurité et RGPD</h2><span class="role">Tous</span></header>
+      <p class="but">Protéger les données des candidats dès la première version.</p>
+      <div class="grille">
+        <div><div class="etiquette">Mesures</div><ul class="specs">
+          <li>Règles d'accès en base sur <b>toutes</b> les tables, testées automatiquement.</li>
+          <li><b>Journal d'accès</b> consultable : consultations, modifications, exports, suppressions.</li>
+          <li>Purge des personnes sans contact depuis 24 mois après confirmation, export et effacement par personne.</li>
+          <li>Accès Microsoft minimal : un seul site SharePoint, une seule boîte email.</li>
+          <li>En-têtes de sécurité du site, clés secrètes uniquement côté serveur.</li>
+        </ul></div>
+        <div><div class="etiquette">Règles</div><ul class="regles">
+          <li>L'IA n'extrait aucune caractéristique protégée (âge, origine, santé…).</li>
+          <li>Seul le PDF anonymisé est envoyé au client.</li>
+          <li>Toute suppression de consultant est tracée.</li>
+        </ul></div>
+      </div>
+      <div class="attente">En attente : jalon D, relecture de la note RGPD et adresse de contact des candidats.</div>
+    </article>
+
+    <article class="module" id="ia">
+      <header><h2>IA et coûts</h2><span class="role">Administrateurs</span></header>
+      <p class="but">Utiliser l'IA seulement là où elle fait gagner du temps, à coût maîtrisé.</p>
+      <div class="grille">
+        <div><div class="etiquette">Usages</div><ul class="specs">
+          <li>Lecture des CV (fiche de compétences), des fiches mission, des réponses de disponibilité.</li>
+          <li>Modèle principal Claude Haiku 5.5, secours Claude Sonnet 5.5 ; jamais Opus.</li>
+          <li>Suivi de chaque appel et plafond mensuel réglable (25 $ par défaut).</li>
+        </ul></div>
+        <div><div class="etiquette">Règles</div><ul class="regles">
+          <li>Pas de nouvelle lecture si le CV n'a pas changé.</li>
+          <li>Lots de nuit à moitié prix, réponses courtes et structurées.</li>
+          <li>Accord préalable au-delà de 5 $ en une fois.</li>
+        </ul></div>
+      </div>
+    </article>
+
+    <article class="module" id="architecture">
+      <header><h2>Architecture et exploitation</h2><span class="role">Administrateurs</span></header>
+      <p class="but">Un outil simple à maintenir, sans rien sur les ordinateurs de l'équipe.</p>
+      <div class="table-scroll" style="margin-top:16px">
+        <table>
+          <thead><tr><th>Brique</th><th>Outil</th><th>Rôle</th></tr></thead>
+          <tbody>
+            <tr><td>Application</td><td>Next.js sur Vercel (Paris)</td><td>Écrans et traitements</td></tr>
+            <tr><td>Base de données</td><td>Supabase Pro (Londres)</td><td>Fiches, missions, journal, recherche, sauvegarde quotidienne</td></tr>
+            <tr><td>Fichiers</td><td>SharePoint (Microsoft Graph)</td><td>CV Word et PDF, fichier Excel</td></tr>
+            <tr><td>Emails</td><td>Boîte ats-candidatures@ (Exchange)</td><td>Candidatures et réponses</td></tr>
+            <tr><td>Planification</td><td>GitHub Actions</td><td>Excel 2 h, CV 2 h 30, emails toutes les heures</td></tr>
+            <tr><td>IA</td><td>API Anthropic</td><td>Lecture des CV, missions et réponses</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="attente fait">Documentation détaillée dans le dépôt : guide utilisateur, guide d'exploitation, note RGPD et suivi du projet.</div>
+    </article>
+
+  </div>
+</main>
+
+<footer>
+  <div class="cadre">ATS Unitech Solutions · document de présentation fonctionnelle, mis à jour le 10 novembre 2026.</div>
+</footer>

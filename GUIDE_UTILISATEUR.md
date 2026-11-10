@@ -1,32 +1,38 @@
 # ATS Unitech Solutions — guide d'une page
 
-**Adresse :** https://ats-unitechsolutions.vercel.app — connexion avec votre email professionnel : un lien de connexion vous est envoyé.
+**Adresse :** https://ats-unitechsolutions.vercel.app — saisissez votre email professionnel : un lien de connexion vous est envoyé (pas de mot de passe). Les administrateurs ayant activé la double authentification saisissent ensuite le code à 6 chiffres de leur application.
+
+## Tableau de bord
+- **Mes missions** ouvertes, avec les 3 meilleurs profils de chacune et le nombre de **profils à 80+ à appeler**.
+- **Nouveaux profils · 7 derniers jours** (emails, SharePoint, saisie) : un clic ouvre la fiche.
+- **À relancer** : consultants proposés, appelés ou envoyés au client sans suite depuis 7 jours.
+- **À vérifier** : les cas à traiter (doublons possibles, téléphones, CV illisibles…).
 
 ## Trouver des consultants pour une mission
-1. **+ Nouvelle mission** (accueil ou menu Missions) → collez la fiche de poste du client → **Enregistrer**.
-2. L'outil extrait les compétences demandées. Ajustez si besoin : rendre une compétence **obligatoire** ou **souhaitée**, ou la retirer.
-3. Les consultants s'affichent **classés par score**. « Pourquoi ce score ? » détaille les compétences trouvées et manquantes.
-4. Pour chaque consultant : téléphone, disponibilité, **PDF anonymisé** prêt à envoyer au client.
-5. Suivez chaque proposition : **Proposé → Appelé → Envoyé au client → Retenu / Refusé**.
+1. **+ Nouvelle mission** → importez la fiche du client (PDF ou Word) **ou** collez son texte → « Lire la fiche et pré-remplir ».
+2. Vérifiez les champs (client, poste, lieu, démarrage, expérience) et les compétences : un clic rend une compétence **obligatoire** (foncée) ou **souhaitée** (claire) ; ✕ la retire ; vous pouvez en ajouter.
+3. « Créer la mission » : les consultants s'affichent **classés par score sur 100**, avec l'évaluation critère par critère (✓ / ◐ / ✕).
+4. Pour chaque consultant : appeler, écrire, CV Word, PDF anonymisé, et **suivi** : Proposé → Appelé → Envoyé au client → Retenu / Refusé.
+5. **Préparer l'envoi au client** : un texte prêt à copier avec les profils anonymes (trigramme), leur disponibilité et le lien du PDF anonymisé. Les administrateurs peuvent **exporter le classement en Excel**.
 
-Le score est une aide : c'est vous qui décidez.
+Le score est une aide : c'est vous qui décidez. La personne qui crée une mission en est responsable ; un administrateur peut la réassigner.
 
-## Consulter et mettre à jour un consultant
-- Menu **Consultants** : le tableau de suivi, avec recherche, filtres par colonne et vues par domaine (Data, Cloud…).
-- **Clic sur une ligne** : la fiche s'ouvre à droite (coordonnées, disponibilité, CV, compétences, missions).
-- **W** ouvre le CV Word Unitech, **PDF** le CV anonymisé (dans SharePoint).
-- Pour modifier : « Ouvrir la fiche complète et modifier ». Pensez à mettre à jour la **disponibilité** : au-delà de 3 mois sans mise à jour, elle passe en orange.
+## Consultants
+- La recherche porte sur **toutes les colonnes**, les **compétences** et **le texte complet des CV** (« java paris », « kafka », « SNCF »).
+- **Filtres rapides** : Disponibles maintenant · Dispo à vérifier (> 3 mois) · Ajoutés cette semaine · CV analysé. Onglets par **domaine**.
+- **Clic sur une ligne** : la fiche s'ouvre à droite. **Word** = CV dans SharePoint, **Email** = candidature reçue (Outlook), **PDF** = CV anonymisé.
+- **Double-clic sur une cellule** pour la modifier ; cochez plusieurs lignes pour modifier une colonne d'un coup ou copier les emails.
+- **+** (en haut à droite) : nouveau consultant, nouvelle mission, export et import Excel (administrateurs).
+- La fiche complète montre l'**historique** (modifications, emails, missions, CV) sur une frise.
 
-## Ajouter un consultant
-- **Pendant la transition** : continuez à remplir le fichier Excel de suivi dans SharePoint ; l'outil se met à jour chaque nuit.
-- **Les CV** : déposez le Word « UNITECH SOLUTIONS - CV Prénom Nom - Métier » et le PDF « UNITECH SOLUTIONS - CV TRI - Métier » dans le bon dossier métier de SharePoint. L'outil les relie et les analyse la nuit suivante.
-- **Les candidatures reçues sur recrutement@** sont traitées automatiquement.
+## Emails (administrateurs)
+Choisir des consultants (fonction ou compétence, disponibilité, statut) → « Aperçu des destinataires » → partir d'un **modèle** ou écrire → **Préparer** → **Lancer l'envoi**. Pour un email « Disponibilité », chaque réponse met à jour la fiche, le tableau et l'Excel automatiquement ; chaque email contient un lien de désinscription.
 
-## Les couleurs des pastilles
+## Pendant la transition
+Continuez à remplir le fichier Excel : il est relu chaque nuit et reçoit les fiches créées dans l'outil. Les CV déposés dans SharePoint (« UNITECH SOLUTIONS - CV Prénom Nom - Métier » et « … - CV TRI - … ») et les candidatures envoyées à recrutement@ sont traités automatiquement.
+
+## Pastilles
 🟢 disponible ou retenu · 🟠 à vérifier · 🔴 alerte · ⚪ inactif
-
-## Cas à vérifier
-L'accueil indique les cas à vérifier (doublon possible, téléphone, nom manquant…). Corrigez la fiche, puis cliquez sur **Résolu**.
 
 ## Données personnelles
 Ne copiez pas les données des candidats hors de l'outil. N'envoyez au client que le **PDF anonymisé**. Toute demande d'un candidat sur ses données est à transmettre à un administrateur.
