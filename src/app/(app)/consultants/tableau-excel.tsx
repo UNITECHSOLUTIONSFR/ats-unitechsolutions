@@ -155,12 +155,12 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
           <h1 className="titre-page">Consultants</h1>
           <p className="text-sm text-zinc-500">
             {chargementPartiel ? "Chargement des autres lignes…" : <>{visibles.length.toLocaleString("fr-FR")} ligne(s){nbFiltres > 0 && ` sur ${lignesVue.length.toLocaleString("fr-FR")}`}</>} ·
-            double-cliquez sur une cellule pour la modifier
+            <span className="hidden sm:inline">double-cliquez sur une cellule pour la modifier</span>
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <label className="relative">
-            <IconeRecherche className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+            <IconeRecherche className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input value={recherche} onChange={(e) => { setRecherche(e.target.value); setPage(0); }}
               placeholder="Nom, compétence, ville, téléphone, mot du CV…" className="champ w-full pl-9 sm:w-72" />
           </label>
@@ -190,13 +190,13 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
       </div>
 
       {/* Filtres rapides */}
-      <div className="flex flex-wrap items-center gap-2 text-sm">
+      <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1 text-sm sm:flex-wrap sm:overflow-visible">
         {([["disponibles", "Disponibles maintenant"], ["a_verifier", "Dispo à vérifier (> 3 mois)"], ["semaine", "Ajoutés cette semaine"], ["cv", "CV analysé"]] as const).map(([f, libelle]) => {
           const actif = rapides.includes(f);
           return (
             <button key={f} type="button" disabled={chargementPartiel}
               onClick={() => { setRapides((r) => (actif ? r.filter((x) => x !== f) : [...r, f])); setPage(0); }}
-              className={`rounded-full px-3.5 py-1 font-medium ring-1 transition disabled:opacity-50 ${actif ? "bg-nuit text-white ring-nuit" : "bg-white/70 text-slate-600 ring-slate-200 hover:bg-white"}`}>
+              className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1 font-medium ring-1 transition disabled:opacity-50 ${actif ? "bg-nuit text-white ring-nuit" : "bg-white/70 text-slate-600 ring-slate-200 hover:bg-white"}`}>
               {libelle}
             </button>
           );
@@ -222,7 +222,7 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
         <table className="w-max min-w-full border-separate border-spacing-0 text-[13px]">
           <thead>
             <tr>
-              <th className="sticky left-0 top-0 z-30 bg-white/95 px-4 py-3 text-left backdrop-blur-xl">
+              <th className="sticky top-0 z-30 bg-white/95 px-4 py-3 text-left backdrop-blur-xl sm:left-0">
                 <input type="checkbox" checked={toutesCochees} onChange={basculerPage} aria-label="Sélectionner la page" className="accent-marque-600" />
               </th>
               {entetes.map((e) => {
@@ -257,7 +257,7 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
                     if (l.consultant_id && !(ev.target as HTMLElement).closest("input, a, button")) setFicheOuverte(l.consultant_id);
                   }}
                   className={`group cursor-pointer ${cochee ? "bg-marque-50" : "bg-white/90 hover:bg-marque-50/70"}`}>
-                  <td className={`sticky left-0 z-10 border-t border-slate-100/80 px-4 py-2.5 ${cochee ? "bg-marque-50" : "bg-white group-hover:bg-[#f3f6fc]"}`}>
+                  <td className={`border-t border-slate-100/80 px-4 py-2.5 sm:sticky sm:left-0 sm:z-10 ${cochee ? "bg-marque-50" : "bg-white group-hover:bg-[#f3f6fc]"}`}>
                     <div className="flex items-center gap-2">
                       <input type="checkbox" checked={cochee} onChange={() => basculer(l.id)} className="accent-marque-600" aria-label={`Ligne ${l.position}`} />
                       <span className="w-9 text-right text-[13px] tabular-nums text-slate-400">{l.position}</span>
