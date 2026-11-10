@@ -17,6 +17,7 @@ export default function Redaction({ modeles }: { modeles: Modele[] }) {
   const [avant, setAvant] = useState("");
   const [exclus, setExclus] = useState<string[]>([]);
   const [apercu, setApercu] = useState<ApercuDestinataires | null>(null);
+  const [apercuOuvert, setApercuOuvert] = useState(false);
   useEffect(() => {
     let actif = true;
     const t = setTimeout(() => {
@@ -36,6 +37,7 @@ export default function Redaction({ modeles }: { modeles: Modele[] }) {
 
   return (
     <form action={action} className="space-y-5">
+      {apercuOuvert && <FenetreApercu apercu={apercu} exclus={exclus.length} onExclure={(id) => setExclus((x) => [...x, id])} onFermer={() => setApercuOuvert(false)} />}
       <input type="hidden" name="exclus" value={JSON.stringify(exclus)} />
       <input type="hidden" name="type" value={type} />
 
@@ -64,17 +66,8 @@ export default function Redaction({ modeles }: { modeles: Modele[] }) {
           ))}
           <span className="text-xs text-slate-400">Aucun choix = tous (hors inactifs et désinscrits)</span>
         </div>
-        <div className="rounded-2xl bg-white/60 p-4 ring-1 ring-white/80">
-          <div className="mb-2 text-sm font-semibold text-nuit">{apercu ? `${apercu.total.toLocaleString("fr-FR")} consultant(s) sélectionné(s)` : "Calcul…"}{exclus.length > 0 && <span className="font-normal text-slate-500"> · {exclus.length} exclu(s)</span>}</div>
-          <div className="grid max-h-56 gap-x-4 gap-y-1 overflow-y-auto text-sm sm:grid-cols-2 lg:grid-cols-3">
-            {apercu?.exemples.map((c) => (
-              <label key={c.id} className="flex items-center gap-2 truncate">
-                <input type="checkbox" defaultChecked className="accent-marque-600" onChange={(e) => { if (!e.target.checked) setExclus((x) => [...x, c.id]); }} />
-                <span className="truncate text-nuit">{c.nom}</span><span className="truncate text-xs text-slate-400">{c.poste ?? ""}</span>
-              </label>
-            ))}
-          </div>
-          {apercu && apercu.total > apercu.exemples.length && <p className="mt-2 text-xs text-slate-500">Les {apercu.exemples.length} premiers sont affichés.</p>}
+        <div className="flex justify-end">
+          <button type="button" onClick={() => setApercuOuvert(true)} className="bouton-secondaire">Aperçu des destinataires</button>
         </div>
       </div>
 
@@ -125,6 +118,42 @@ function Etape({ n, titre, texte }: { n: number; titre: string; texte: string })
     <div className="flex items-start gap-3">
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-nuit text-sm font-bold text-white">{n}</span>
       <div><h2 className="font-semibold text-nuit">{titre}</h2><p className="text-sm text-slate-500">{texte}</p></div>
+    </div>
+  );
+}
+
+/** Fenêtre d'aperçu : combien de consultants seront contactés, et lesquels (50 premiers), avec exclusion possible. */
+function FenetreApercu({ apercu, exclus, onExclure, onFermer }: {
+  apercu: ApercuDestinataires | null; exclus: number; onExclure: (id: string) => void; onFermer: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-nuit/20 p-4 backdrop-blur-sm" onClick={onFermer}>
+      <div className="verre flex max-h-[80vh] w-full max-w-3xl flex-col rounded-3xl bg-white/90" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-6">
+          <div>
+            <div className="text-sm text-slate-500">Consultants qui seront contactés</div>
+            <div className="text-4xl font-bold tracking-tight text-nuit tabular-nums">{apercu ? apercu.total.toLocaleString("fr-FR") : "…"}</div>
+            {exclus > 0 && <div className="text-xs text-slate-500">{exclus} exclu(s) à la main</div>}
+          </div>
+          <button type="button" onClick={onFermer} className="rounded-full px-3 py-1 text-slate-400 hover:bg-slate-100 hover:text-nuit" aria-label="Fermer">✕</button>
+        </div>
+        <div className="overflow-y-auto px-6 py-2">
+          <table className="w-full text-sm">
+            <thead className="text-left text-xs text-slate-400"><tr><th className="py-2 font-medium">Nom</th><th className="py-2 font-medium">Poste</th><th className="py-2 font-medium">Disponibilité</th><th /></tr></thead>
+            <tbody>
+              {apercu?.exemples.map((c) => (
+                <tr key={c.id} className="border-t border-slate-100">
+                  <td className="py-2 pr-3 text-nuit">{c.nom || "—"}</td>
+                  <td className="max-w-56 truncate py-2 pr-3 text-slate-500">{c.poste ?? ""}</td>
+                  <td className="py-2 pr-3 text-slate-500">{c.disponibilite ?? ""}</td>
+                  <td className="py-2 text-right"><button type="button" onClick={() => onExclure(c.id)} className="text-xs text-slate-400 hover:text-red-700">Exclure</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {apercu && apercu.total > apercu.exemples.length && <p className="border-t border-slate-100 px-6 py-3 text-xs text-slate-500">Les {apercu.exemples.length} premiers (par nom) sont affichés.</p>}
+      </div>
     </div>
   );
 }
