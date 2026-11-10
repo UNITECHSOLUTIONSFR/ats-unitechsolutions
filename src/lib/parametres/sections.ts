@@ -16,6 +16,7 @@ export const SECTIONS: Section[] = [
   { href: "/parametres/cv", titre: "CV SharePoint", texte: "CV Word et PDF anonymisés, rattachement manuel à une fiche.", groupe: "Données", icone: "📄" },
   { href: "/parametres/analyse-cv", titre: "Analyse des CV", texte: "Lecture des CV par l'IA : compétences, expérience, résumé.", groupe: "Données", icone: "✨" },
   { href: "/parametres/emails", titre: "Candidatures email", texte: "Emails reçus sur recrutement@ et ce que l'outil en a fait.", groupe: "Automatisations", icone: "✉️" },
+  { href: "/parametres/sante", titre: "Bilan de santé", texte: "Tout tourne-t-il ? Derniers passages, erreurs, coûts, cas à vérifier.", groupe: "Automatisations", icone: "🩺" },
   { href: "/parametres/synchronisations", titre: "Synchronisations", texte: "Excel, CV et emails : passages automatiques et lancement à la main.", groupe: "Automatisations", icone: "🔄" },
   { href: "/parametres/couts", titre: "Coûts et réglages", texte: "Dépenses d'IA du mois, plafond, pondérations du matching.", groupe: "Automatisations", icone: "💶" },
   { href: "/parametres/rgpd", titre: "RGPD : purge à 24 mois", texte: "Personnes sans contact depuis 24 mois, export et effacement.", groupe: "Conformité", icone: "🛡️" },

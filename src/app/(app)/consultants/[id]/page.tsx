@@ -4,6 +4,11 @@ import { exigerUtilisateur, journaliser } from "@/lib/acces";
 import { formaterTelephone } from "@/lib/metier/telephone";
 import { modifierConsultant } from "@/lib/consultants/actions";
 import BlocRGPD from "./rgpd";
+import { frise, type Evenement } from "@/lib/consultants/historique";
+
+const COULEUR_EVENEMENT: Record<Evenement["type"], string> = {
+  modification: "bg-marque-500", email: "bg-amber-400", mission: "bg-emerald-500", document: "bg-sky-400", relance: "bg-violet-500", creation: "bg-slate-400",
+};
 
 const TYPES_DOC: Record<string, string> = { word_nominatif: "Word nominatif", pdf_anonyme: "PDF anonymisé", autre: "Autre" };
 const STATUTS_PROPOSITION: Record<string, string> = {
@@ -21,7 +26,7 @@ export default async function FicheConsultant({ params }: { params: Promise<{ id
     supabase.from("propositions").select("statut, score, updated_at, missions(id, intitule, client)").eq("consultant_id", id).order("updated_at", { ascending: false }),
   ]);
   if (!c) notFound();
-  await journaliser(supabase, utilisateur.id, "consultation", id);
+  const [evenements] = await Promise.all([frise(supabase, id, c.created_at, c.source), journaliser(supabase, utilisateur.id, "consultation", id)]);
 
   const { majDispo, dispoAncienne } = etatDisponibilite(c.disponibilite_maj_le);
   const pdf = (documents ?? []).find((d) => d.type === "pdf_anonyme");
@@ -124,6 +129,22 @@ export default async function FicheConsultant({ params }: { params: Promise<{ id
               })}
               {!propositions?.length && <li className="text-slate-500">Aucune.</li>}
             </ul>
+          </div>
+
+          <div className="carte p-6">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Historique</h2>
+            <ol className="mt-3 space-y-3 border-l border-slate-200 pl-5">
+              {evenements.map((e, k) => (
+                <li key={k} className="relative text-sm">
+                  <span className={`absolute -left-[26px] top-1 h-3 w-3 rounded-full ring-4 ring-white ${COULEUR_EVENEMENT[e.type]}`} />
+                  <div className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="font-medium text-nuit">{e.lien ? <Link href={e.lien} className="hover:underline">{e.titre}</Link> : e.titre}</span>
+                    <span className="text-xs tabular-nums text-slate-400">{new Date(e.date).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}</span>
+                  </div>
+                  {e.detail && <div className="text-slate-500">{e.detail}</div>}
+                </li>
+              ))}
+            </ol>
           </div>
         </section>
 
