@@ -213,4 +213,14 @@ describe("tableau de suivi", () => {
     await commeUtilisateur(ADMIN, `delete from consultants where id=$1`, [c.id]);
     expect(await commeUtilisateur(ADMIN, `select * from tableau_lignes where onglet_id=$1`, [o.id])).toEqual([]);
   });
+
+  it("effacement RGPD : un administrateur supprime fiche, documents et emails ; un recruteur ne peut pas", async () => {
+    const [c] = await commeUtilisateur<{ id: string }>(ADMIN, `insert into consultants (prenom, nom, trigramme) values ('Effa','Cement','ECE') returning id`);
+    await db.query(`insert into documents (consultant_id, type, sharepoint_drive_id, sharepoint_item_id, nom_fichier, texte_extrait) values ($1,'word_nominatif','d','rgpd1','cv.docx','texte')`, [c.id]);
+    await db.query(`insert into emails_entrants (message_id, expediteur, consultant_id) values ('m-rgpd','x@y.fr',$1)`, [c.id]);
+    expect(await commeUtilisateur(RECRUTEUR, `delete from emails_entrants where consultant_id=$1 returning id`, [c.id])).toEqual([]);
+    expect(await commeUtilisateur(ADMIN, `delete from documents where consultant_id=$1 returning id`, [c.id])).toHaveLength(1);
+    expect(await commeUtilisateur(ADMIN, `delete from emails_entrants where consultant_id=$1 returning id`, [c.id])).toHaveLength(1);
+    expect(await commeUtilisateur(ADMIN, `delete from consultants where id=$1 returning id`, [c.id])).toHaveLength(1);
+  });
 });

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { exigerUtilisateur, journaliser } from "@/lib/acces";
 import { formaterTelephone } from "@/lib/metier/telephone";
 import { modifierConsultant } from "@/lib/consultants/actions";
+import BlocRGPD from "./rgpd";
 
 const TYPES_DOC: Record<string, string> = { word_nominatif: "Word nominatif", pdf_anonyme: "PDF anonymisé", autre: "Autre" };
 const STATUTS_PROPOSITION: Record<string, string> = {
@@ -107,6 +108,7 @@ export default async function FicheConsultant({ params }: { params: Promise<{ id
           </div>
         </section>
 
+        <div className="space-y-4">
         <form action={modifierConsultant} className="space-y-3 carte p-5 text-sm">
           <h2 className="font-semibold">Coordonnées et suivi</h2>
           <input type="hidden" name="id" value={c.id} />
@@ -133,6 +135,8 @@ export default async function FicheConsultant({ params }: { params: Promise<{ id
           </label>
           <button className="bouton-primaire w-full justify-center">Enregistrer</button>
         </form>
+          {utilisateur.role === "admin" && <BlocRGPD id={c.id} trigramme={c.trigramme} />}
+        </div>
       </div>
     </div>
   );
