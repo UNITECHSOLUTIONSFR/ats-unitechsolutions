@@ -2,12 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { exigerAdmin } from "@/lib/acces-admin";
-import { envoyerLotProfilsCV, lireLotProfilsCV, PROMPT_VERSION } from "@/lib/ai";
+import { envoyerLotProfilsCV, lireLotProfilsCV } from "@/lib/ai";
 import { MODELES } from "@/lib/ai/config";
 import { enregistrerUsages, etatBudgetMois } from "@/lib/ai/journal";
 import { resoudreCompetences } from "@/lib/matching/competences";
 import { empreinteSHA256, extraireTexte, telechargerFichier } from "@/lib/sharepoint";
 import { COUT_ESTIME_PAR_CV, cvAAnalyser } from "./selection";
+import { enregistrerProfil } from "./enregistrement";
 
 export interface EtatAnalyse {
   message?: string;
@@ -85,22 +86,7 @@ export async function recupererResultats(): Promise<EtatAnalyse> {
   for (const r of lot.resultats) {
     const consultantId = consultantDe.get(r.id);
     if (!r.profil || !consultantId) { echecs.push(r.id); continue; }
-    const p = r.profil;
-    const { error } = await supabase.from("profils").upsert({
-      consultant_id: consultantId, document_id: r.id, annees_experience: p.annees_experience, seniorite: p.seniorite,
-      secteurs: p.secteurs, langues: p.langues, certifications: p.certifications, resume: p.resume,
-      modele: MODELES.ficheCV, prompt_version: PROMPT_VERSION,
-    }, { onConflict: "consultant_id" });
-    if (error) { echecs.push(r.id); continue; }
-    const lignes = new Map<string, { niveau: number | null; annees: number | null }>();
-    for (const c of p.competences) {
-      const id = correspondance.get(c.nom);
-      if (id && !lignes.has(id)) lignes.set(id, { niveau: c.niveau, annees: c.annees });
-    }
-    await supabase.from("consultant_competences").delete().eq("consultant_id", consultantId);
-    if (lignes.size) {
-      await supabase.from("consultant_competences").insert([...lignes].map(([competence_id, v]) => ({ consultant_id: consultantId, competence_id, ...v })));
-    }
+    if (!(await enregistrerProfil(supabase, consultantId, r.id, r.profil, MODELES.ficheCV, correspondance))) { echecs.push(r.id); continue; }
     enregistres++;
   }
 

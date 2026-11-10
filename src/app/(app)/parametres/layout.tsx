@@ -10,6 +10,7 @@ export default async function LayoutParametres({ children }: { children: React.R
         <Link href="/parametres" className="rounded-full bg-white px-3 py-1 ring-1 ring-zinc-300 hover:bg-zinc-50">Utilisateurs et droits</Link>
         <Link href="/parametres/import" className="rounded-full bg-white px-3 py-1 ring-1 ring-zinc-300 hover:bg-zinc-50">Import du fichier Excel</Link>
         <Link href="/parametres/analyse-cv" className="rounded-full bg-white px-3 py-1 ring-1 ring-zinc-300 hover:bg-zinc-50">Analyse des CV</Link>
+        <Link href="/parametres/emails" className="rounded-full bg-white px-3 py-1 ring-1 ring-zinc-300 hover:bg-zinc-50">Candidatures email</Link>
       </nav>
       {children}
     </div>
