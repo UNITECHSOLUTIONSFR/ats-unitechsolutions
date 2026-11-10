@@ -113,7 +113,7 @@ html { scroll-behavior: smooth; }
   <div class="cadre">
     <nav aria-label="Modules">
       <a href="#acces">Accès</a><a href="#tableau-de-bord">Tableau de bord</a><a href="#consultants">Consultants</a><a href="#fiche">Fiche</a>
-      <a href="#missions">Missions</a><a href="#emails">Emails</a><a href="#candidatures">Candidatures email</a><a href="#cv">CV SharePoint</a>
+      <a href="#missions">Missions</a><a href="#cv-unitech">CV Unitech</a><a href="#emails">Emails</a><a href="#candidatures">Candidatures email</a><a href="#cv">CV SharePoint</a>
       <a href="#excel">Fichier Excel</a><a href="#verifier">Cas à vérifier</a><a href="#parametres">Paramètres</a><a href="#securite">Sécurité et RGPD</a>
       <a href="#ia">IA et coûts</a><a href="#architecture">Architecture</a>
     </nav>
@@ -199,7 +199,8 @@ html { scroll-behavior: smooth; }
           <li>Coordonnées, disponibilité (avec date de mise à jour), profil et compétences lus dans le CV.</li>
           <li><b>Proposer sur une mission</b> ouverte en un clic.</li>
           <li>Fiche complète : modification des champs, informations du fichier de suivi, documents, propositions.</li>
-          <li><b>Historique en frise</b> : modifications, emails reçus, suivi des missions, CV, relances, création.</li>
+          <li><b>Échanges de l'équipe</b> : notes rapides datées et signées, visibles par tous.</li>
+          <li><b>Historique en frise</b> : modifications, notes, emails reçus, suivi des missions, CV, relances, création.</li>
           <li>Export de toutes les données d'une personne et effacement définitif (administrateurs).</li>
         </ul></div>
         <div><div class="etiquette">Règles</div><ul class="regles">
@@ -231,6 +232,27 @@ html { scroll-behavior: smooth; }
         </ul></div>
       </div>
       <div class="attente">En attente : jalon C, validation du matching sur 3 missions passées.</div>
+    </article>
+
+    <article class="module" id="cv-unitech">
+      <header><h2>CV Unitech</h2><span class="role">Tous · réglage : admins</span></header>
+      <p class="but">Transformer n'importe quel CV en CV Unitech prêt à envoyer au client.</p>
+      <div class="grille">
+        <div><div class="etiquette">Fonctionnalités</div><ul class="specs">
+          <li>À partir d'un CV PDF ou Word quelconque : <b>Word Unitech nominatif</b> et <b>PDF Unitech anonymisé</b>.</li>
+          <li>Gabarit fidèle au modèle Unitech : police Century Gothic, bandeau bleu, rubriques grises, logo, pied de page.</li>
+          <li>Section <b>« Adéquation à la mission »</b> rédigée pour la mission choisie (sinon « Profil »).</li>
+          <li>Boutons sur la fiche et sur chaque profil classé d'une mission ; dépôt automatique dans SharePoint.</li>
+          <li>CV reçus par email : Word et PDF Unitech générés chaque nuit, une fois le rendu validé.</li>
+        </ul></div>
+        <div><div class="etiquette">Règles</div><ul class="regles">
+          <li>L'IA ne rajoute rien : ni expérience, ni date, ni compétence absente du CV.</li>
+          <li>Le document ne contient que le trigramme, jamais le nom ni les coordonnées.</li>
+          <li>Un fichier existant n'est jamais écrasé.</li>
+          <li>À relire avant tout envoi au client.</li>
+        </ul></div>
+      </div>
+      <div class="attente">En attente : validation des 10 essais, puis activation du dépôt dans les dossiers métier.</div>
     </article>
 
     <article class="module" id="emails">
@@ -347,6 +369,7 @@ html { scroll-behavior: smooth; }
           <li>Règles d'accès en base sur <b>toutes</b> les tables, testées automatiquement.</li>
           <li><b>Journal d'accès</b> consultable : consultations, modifications, exports, suppressions.</li>
           <li>Purge des personnes sans contact depuis 24 mois après confirmation, export et effacement par personne.</li>
+          <li>Sauvegarde Excel complète déposée chaque lundi dans SharePoint, en plus des sauvegardes quotidiennes de la base.</li>
           <li>Accès Microsoft minimal : un seul site SharePoint, une seule boîte email.</li>
           <li>En-têtes de sécurité du site, clés secrètes uniquement côté serveur.</li>
         </ul></div>
@@ -387,7 +410,7 @@ html { scroll-behavior: smooth; }
             <tr><td>Base de données</td><td>Supabase Pro (Londres)</td><td>Fiches, missions, journal, recherche, sauvegarde quotidienne</td></tr>
             <tr><td>Fichiers</td><td>SharePoint (Microsoft Graph)</td><td>CV Word et PDF, fichier Excel</td></tr>
             <tr><td>Emails</td><td>Boîte ats-candidatures@ (Exchange)</td><td>Candidatures et réponses</td></tr>
-            <tr><td>Planification</td><td>GitHub Actions</td><td>Excel 2 h, CV 2 h 30, emails toutes les heures</td></tr>
+            <tr><td>Planification</td><td>GitHub Actions</td><td>Excel 2 h, CV 2 h 30, emails toutes les heures, sauvegarde Excel le lundi</td></tr>
             <tr><td>IA</td><td>API Anthropic</td><td>Lecture des CV, missions et réponses</td></tr>
           </tbody>
         </table>

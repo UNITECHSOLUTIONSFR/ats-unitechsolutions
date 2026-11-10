@@ -40,6 +40,8 @@ Toutes les tâches réalisables sans action de l'utilisatrice sont **terminées 
 
 - **Durée des connexions (10/11)** : 7 jours maximum depuis la connexion, 3 jours sans activité ; appliqué par l'outil (réglage Supabase refusé : non inclus dans la formule).
 
+- **7 améliorations (10/11, soir)** : notes rapides de l'équipe sur les fiches (migration 20) ; « Nouveaux profils pour vos missions » sur le tableau de bord ; sauvegarde Excel hebdomadaire dans SharePoint (lundi) ; statistiques ; lecture des CV scannés par l'IA et des vieux .doc par Microsoft ; **CV Unitech** (Word + PDF anonymisé au modèle Unitech, adéquation à la mission, gabarit `src/lib/cv-unitech/gabarit-unitech.docx` sans donnée personnelle, migration 21) ; dépôt automatique des CV email après validation du rendu (réglage `cv_unitech_depot_metier`, mode essai par défaut).
+
 ## En attente de l'utilisatrice
 1. Copier l'historique des emails (2-3 semaines) du groupe recrutement dans la boîte ATS Candidatures, puis Paramètres → Candidatures email → « Traiter les nouveaux emails » (relancer tant qu'il en reste).
 2. Jalon C : 3 missions passées avec les bons profils.

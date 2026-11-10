@@ -25,6 +25,12 @@ Le score est une aide : c'est vous qui décidez. La personne qui crée une missi
 - **+** (en haut à droite) : nouveau consultant, nouvelle mission, export et import Excel (administrateurs).
 - La fiche complète montre l'**historique** (modifications, emails, missions, CV) sur une frise.
 
+## CV Unitech
+Sur la fiche (bloc « CV Unitech ») ou sur un profil classé d'une mission : « Générer le Word et le PDF Unitech ». L'outil réécrit le CV (n'importe quel format) au modèle Unitech, avec la section **Adéquation à la mission** si une mission est choisie, puis dépose le Word nominatif et le PDF anonymisé dans SharePoint (sans jamais écraser un fichier). Relisez-les avant envoi.
+
+## Notes et statistiques
+« Échanges de l'équipe » sur la fiche : une note datée et signée (« appelé, dispo mars »), visible par tous. Le menu **Statistiques** montre l'arrivée des profils, leurs sources et le suivi des propositions.
+
 ## Emails (administrateurs)
 Choisir des consultants (fonction ou compétence, disponibilité, statut) → « Aperçu des destinataires » → partir d'un **modèle** ou écrire → **Préparer** → **Lancer l'envoi**. Pour un email « Disponibilité », chaque réponse met à jour la fiche, le tableau et l'Excel automatiquement ; chaque email contient un lien de désinscription.
 
