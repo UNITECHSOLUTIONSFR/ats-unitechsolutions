@@ -5,7 +5,7 @@ import { MODELES } from "@/lib/ai/config";
 import { enregistrerUsages, etatBudgetMois } from "@/lib/ai/journal";
 import { resoudreCompetences } from "@/lib/matching/competences";
 import { empreinteSHA256, extraireTexte, telechargerFichier } from "@/lib/sharepoint";
-import { COUT_ESTIME_PAR_CV, cvAAnalyser } from "./selection";
+import { COUT_ESTIME_PAR_CV, cvAAnalyser, echecsRecents } from "./selection";
 import { enregistrerProfil } from "./enregistrement";
 
 /**
@@ -30,7 +30,7 @@ export async function envoyerAnalyse(supabase: SupabaseClient): Promise<EtatAnal
   const budget = await etatBudgetMois();
   if (budget.depasse) return { erreur: `Plafond IA du mois atteint (${budget.depense.toFixed(2)} $ / ${budget.plafond} $).` };
 
-  const textes: { id: string; texte: string }[] = [];
+  const textes: { id: string; texte: string; modele?: string }[] = [];
   const illisibles: string[] = [];
   const erreurs: string[] = [];
   const file = [...aFaire];
@@ -42,7 +42,8 @@ export async function envoyerAnalyse(supabase: SupabaseClient): Promise<EtatAnal
         await supabase.from("documents").update({
           empreinte_sha256: empreinteSHA256(contenu), texte_extrait: extrait.texte, texte_extractible: extrait.extractible,
         }).eq("id", doc.id);
-        if (extrait.extractible) textes.push({ id: doc.id, texte: extrait.texte });
+        // Déjà en échec une fois avec Haiku : nouvel essai unique avec le modèle de secours (Sonnet).
+        if (extrait.extractible) textes.push({ id: doc.id, texte: extrait.texte, modele: doc.repli ? MODELES.ficheCVRepli : undefined });
         else illisibles.push(doc.id);
       } catch (e) {
         erreurs.push(`${doc.nom_fichier} : ${(e as Error).message}`);
@@ -93,7 +94,11 @@ export async function collecterAnalyse(supabase: SupabaseClient): Promise<EtatAn
   const cout = usages.reduce((s, u) => s + u.cout_estime_usd, 0);
   await supabase.from("executions").update({
     statut: "termine", fin: new Date().toISOString(), erreurs: echecs.length,
-    rapport: { ...rapport, enregistres, echecs: echecs.length, cout_usd: cout },
+    rapport: { ...rapport, enregistres, echecs: echecs.length, echecIds: echecs, cout_usd: cout },
   }).eq("id", execution.id);
+  // Second échec : signalé pour vérification à la main (CV atypique).
+  const deja = await echecsRecents(supabase);
+  const definitifs = echecs.filter((id) => (deja.get(id) ?? 0) >= 2);
+  if (definitifs.length) await supabase.from("alertes").insert(definitifs.map((id) => ({ type: "cv_illisible", document_id: id, consultant_id: consultantDe.get(id) ?? null, details: { motif: "analyse IA impossible (2 essais)" } })));
   return { message: `${enregistres} CV analysés et enregistrés, ${echecs.length} en échec. Coût réel : ${cout.toFixed(2)} $.` };
 }

@@ -174,8 +174,8 @@ export function requeteLotProfilCV(identifiant: string, texteCV: string, modele:
 }
 
 /** Envoie un lot de CV à structurer (Batch API, 50 % moins cher). Renvoie l'identifiant du lot. */
-export async function envoyerLotProfilsCV(cv: { id: string; texte: string }[]): Promise<string> {
-  const lot = await anthropic().messages.batches.create({ requests: cv.map((c) => requeteLotProfilCV(c.id, c.texte)) });
+export async function envoyerLotProfilsCV(cv: { id: string; texte: string; modele?: string }[]): Promise<string> {
+  const lot = await anthropic().messages.batches.create({ requests: cv.map((c) => requeteLotProfilCV(c.id, c.texte, c.modele)) });
   return lot.id;
 }
 
