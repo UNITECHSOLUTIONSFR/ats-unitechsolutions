@@ -86,3 +86,22 @@ export async function creerConsultant(_e: EtatCreation, formData: FormData): Pro
   revalidatePath("/consultants");
   redirect(`/consultants/${cree.id}`);
 }
+
+/** Fusionne deux fiches d'une même personne (administrateurs). La fiche « gardée » reçoit les valeurs choisies et tout le reste. */
+export async function fusionnerFiches(formData: FormData) {
+  const { utilisateur, supabase } = await exigerUtilisateur();
+  if (utilisateur.role !== "admin") throw new Error("Fusion réservée aux administrateurs.");
+  const garde = String(formData.get("garde")), supprime = String(formData.get("supprime"));
+  const valeurs: Record<string, unknown> = {};
+  for (const [k, v] of formData.entries()) {
+    if (!k.startsWith("champ:")) continue;
+    const [source, champ] = [String(v), k.slice(6)];
+    if (source !== "autre") continue; // par défaut, la valeur de la fiche gardée reste
+    valeurs[champ] = formData.get(`valeur:${champ}`) === "" ? null : formData.get(`valeur:${champ}`);
+  }
+  const { error } = await supabase.rpc("fusionner_consultants", { p_garde: garde, p_supprime: supprime, p_valeurs: valeurs });
+  if (error) throw new Error(error.message);
+  revalidatePath("/alertes");
+  revalidatePath("/consultants");
+  redirect(`/consultants/${garde}`);
+}

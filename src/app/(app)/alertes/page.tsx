@@ -4,7 +4,8 @@ import { traiterAlertes } from "@/lib/alertes/actions";
 import { detailAlerte, LIBELLES_ALERTES } from "@/lib/alertes/libelles";
 
 export default async function Alertes({ searchParams }: { searchParams: Promise<{ type?: string }> }) {
-  const { supabase } = await exigerUtilisateur();
+  const { utilisateur, supabase } = await exigerUtilisateur();
+  const estAdmin = utilisateur.role === "admin";
   const { type } = await searchParams;
   let q = supabase.from("alertes").select("id, type, details, created_at, consultant_id, consultants(prenom, nom, trigramme)")
     .eq("statut", "ouverte").order("created_at", { ascending: false }).limit(300);
@@ -43,6 +44,9 @@ export default async function Alertes({ searchParams }: { searchParams: Promise<
                   <td className="p-3">{c ? <Link href={`/consultants/${a.consultant_id}`} className="font-medium text-marque-700 hover:underline">{c.prenom} {c.nom} <span className="font-mono text-xs text-zinc-500">{c.trigramme}</span></Link> : "—"}</td>
                   <td className="p-3 text-zinc-600">{detailAlerte(a.details as Record<string, unknown>)}</td>
                   <td className="whitespace-nowrap p-3 text-right">
+                    {estAdmin && a.type === "doublon_possible" && a.consultant_id && ((a.details as { fiches_existantes?: string[] })?.fiches_existantes ?? [])[0] && (
+                      <><Link href={`/alertes/fusion?a=${a.consultant_id}&b=${(a.details as { fiches_existantes: string[] }).fiches_existantes[0]}`} className="bouton-primaire">Comparer</Link>{" "}</>
+                    )}
                     <button name="action" value={`resolue:${a.id}`} className="bouton-secondaire">Résolu</button>{" "}
                     <button name="action" value={`ignoree:${a.id}`} className="bouton-secondaire">Ignorer</button>
                   </td>

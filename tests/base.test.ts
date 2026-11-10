@@ -243,4 +243,17 @@ describe("tableau de suivi", () => {
     await expect(commeUtilisateur(RECRUTEUR, "update envois_relance set statut = 'envoye' where campagne_id = $1 returning id", [c.id])).resolves.toEqual([]);
     expect(await commeUtilisateur(INCONNU, "select id from envois_relance")).toEqual([]);
   });
+  it("fusion de deux fiches : réservée aux administrateurs, rien n'est perdu", async () => {
+    const [a] = await commeUtilisateur<{ id: string }>(ADMIN, "insert into consultants (prenom, nom, trigramme, email) values ('Ana', 'Roux', 'ARO', 'ana1@x.fr') returning id");
+    const [b] = await commeUtilisateur<{ id: string }>(ADMIN, "insert into consultants (prenom, nom, trigramme, email, telephone_e164) values ('Ana', 'ROUX', 'ARO', 'ana2@x.fr', '+33611111111') returning id");
+    await commeUtilisateur(ADMIN, "insert into alertes (type, consultant_id) values ('doublon_possible', $1)", [b.id]);
+    await expect(commeUtilisateur(RECRUTEUR, "select fusionner_consultants($1, $2, '{}')", [a.id, b.id])).rejects.toThrow(/administrateurs/);
+    await commeUtilisateur(ADMIN, "select fusionner_consultants($1, $2, $3)", [a.id, b.id, JSON.stringify({ email: "ana2@x.fr", telephone_e164: "+33611111111" })]);
+    const [f] = await commeUtilisateur<{ email: string; telephone_e164: string }>(ADMIN, "select email, telephone_e164 from consultants where id = $1", [a.id]);
+    expect(f).toEqual({ email: "ana2@x.fr", telephone_e164: "+33611111111" });
+    expect(await commeUtilisateur(ADMIN, "select id from consultants where id = $1", [b.id])).toEqual([]);
+    expect(await commeUtilisateur(ADMIN, "select statut from alertes where consultant_id = $1 and type = 'doublon_possible'", [a.id])).toEqual([]);
+    const [h] = await commeUtilisateur<{ n: string }>(ADMIN, "select count(*) n from consultants_historique where consultant_id = $1 and source = 'fusion'", [a.id]);
+    expect(Number(h.n)).toBe(1);
+  });
 });
