@@ -30,9 +30,10 @@ export default async function FicheConsultant({ params }: { params: Promise<{ id
     supabase.from("propositions").select("statut, score, updated_at, missions(id, intitule, client)").eq("consultant_id", id).order("updated_at", { ascending: false }),
   ]);
   if (!c) notFound();
-  const [evenements, { data: missionsOuvertes }] = await Promise.all([
+  const [evenements, { data: missionsOuvertes }, { data: cvGeneres }] = await Promise.all([
     frise(supabase, id, c.created_at, c.source),
     supabase.from("missions").select("id, intitule, client").eq("statut", "ouverte").order("created_at", { ascending: false }),
+    supabase.from("cv_unitech_generes").select("id, created_at, word_nom, word_url, pdf_nom, pdf_url, missions(intitule, client)").eq("consultant_id", id).order("created_at", { ascending: false }).limit(10),
     journaliser(supabase, utilisateur.id, "consultation", id),
   ]);
 
@@ -117,7 +118,7 @@ export default async function FicheConsultant({ params }: { params: Promise<{ id
               {(documents ?? []).map((d) => (
                 <li key={d.id}>
                   <span className="text-slate-500">{TYPES_DOC[d.type]} : </span>
-                  {d.url_web ? <a href={d.url_web} target="_blank" rel="noreferrer" className="lien">{d.nom_fichier}</a> : d.nom_fichier}
+                  {d.url_web?.includes("sharepoint.com") ? <a href={d.url_web} target="_blank" rel="noreferrer" className="lien">{d.nom_fichier}</a> : d.nom_fichier}
                 </li>
               ))}
             </ul>
@@ -183,7 +184,10 @@ export default async function FicheConsultant({ params }: { params: Promise<{ id
           </label>
           <button className="bouton-primaire w-full justify-center">Enregistrer</button>
         </form>
-          <BlocCVUnitech consultantId={c.id} missions={missionsOuvertes ?? []} />
+          <BlocCVUnitech consultantId={c.id} missions={missionsOuvertes ?? []} generes={(cvGeneres ?? []).map((g) => {
+            const m = g.missions as unknown as { intitule: string; client: string | null } | null;
+            return { id: g.id, date: g.created_at, mission: m ? `${m.intitule}${m.client ? ` · ${m.client}` : ""}` : null, word: { nom: g.word_nom, url: g.word_url }, pdf: { nom: g.pdf_nom, url: g.pdf_url } };
+          })} />
           {utilisateur.role === "admin" && <BlocRGPD id={c.id} trigramme={c.trigramme} />}
         </div>
       </div>

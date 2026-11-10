@@ -29,7 +29,7 @@ export async function dossierMetier(driveId: string, poste: string | null, metie
  * avec la section « Adéquation à la mission » si une mission est donnée. Les deux fichiers sont déposés dans SharePoint
  * (dossier métier, ou dossier d'essais) sans jamais écraser un fichier existant.
  */
-export async function genererCVUnitech(supabase: SupabaseClient, consultantId: string, options: { missionId?: string | null; essai?: boolean } = {}): Promise<ResultatCVUnitech> {
+export async function genererCVUnitech(supabase: SupabaseClient, consultantId: string, options: { missionId?: string | null; essai?: boolean; par?: string | null } = {}): Promise<ResultatCVUnitech> {
   const usages: UsageIA[] = [];
   try {
     const [{ data: c }, { data: docs }] = await Promise.all([
@@ -70,7 +70,13 @@ export async function genererCVUnitech(supabase: SupabaseClient, consultantId: s
     // PDF : conversion par Microsoft (rendu identique au Word, polices comprises).
     const pdf = await graphGet<Buffer>(`drives/${driveId}/items/${word.id}/content?format=pdf`, { brut: true });
     const pdfDepose = await graphTeleverser(driveId, `${dossier}/${noms.pdf}`, pdf, "application/pdf", fetch, "rename");
-    return { word: { nom: word.name, url: word.webUrl }, pdf: { nom: pdfDepose.name, url: pdfDepose.webUrl }, dossier, coutUSD: usages.reduce((s, u) => s + u.cout_estime_usd, 0) };
+    const coutUSD = usages.reduce((s, u) => s + u.cout_estime_usd, 0);
+    // Gardé dans l'outil : la fiche et la mission rouvrent ces fichiers sans nouvelle génération.
+    await supabase.from("cv_unitech_generes").insert({
+      consultant_id: consultantId, mission_id: options.missionId ?? null, word_nom: word.name, word_url: word.webUrl,
+      pdf_nom: pdfDepose.name, pdf_url: pdfDepose.webUrl, dossier, cout_usd: coutUSD, par: options.par ?? null,
+    });
+    return { word: { nom: word.name, url: word.webUrl }, pdf: { nom: pdfDepose.name, url: pdfDepose.webUrl }, dossier, coutUSD };
   } finally {
     await enregistrerUsages(usages, `cv_unitech:${consultantId}`);
   }

@@ -85,8 +85,15 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
     }, 300);
     return () => { actif = false; clearTimeout(t); };
   }, [rechercheDifferee]);
-  const idsCV = dansCV.q === rechercheDifferee.trim() ? dansCV.ids : undefined;
+  const [avecCV, setAvecCV] = useState(true);
+  const idsCV = avecCV && dansCV.q === rechercheDifferee.trim() ? dansCV.ids : undefined;
   const visibles = useMemo(() => filtrerEtTrier(lignesVue, filtres, rechercheDifferee, tri, affiche, idsCV), [lignesVue, filtres, rechercheDifferee, tri, affiche, idsCV]);
+  // Lignes trouvées seulement grâce au texte du CV (le mot n'est dans aucune colonne) : signalées par une pastille.
+  const parLeCV = useMemo(() => {
+    if (!idsCV?.size) return new Set<string>();
+    const dansColonnes = new Set(filtrerEtTrier(lignesVue, filtres, rechercheDifferee, null, affiche).map((l) => l.id));
+    return new Set(visibles.filter((l) => !dansColonnes.has(l.id)).map((l) => l.id));
+  }, [idsCV, lignesVue, filtres, rechercheDifferee, affiche, visibles]);
   const pages = Math.max(1, Math.ceil(visibles.length / PAR_PAGE));
   const pageCourante = Math.min(page, pages - 1);
   const affichees = visibles.slice(pageCourante * PAR_PAGE, (pageCourante + 1) * PAR_PAGE);
@@ -154,7 +161,7 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
         <div>
           <h1 className="titre-page">Consultants</h1>
           <p className="text-sm text-zinc-500">
-            {chargementPartiel ? "Chargement des autres lignes…" : <>{visibles.length.toLocaleString("fr-FR")} ligne(s){nbFiltres > 0 && ` sur ${lignesVue.length.toLocaleString("fr-FR")}`}</>} ·
+            {chargementPartiel ? "Chargement des autres lignes…" : <>{visibles.length.toLocaleString("fr-FR")} ligne(s){nbFiltres > 0 && ` sur ${lignesVue.length.toLocaleString("fr-FR")}`}{parLeCV.size > 0 && `, dont ${parLeCV.size} où le mot est seulement dans le CV`}</>} ·
             <span className="hidden sm:inline">double-cliquez sur une cellule pour la modifier</span>
           </p>
         </div>
@@ -163,6 +170,10 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
             <IconeRecherche className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input value={recherche} onChange={(e) => { setRecherche(e.target.value); setPage(0); }}
               placeholder="Nom, compétence, ville, téléphone, mot du CV…" className="champ w-full pl-9 sm:w-72" />
+          </label>
+          <label className="flex items-center gap-1.5 text-xs text-slate-500" title="Chercher aussi le mot dans le texte complet des CV">
+            <input type="checkbox" checked={avecCV} onChange={(e) => { setAvecCV(e.target.checked); setPage(0); }} className="accent-marque-600" />
+            Chercher aussi dans les CV
           </label>
           {nbFiltres > 0 && (
             <button className="bouton-secondaire" onClick={() => { setFiltres({}); setRecherche(""); setRapides([]); setTri(null); setPage(0); }}>
@@ -261,6 +272,7 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
                     <div className="flex items-center gap-2">
                       <input type="checkbox" checked={cochee} onChange={() => basculer(l.id)} className="accent-marque-600" aria-label={`Ligne ${l.position}`} />
                       <span className="w-9 text-right text-[13px] tabular-nums text-slate-400">{l.position}</span>
+                      {parLeCV.has(l.id) && <span className="rounded-md bg-violet-50 px-1.5 py-0.5 text-[10px] font-bold text-violet-700" title="Le mot cherché figure dans le texte du CV de cette personne">mot dans le CV</span>}
                       {l.consultant_id ? (
                         <button type="button" onClick={() => setFicheOuverte(l.consultant_id)} title="Ouvrir la fiche" className="text-zinc-400 hover:text-marque-600">
                           <IconeFiche className="h-4 w-4" />
@@ -271,8 +283,8 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
                           className="rounded-md bg-marque-50 px-1.5 py-0.5 text-[10px] font-bold text-marque-700 hover:bg-marque-100">Word</a>
                       )}
                       {l.consultant_id && documents[l.consultant_id]?.email && (
-                        <a href={documents[l.consultant_id].email} target="_blank" rel="noreferrer" title="Ouvrir l'email de candidature (Outlook)"
-                          className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 hover:bg-amber-100">Email</a>
+                        <a href={documents[l.consultant_id].email} target="_blank" rel="noreferrer" title="Ouvrir le CV reçu par email (SharePoint)"
+                          className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 hover:bg-amber-100">CV reçu</a>
                       )}
                       {l.consultant_id && documents[l.consultant_id]?.pdf && (
                         <a href={documents[l.consultant_id].pdf} target="_blank" rel="noreferrer" title="Ouvrir le PDF anonymisé (SharePoint)"

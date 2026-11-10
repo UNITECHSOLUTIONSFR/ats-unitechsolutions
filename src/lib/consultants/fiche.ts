@@ -58,7 +58,8 @@ export async function chargerFiche(supabase: SupabaseClient, utilisateurId: stri
     disponibilite_maj_le: c.disponibilite_maj_le, linkedin: c.linkedin, notes: c.notes,
     resume: profil?.resume ?? null, annees_experience: profil?.annees_experience ?? null, seniorite: profil?.seniorite ?? null,
     competences: (comp ?? []).map((k) => ({ nom: (k.competences as unknown as { nom_canonique: string } | null)?.nom_canonique ?? "?", annees: k.annees })),
-    documents: (docs ?? []).map((d) => ({ type: String(d.sharepoint_drive_id).startsWith("boite:") ? "email" : d.type, nom: d.nom_fichier, url: d.url_web })),
+    documents: (docs ?? []).filter((d) => !String(d.sharepoint_drive_id).startsWith("boite:") || d.url_web?.includes("sharepoint.com"))
+      .map((d) => ({ type: String(d.sharepoint_drive_id).startsWith("boite:") ? "email" : d.type, nom: d.nom_fichier, url: d.url_web })),
     propositions: (props ?? []).map((p) => ({
       mission_id: p.mission_id, statut: p.statut, score: p.score,
       mission: (p.missions as unknown as { intitule: string } | null)?.intitule ?? "Mission",

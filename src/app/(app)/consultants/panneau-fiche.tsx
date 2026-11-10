@@ -81,7 +81,7 @@ export default function PanneauFiche({ id, onFermer }: { id: string; onFermer: (
               <Action href={fiche.email ? `mailto:${fiche.email}` : undefined} libelle="Écrire" icone="@" />
               {word || !email
                 ? <Action href={word?.url ?? undefined} libelle="CV Word" icone="W" externe />
-                : <Action href={email.url ?? undefined} libelle="Email reçu" icone="✉" externe />}
+                : <Action href={email.url ?? undefined} libelle="CV reçu" icone="CV" externe />}
               <Action href={pdf?.url ?? undefined} libelle="PDF anonyme" icone="PDF" externe />
             </div>
 

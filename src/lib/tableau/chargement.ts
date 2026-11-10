@@ -48,7 +48,8 @@ export async function chargerTableau(supabase: SupabaseClient): Promise<DonneesT
   for (const d of docs) {
     const e = (documents[d.consultant_id] ??= {});
     const parEmail = String(d.sharepoint_drive_id).startsWith("boite:");
-    if (d.type === "word_nominatif" && parEmail && !e.email) e.email = d.url_web ?? undefined;
+    // CV reçu par email : seulement s'il a été rangé dans SharePoint (le lien vers la messagerie ne menait nulle part de précis).
+    if (d.type === "word_nominatif" && parEmail && !e.email && d.url_web?.includes("sharepoint.com")) e.email = d.url_web;
     if (d.type === "word_nominatif" && !parEmail && !e.word) e.word = d.url_web ?? undefined;
     if (d.type === "pdf_anonyme" && !e.pdf) e.pdf = d.url_web ?? undefined;
   }

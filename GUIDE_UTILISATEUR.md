@@ -20,13 +20,13 @@ Le score est une aide : c'est vous qui décidez. La personne qui crée une missi
 ## Consultants
 - La recherche porte sur **toutes les colonnes**, les **compétences** et **le texte complet des CV** (« java paris », « kafka », « SNCF »).
 - **Filtres rapides** : Disponibles maintenant · Dispo à vérifier (> 3 mois) · Ajoutés cette semaine · CV analysé. Onglets par **domaine**.
-- **Clic sur une ligne** : la fiche s'ouvre à droite. **Word** = CV dans SharePoint, **Email** = candidature reçue (Outlook), **PDF** = CV anonymisé.
+- **Clic sur une ligne** : la fiche s'ouvre à droite. **Word** = CV dans SharePoint, **CV reçu** = pièce jointe d'une candidature email (copiée dans SharePoint), **PDF** = CV anonymisé. Un badge « mot dans le CV » signale un résultat trouvé seulement dans le texte du CV (décochez « Chercher aussi dans les CV » pour l'exclure).
 - **Double-clic sur une cellule** pour la modifier ; cochez plusieurs lignes pour modifier une colonne d'un coup ou copier les emails.
 - **+** (en haut à droite) : nouveau consultant, nouvelle mission, export et import Excel (administrateurs).
 - La fiche complète montre l'**historique** (modifications, emails, missions, CV) sur une frise.
 
 ## CV Unitech
-Sur la fiche (bloc « CV Unitech ») ou sur un profil classé d'une mission : « Générer le Word et le PDF Unitech ». L'outil réécrit le CV (n'importe quel format) au modèle Unitech, avec la section **Adéquation à la mission** si une mission est choisie, puis dépose le Word nominatif et le PDF anonymisé dans SharePoint (sans jamais écraser un fichier). Relisez-les avant envoi.
+Sur la fiche (bloc « CV Unitech ») ou sur un profil classé d'une mission : « Générer le Word et le PDF Unitech ». L'outil réécrit le CV (n'importe quel format) au modèle Unitech, avec la section **Adéquation à la mission** si une mission est choisie, puis dépose le Word nominatif et le PDF anonymisé dans SharePoint (sans jamais écraser un fichier). Les CV déjà générés restent listés sur la fiche (et sur la carte du profil dans la mission) : rouvrez-les sans nouvelle génération. Relisez-les avant envoi.
 
 ## Notes et statistiques
 « Échanges de l'équipe » sur la fiche : une note datée et signée (« appelé, dispo mars »), visible par tous. Le menu **Statistiques** montre l'arrivée des profils, leurs sources et le suivi des propositions.

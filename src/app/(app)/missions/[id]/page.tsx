@@ -10,7 +10,8 @@ import BoutonCVMission from "./cv-mission";
 
 // Génération des CV Unitech (IA + SharePoint) depuis cet écran : jusqu'à 2 minutes.
 export const maxDuration = 120;
-import { changerStatutMission, modifierExigence, suivreProposition } from "@/lib/missions/actions";
+import { modifierExigence, suivreProposition } from "@/lib/missions/actions";
+import ChoixStatut from "../statut";
 
 const STATUTS_PROPOSITION: Record<string, string> = {
   propose: "Proposé", appele: "Appelé", envoye_client: "Envoyé au client", retenu: "Retenu", refuse: "Refusé",
@@ -27,11 +28,15 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
     .maybeSingle();
   if (!mission) notFound();
 
-  const [classement, { data: propositions }, responsables] = await Promise.all([
+  const [classement, { data: propositions }, responsables, { data: cvMission }] = await Promise.all([
     classementMission(supabase, id),
     supabase.from("propositions").select("consultant_id, statut").eq("mission_id", id),
     responsablesPossibles(supabase),
+    supabase.from("cv_unitech_generes").select("consultant_id, word_url, pdf_url, created_at").eq("mission_id", id).order("created_at", { ascending: false }),
   ]);
+  // Dernier CV Unitech généré pour cette mission, par consultant : rouvert sans nouvelle génération.
+  const cvParConsultant = new Map<string, { word: string; pdf: string }>();
+  for (const g of cvMission ?? []) if (!cvParConsultant.has(g.consultant_id)) cvParConsultant.set(g.consultant_id, { word: g.word_url, pdf: g.pdf_url });
   const suivi = new Map((propositions ?? []).map((p) => [p.consultant_id, p.statut as string]));
   const shortlist: ProfilShortlist[] = classement.filter((c) => suivi.has(c.consultant_id) && suivi.get(c.consultant_id) !== "refuse").map((c) => ({
     trigramme: c.trigramme, poste: c.intitule_poste, annees: c.annees_experience, score: Math.round(c.resultat.score),
@@ -59,13 +64,7 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
           <span className="text-slate-500">Responsable</span>
           <ChoixResponsable missionId={id} responsableId={mission.responsable_id} responsables={responsables} estAdmin={utilisateur.role === "admin"} />
         </div>
-        <form action={changerStatutMission} className="flex items-center gap-2 text-sm">
-          <input type="hidden" name="mission_id" value={id} />
-          <select name="statut" defaultValue={mission.statut} className="champ py-1.5">
-            <option value="ouverte">Ouverte</option><option value="pourvue">Pourvue</option><option value="fermee">Fermée</option>
-          </select>
-          <button className="bouton-secondaire">Enregistrer</button>
-        </form>
+        <ChoixStatut missionId={id} statut={mission.statut} />
         </div>
       </div>
 
@@ -119,9 +118,14 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
         </div>
 
         {classement.map((c, i) => (
-          <CarteCandidat key={c.consultant_id} rang={i + 1} c={c} missionId={id} statut={suivi.get(c.consultant_id)} ouvert={i < 10} />
+          <CarteCandidat key={c.consultant_id} rang={i + 1} c={c} missionId={id} statut={suivi.get(c.consultant_id)} ouvert={i < 10} cv={cvParConsultant.get(c.consultant_id)} />
         ))}
-        {!classement.length && <div className="carte p-8 text-center text-slate-500">Aucun consultant ne possède les compétences demandées.</div>}
+        {!classement.length && (
+          <div className="carte p-8 text-center text-sm text-slate-500">
+            <p className="font-medium text-nuit">Aucun consultant ne possède les compétences demandées.</p>
+            <p className="mt-1">Rendez certaines compétences « souhaitées » plutôt qu&apos;obligatoires, ou retirez-en une : le classement se recalcule aussitôt. La mission reste enregistrée.</p>
+          </div>
+        )}
       </section>
     </div>
   );
@@ -138,8 +142,8 @@ function niveau(score: number) {
 }
 
 /** Un consultant classé : identité, actions, puis l'explication du score critère par critère. */
-function CarteCandidat({ rang, c, missionId, statut, ouvert }: {
-  rang: number; c: LigneClassement; missionId: string; statut?: string; ouvert: boolean;
+function CarteCandidat({ rang, c, missionId, statut, ouvert, cv }: {
+  rang: number; c: LigneClassement; missionId: string; statut?: string; ouvert: boolean; cv?: { word: string; pdf: string };
 }) {
   const n = niveau(c.resultat.score);
   const initiales = `${c.prenom?.[0] ?? ""}${c.nom?.[0] ?? ""}`.replace("—", "").toUpperCase() || "?";
@@ -163,7 +167,12 @@ function CarteCandidat({ rang, c, missionId, statut, ouvert }: {
           {c.pdf_anonyme_url
             ? <a href={c.pdf_anonyme_url} target="_blank" rel="noreferrer" className={action}>PDF anonymisé</a>
             : <span className="pastille pastille-orange">PDF anonymisé manquant</span>}
-          <BoutonCVMission consultantId={c.consultant_id} missionId={missionId} />
+          {cv ? (
+            <>
+              <a href={cv.word} target="_blank" rel="noreferrer" className={action}>Word Unitech</a>
+              <a href={cv.pdf} target="_blank" rel="noreferrer" className={action}>PDF Unitech</a>
+            </>
+          ) : <BoutonCVMission consultantId={c.consultant_id} missionId={missionId} />}
           <form action={suivreProposition} className="flex items-center gap-1 rounded-full bg-white/70 p-1 ring-1 ring-white/80">
             <input type="hidden" name="mission_id" value={missionId} />
             <input type="hidden" name="consultant_id" value={c.consultant_id} />

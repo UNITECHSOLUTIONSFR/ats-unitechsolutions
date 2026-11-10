@@ -15,8 +15,11 @@ export async function genererCVUnitechAction(_e: EtatCVUnitech, formData: FormDa
   const missionId = String(formData.get("mission_id") ?? "") || null;
   const { data: reglage } = await supabase.from("reglages").select("valeur").eq("cle", "cv_unitech_depot_metier").maybeSingle();
   try {
-    const resultat = await genererCVUnitech(supabase, consultantId, { missionId, essai: reglage?.valeur !== true && reglage?.valeur !== "true" });
+    const resultat = await genererCVUnitech(supabase, consultantId, { missionId, essai: reglage?.valeur !== true && reglage?.valeur !== "true", par: utilisateur.id });
     await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "export", consultant_id: consultantId, details: { cv_unitech: resultat.word.nom, mission_id: missionId } });
+    const { revalidatePath } = await import("next/cache");
+    revalidatePath(`/consultants/${consultantId}`);
+    if (missionId) revalidatePath(`/missions/${missionId}`);
     return { resultat };
   } catch (e) {
     return { erreur: (e as Error).message.slice(0, 300) };

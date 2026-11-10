@@ -12,6 +12,7 @@ import { calculerTrigramme } from "@/lib/metier/trigramme";
 import { empreinteSHA256, extraireTexte } from "@/lib/sharepoint";
 import { envoiCorrespondant, traiterReponse } from "@/lib/relance/reponses";
 import { envoiActif } from "@/lib/relance/modele";
+import { deposerCVRecu } from "./depot";
 import { BOITE_CANDIDATURES, estInterne, messagesDepuis, piecesJointesCV, type MessageBoite, type PieceJointe } from "./boite";
 
 export interface BilanEmails {
@@ -185,6 +186,8 @@ export async function traiterCandidature(
     texte_extrait: extrait.texte, texte_extractible: true, modifie_sharepoint_le: m.receivedDateTime, statut_association: "non_traite",
   }).select("id").single();
   if (doc) {
+    // Le fichier reçu est rangé dans SharePoint : la fiche ouvre le vrai CV (et plus l'email).
+    await deposerCVRecu(supabase, doc.id, contenu, pj.name, { prenom, nom }, m.receivedDateTime).catch(() => undefined);
     const correspondance = await resoudreCompetences(supabase, p.competences.map((c) => c.nom));
     await enregistrerProfil(supabase, consultantId as string, doc.id, p, r.modele ?? MODELES.ficheCV, correspondance);
   }

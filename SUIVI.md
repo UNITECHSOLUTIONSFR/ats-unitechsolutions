@@ -132,3 +132,8 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 | Date | Traitement | Coût réel |
 |---|---|---|
 | — | — | 0 $ |
+
+### 10/11/2026 — Corrections (mission, recherche, CV Unitech, lien Email)
+- Fait : statut de mission enregistré automatiquement (« Enregistré ✓ ») ; recherche : badge « mot dans le CV » + case pour l'exclure ; CV Unitech générés conservés (table `cv_unitech_generes`) et listés sur la fiche et la carte mission ; lien « Email » remplacé par « CV reçu » (fichier copié dans SharePoint, `Candidatures reçues/<mois>`).
+- Testé : 153 tests, règles RLS (21), build.
+- Suite : 522 CV de l'historique du groupe sans fichier (accès groupe retiré) — récupérables si Group.Read.All est remis temporairement (à décider).
