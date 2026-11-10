@@ -98,6 +98,8 @@ export interface LigneTableau {
   position: number;
   consultant_id: string | null;
   valeurs: Record<string, string>;
+  /** Texte cherchable en plus des colonnes (compétences du CV analysé). */
+  recherche?: string;
 }
 
 /** Filtres par colonne : liste des valeurs cochées (absente = pas de filtre). */
@@ -108,6 +110,18 @@ export interface Tri {
 }
 
 const pli = (s: string) => sansAccents(s).toLowerCase();
+
+// Texte de recherche calculé une seule fois par ligne (une ligne modifiée est un nouvel objet, donc réindexée).
+const INDEX = new WeakMap<LigneTableau, { tout: string; chiffres: string }>();
+function indexRecherche(l: LigneTableau, affiche: (c: string, v: string | undefined) => string) {
+  let i = INDEX.get(l);
+  if (!i) {
+    const tout = pli([...Object.entries(l.valeurs).map(([c, v]) => `${v} ${affiche(c, v)}`), l.recherche ?? ""].join(" "));
+    i = { tout, chiffres: tout.replace(/\D/g, "") };
+    INDEX.set(l, i);
+  }
+  return i;
+}
 
 export function filtrerEtTrier(
   lignes: LigneTableau[],
@@ -125,8 +139,7 @@ export function filtrerEtTrier(
     }
     if (!mots.length) return true;
     // Recherche sur toutes les colonnes, sans accents ni majuscules ; un numéro se retrouve quel que soit son format.
-    const tout = pli(Object.entries(l.valeurs).map(([c, v]) => `${v} ${affiche(c, v)}`).join(" "));
-    const chiffres = tout.replace(/\D/g, "");
+    const { tout, chiffres } = indexRecherche(l, affiche);
     return mots.every((m) => tout.includes(m) || (/^\+?\d[\d\s.]{3,}$/.test(m) && chiffres.includes(m.replace(/\D/g, "").replace(/^0/, ""))));
   });
   if (tri) {

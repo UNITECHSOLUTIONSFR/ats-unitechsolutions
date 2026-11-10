@@ -42,7 +42,7 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
         </div>
         <form action={changerStatutMission} className="flex items-center gap-2 text-sm">
           <input type="hidden" name="mission_id" value={id} />
-          <select name="statut" defaultValue={mission.statut} className="rounded-lg border border-zinc-300 px-2 py-1">
+          <select name="statut" defaultValue={mission.statut} className="champ py-1.5">
             <option value="ouverte">Ouverte</option><option value="pourvue">Pourvue</option><option value="fermee">Fermée</option>
           </select>
           <button className="bouton-secondaire">Enregistrer</button>
@@ -52,7 +52,7 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
       <section className="carte p-5">
         <h2 className="font-semibold">Exigences extraites</h2>
         <p className="text-sm text-zinc-500">Ajustez-les si besoin : le classement se recalcule aussitôt.</p>
-        <ul className="mt-3 divide-y divide-zinc-100">
+        <ul className="mt-3 divide-y divide-white/70">
           {exigences.map((e) => (
             <li key={e.competence_id} className="flex flex-wrap items-center gap-3 py-2 text-sm">
               <span className="min-w-40 font-medium">{e.competences?.nom_canonique}</span>
@@ -88,7 +88,7 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
         <p className="text-sm text-zinc-500">Le score est une aide à la décision, jamais un refus automatique.</p>
         <div className="overflow-x-auto carte">
           <table className="w-full text-sm">
-            <thead className="bg-zinc-50 text-left text-zinc-500">
+            <thead className="bg-white/50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="p-3">#</th><th className="p-3">Consultant</th><th className="p-3">Score et raisons</th>
                 <th className="p-3">Disponibilité</th><th className="p-3">Téléphone</th><th className="p-3">CV</th><th className="p-3">Suivi</th>
@@ -96,7 +96,7 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
             </thead>
             <tbody>
               {classement.map((c, i) => (
-                <tr key={c.consultant_id} className={`border-t border-zinc-100 align-top ${c.resultat.elimine ? "opacity-60" : ""}`}>
+                <tr key={c.consultant_id} className={`border-t border-white/70 align-top ${c.resultat.elimine ? "opacity-60" : ""}`}>
                   <td className="p-3 text-zinc-400">{i + 1}</td>
                   <td className="p-3">
                     <Link href={`/consultants/${c.consultant_id}`} className="font-medium hover:underline">
@@ -106,8 +106,8 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
                   </td>
                   <td className="w-80 p-3">
                     <div className="flex items-center gap-2">
-                      <div className="h-2 w-24 rounded bg-zinc-100">
-                        <div className="h-2 rounded bg-marque-600" style={{ width: `${c.resultat.score}%` }} />
+                      <div className="h-2 w-24 rounded-full bg-slate-200/60">
+                        <div className="h-2 rounded-full bg-gradient-to-r from-marque-600 to-marque-400" style={{ width: `${c.resultat.score}%` }} />
                       </div>
                       <span className="font-semibold">{Math.round(c.resultat.score)}</span>
                     </div>
@@ -137,10 +137,10 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
                       <input type="hidden" name="consultant_id" value={c.consultant_id} />
                       <input type="hidden" name="score" value={c.resultat.score} />
                       <input type="hidden" name="detail" value={JSON.stringify(c.resultat)} />
-                      <select name="statut" defaultValue={suivi.get(c.consultant_id) ?? "propose"} className="rounded border border-zinc-300 px-1 py-0.5 text-xs">
+                      <select name="statut" defaultValue={suivi.get(c.consultant_id) ?? "propose"} className="champ px-2 py-1 text-xs">
                         {Object.entries(STATUTS_PROPOSITION).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                       </select>
-                      <button className="rounded border border-zinc-300 px-2 py-0.5 text-xs hover:bg-zinc-50">
+                      <button className="bouton-secondaire px-3 py-1 text-xs">
                         {suivi.has(c.consultant_id) ? "OK" : "Suivre"}
                       </button>
                     </form>

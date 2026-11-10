@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import type { ChampFiche } from "@/lib/import/excel";
 import {
   filtrerEtTrier, valeurEcran, valeursDistinctes, VIDE,
@@ -10,14 +10,25 @@ import {
 import { modifierCellules } from "@/lib/tableau/actions";
 import { classePastille } from "@/lib/statuts";
 import PanneauFiche from "./panneau-fiche";
-import { IconeCopier, IconeCrayon, IconeExport, IconeFiche, IconeFiltre, IconeRecherche } from "../icones";
+import { IconeCopier, IconeCrayon, IconeExport, IconeFiche, IconeFiltre, IconeImport, IconePlus, IconeRecherche } from "../icones";
 
 const PAR_PAGE = 100;
+
+/** Largeur de chaque colonne selon ce qu'elle contient : compacte pour un trigramme, large pour des notes. Texte trop long = coupé, visible au survol. */
+const LARGEURS: Partial<Record<ChampFiche, string>> = {
+  trigramme: "w-20 min-w-20 max-w-20", prenom: "min-w-32 max-w-40", nom: "min-w-32 max-w-44", nom_complet: "min-w-44 max-w-56",
+  telephone: "min-w-36 max-w-36", email: "min-w-52 max-w-64", email_2: "min-w-44 max-w-56", statut: "min-w-28 max-w-36",
+  disponibilite: "min-w-32 max-w-40", date_maj: "min-w-28 max-w-28", intitule_poste: "min-w-48 max-w-64", localisation: "min-w-32 max-w-44",
+  experience: "min-w-24 max-w-32", tjm_salaire: "min-w-28 max-w-36", linkedin: "min-w-36 max-w-44", cv_lien: "min-w-32 max-w-40",
+  notes: "min-w-64 max-w-80", commentaire_email: "min-w-48 max-w-64",
+};
+const largeur = (champ?: ChampFiche) => (champ && LARGEURS[champ]) || "min-w-32 max-w-56";
 
 interface Props {
   /** Vues par domaine (colonne « Domaine »), affichées comme des onglets. */
   vues: { cle: string; nom: string }[];
-  vueActive: string;
+  vueInitiale: string;
+  colonneDomaine: string;
   ongletId: string;
   entetes: string[];
   champs: Record<string, ChampFiche>;
@@ -27,8 +38,10 @@ interface Props {
   documents: Record<string, { word?: string; pdf?: string }>;
 }
 
-export default function TableauExcel({ vues, vueActive, ongletId, entetes, champs, lignes: initiales, estAdmin, documents }: Props) {
+export default function TableauExcel({ vues, vueInitiale, colonneDomaine, ongletId, entetes, champs, lignes: initiales, estAdmin, documents }: Props) {
   const [lignes, setLignes] = useState(initiales);
+  // Vue par domaine : filtrée dans le navigateur, sans recharger les 4 000 lignes.
+  const [vueActive, setVueActive] = useState(vueInitiale);
   const [filtres, setFiltres] = useState<Filtres>({});
   const [recherche, setRecherche] = useState("");
   // Tri par défaut : ordre alphabétique des prénoms.
@@ -47,7 +60,13 @@ export default function TableauExcel({ vues, vueActive, ongletId, entetes, champ
   const fermerFiche = useCallback(() => setFicheOuverte(null), []);
 
   const affiche = useCallback((c: string, v: string | undefined) => valeurEcran(champs[c], v), [champs]);
-  const visibles = useMemo(() => filtrerEtTrier(lignes, filtres, recherche, tri, affiche), [lignes, filtres, recherche, tri, affiche]);
+  // La saisie reste fluide : le filtrage suit juste derrière la frappe.
+  const rechercheDifferee = useDeferredValue(recherche);
+  const lignesVue = useMemo(
+    () => (vueActive ? lignes.filter((l) => (l.valeurs[colonneDomaine] ?? "").split(" ; ").includes(vueActive)) : lignes),
+    [lignes, vueActive, colonneDomaine],
+  );
+  const visibles = useMemo(() => filtrerEtTrier(lignesVue, filtres, rechercheDifferee, tri, affiche), [lignesVue, filtres, rechercheDifferee, tri, affiche]);
   const pages = Math.max(1, Math.ceil(visibles.length / PAR_PAGE));
   const pageCourante = Math.min(page, pages - 1);
   const affichees = visibles.slice(pageCourante * PAR_PAGE, (pageCourante + 1) * PAR_PAGE);
@@ -113,9 +132,9 @@ export default function TableauExcel({ vues, vueActive, ongletId, entetes, champ
       {ficheOuverte && <PanneauFiche id={ficheOuverte} onFermer={fermerFiche} />}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className="flex items-center gap-3"><h1 className="titre-page">Consultants</h1><Link href="/consultants/nouveau" className="bouton-primaire">+ Nouveau consultant</Link></div>
+          <h1 className="titre-page">Consultants</h1>
           <p className="text-sm text-zinc-500">
-            {visibles.length.toLocaleString("fr-FR")} ligne(s){nbFiltres > 0 && ` sur ${lignes.length.toLocaleString("fr-FR")}`} ·
+            {visibles.length.toLocaleString("fr-FR")} ligne(s){nbFiltres > 0 && ` sur ${lignesVue.length.toLocaleString("fr-FR")}`} ·
             double-cliquez sur une cellule pour la modifier
           </p>
         </div>
@@ -123,26 +142,30 @@ export default function TableauExcel({ vues, vueActive, ongletId, entetes, champ
           <label className="relative">
             <IconeRecherche className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
             <input value={recherche} onChange={(e) => { setRecherche(e.target.value); setPage(0); }}
-              placeholder="Rechercher dans tout l'onglet…" className="champ w-full pl-9 sm:w-72" />
+              placeholder="Nom, compétence, ville, téléphone…" className="champ w-full pl-9 sm:w-72" />
           </label>
           {nbFiltres > 0 && (
             <button className="bouton-secondaire" onClick={() => { setFiltres({}); setRecherche(""); setTri(null); setPage(0); }}>
               Effacer les filtres
             </button>
           )}
-          {estAdmin && <FormulaireExport ongletId={ongletId} ids={visibles.map((l) => l.id)} libelle="Exporter en Excel" />}
+          <MenuActions ongletId={ongletId} idsVisibles={visibles.map((l) => l.id)} estAdmin={estAdmin} />
         </div>
       </div>
 
       {/* Vues par domaine, comme les onglets de l'Excel, mais calculées (toujours à jour) */}
-      <div className="flex gap-1 overflow-x-auto border-b border-zinc-200">
+      <div className="verre flex w-fit max-w-full gap-1 overflow-x-auto rounded-full p-1">
         {vues.map((o) => (
-          <Link key={o.cle} href={o.cle ? `/consultants?domaine=${encodeURIComponent(o.cle)}` : "/consultants"}
-            className={`whitespace-nowrap rounded-t-lg px-4 py-2 text-sm font-medium transition ${
-              o.cle === vueActive ? "bg-white text-marque-700 shadow-[inset_0_-2px_0] shadow-marque-600" : "text-zinc-500 hover:bg-white/60 hover:text-zinc-800"
+          <button key={o.cle} type="button"
+            onClick={() => {
+              setVueActive(o.cle); setPage(0); setSelection(new Set());
+              window.history.replaceState(null, "", o.cle ? `/consultants?domaine=${encodeURIComponent(o.cle)}` : "/consultants");
+            }}
+            className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+              o.cle === vueActive ? "bg-nuit text-white shadow-[0_6px_16px_-8px_rgba(11,26,63,0.7)]" : "text-slate-500 hover:bg-white/80 hover:text-nuit"
             }`}>
             {o.nom}
-          </Link>
+          </button>
         ))}
       </div>
 
@@ -161,24 +184,24 @@ export default function TableauExcel({ vues, vueActive, ongletId, entetes, champ
         <p className={`rounded-lg px-4 py-2 text-sm ${message.ok ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"}`}>{message.texte}</p>
       )}
 
-      <div className="carte max-h-[calc(100vh-15rem)] overflow-auto">
+      <div className="carte max-h-[calc(100vh-15rem)] overflow-auto rounded-2xl">
         <table className="w-max min-w-full border-separate border-spacing-0 text-sm">
           <thead>
             <tr>
-              <th className="sticky left-0 top-0 z-30 border-b border-zinc-200 bg-zinc-50 px-3 py-2.5 text-left">
+              <th className="sticky left-0 top-0 z-30 border-b border-slate-200/70 bg-white/90 px-3 py-2.5 text-left backdrop-blur-xl">
                 <input type="checkbox" checked={toutesCochees} onChange={basculerPage} aria-label="Sélectionner la page" className="accent-marque-600" />
               </th>
               {entetes.map((e) => {
                 const actif = !!filtres[e] || tri?.colonne === e;
                 return (
-                  <th key={e} className="sticky top-0 z-20 border-b border-l border-zinc-200 bg-zinc-50 p-0 text-left font-semibold text-zinc-700">
+                  <th key={e} className={`${largeur(champs[e])} sticky top-0 z-20 border-b border-l border-slate-200/70 bg-white/90 p-0 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 backdrop-blur-xl`}>
                     <button
                       onClick={(ev) => {
                         const r = ev.currentTarget.getBoundingClientRect();
                         setFiltreOuvert(filtreOuvert?.colonne === e ? null : { colonne: e, x: Math.min(r.left, window.innerWidth - 300), y: r.bottom + 4 });
                       }}
-                      className="flex w-full items-center justify-between gap-3 px-3 py-2.5 hover:bg-zinc-100">
-                      <span className="whitespace-nowrap">{e}</span>
+                      className="flex w-full items-center justify-between gap-3 px-3 py-3 hover:bg-white">
+                      <span className="truncate" title={e}>{e}</span>
                       <span className={`flex items-center gap-0.5 ${actif ? "text-marque-600" : "text-zinc-400"}`}>
                         {tri?.colonne === e && <span className="text-xs">{tri.sens === "asc" ? "▲" : "▼"}</span>}
                         <IconeFiltre className="h-3.5 w-3.5" />
@@ -198,8 +221,8 @@ export default function TableauExcel({ vues, vueActive, ongletId, entetes, champ
                     // Clic sur la ligne : fiche dans le panneau de droite (sauf case à cocher, lien ou cellule en édition).
                     if (l.consultant_id && !(ev.target as HTMLElement).closest("input, a, button")) setFicheOuverte(l.consultant_id);
                   }}
-                  className={`group cursor-pointer ${cochee ? "bg-marque-50" : "odd:bg-white even:bg-zinc-50 hover:bg-marque-50/50"}`}>
-                  <td className={`sticky left-0 z-10 border-b border-zinc-100 px-3 py-2 ${cochee ? "bg-marque-50" : "bg-inherit"}`}>
+                  className={`group cursor-pointer ${cochee ? "bg-marque-50" : "bg-white/80 even:bg-[#f6f8fd]/90 hover:bg-marque-50"}`}>
+                  <td className={`sticky left-0 z-10 border-b border-slate-100 px-3 py-2 ${cochee ? "bg-marque-50" : "bg-white group-even:bg-[#f6f8fd] group-hover:bg-marque-50"}`}>
                     <div className="flex items-center gap-2">
                       <input type="checkbox" checked={cochee} onChange={() => basculer(l.id)} className="accent-marque-600" aria-label={`Ligne ${l.position}`} />
                       <span className="w-9 text-right text-xs tabular-nums text-zinc-400">{l.position}</span>
@@ -223,7 +246,7 @@ export default function TableauExcel({ vues, vueActive, ongletId, entetes, champ
                     const v = affiche(e, l.valeurs[e]);
                     return (
                       <td key={e} onDoubleClick={() => setEdition({ id: l.id, colonne: e })}
-                        className="max-w-[22rem] cursor-default border-b border-l border-zinc-100 px-3 py-2">
+                        className={`${largeur(champs[e])} cursor-default border-b border-l border-slate-100 px-3 py-1.5 text-slate-700`}>
                         {enEdition ? (
                           <EditeurCellule valeur={l.valeurs[e] ?? ""}
                             onValider={(nv) => { setEdition(null); if (nv.trim() !== (l.valeurs[e] ?? "")) enregistrer([l.id], e, nv); }}
@@ -259,7 +282,7 @@ export default function TableauExcel({ vues, vueActive, ongletId, entetes, champ
           position={filtreOuvert}
           // Comme Excel : les choix proposés tiennent compte des autres filtres.
           valeurs={valeursDistinctes(
-            filtrerEtTrier(lignes, Object.fromEntries(Object.entries(filtres).filter(([c]) => c !== filtreOuvert.colonne)), recherche, null, affiche),
+            filtrerEtTrier(lignesVue, Object.fromEntries(Object.entries(filtres).filter(([c]) => c !== filtreOuvert.colonne)), recherche, null, affiche),
             filtreOuvert.colonne, affiche,
           )}
           coches={filtres[filtreOuvert.colonne]}
@@ -292,12 +315,12 @@ export default function TableauExcel({ vues, vueActive, ongletId, entetes, champ
 
 function Cellule({ valeur, champ }: { valeur: string; champ?: ChampFiche }) {
   if (!valeur) return <span className="text-zinc-300">—</span>;
-  if (champ === "email") return <a href={`mailto:${valeur}`} className="text-marque-700 hover:underline">{valeur}</a>;
+  if (champ === "email") return <a href={`mailto:${valeur}`} className="block truncate text-marque-700 hover:underline" title={valeur}>{valeur}</a>;
   if (/^https?:\/\//i.test(valeur)) {
     return <a href={valeur} target="_blank" rel="noreferrer" className="block truncate text-marque-700 hover:underline" title={valeur}>{valeur.replace(/^https?:\/\/(www\.)?/i, "")}</a>;
   }
   if (champ === "statut" || champ === "disponibilite") return <span className={classePastille(valeur)}>{valeur}</span>;
-  return <span className={`block ${valeur.length > 60 ? "line-clamp-2" : "whitespace-nowrap"}`} title={valeur.length > 60 ? valeur : undefined}>{valeur}</span>;
+  return <span className="block truncate" title={valeur.length > 20 ? valeur : undefined}>{valeur}</span>;
 }
 
 function EditeurCellule({ valeur, onValider, onAnnuler }: { valeur: string; onValider: (v: string) => void; onAnnuler: () => void }) {
@@ -348,7 +371,7 @@ function MenuFiltre({ colonne, position, valeurs, coches, onTrier, onAppliquer, 
 
   return (
     <div ref={boite} style={{ left: Math.max(8, position.x), top: position.y }}
-      className="fixed z-50 w-72 rounded-xl bg-white p-3 text-sm shadow-xl ring-1 ring-zinc-200">
+      className="verre fixed z-50 w-72 rounded-2xl bg-white/85 p-3 text-sm">
       <div className="mb-2 truncate text-xs font-semibold uppercase tracking-wide text-zinc-500">{colonne}</div>
       <div className="mb-2 grid grid-cols-2 gap-1">
         <button className="bouton-secondaire justify-center" onClick={() => onTrier("asc")}>Trier A → Z</button>
@@ -389,7 +412,7 @@ function ModificationMasse({ entetes, nombre, onAnnuler, onValider }: {
   const [valeur, setValeur] = useState("");
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/40 p-4 backdrop-blur-sm" onClick={onAnnuler}>
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="verre w-full max-w-md rounded-3xl bg-white/85 p-6" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-lg font-semibold">Modifier {nombre} ligne(s)</h2>
         <p className="mt-1 text-sm text-zinc-500">La même valeur sera écrite dans la colonne choisie pour toutes les lignes sélectionnées. Laissez vide pour effacer.</p>
         <label className="mt-4 block text-sm font-medium">Colonne
@@ -405,6 +428,46 @@ function ModificationMasse({ entetes, nombre, onAnnuler, onValider }: {
           <button className="bouton-primaire" onClick={() => onValider(colonne, valeur)}>Appliquer à {nombre} ligne(s)</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Bouton « + » tout à droite : nouvelle fiche, nouvelle mission, export et import du fichier Excel. */
+function MenuActions({ ongletId, idsVisibles, estAdmin }: { ongletId: string; idsVisibles: string[]; estAdmin: boolean }) {
+  const [ouvert, setOuvert] = useState(false);
+  const boite = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!ouvert) return;
+    const clic = (e: MouseEvent) => { if (boite.current && !boite.current.contains(e.target as Node)) setOuvert(false); };
+    const touche = (e: KeyboardEvent) => { if (e.key === "Escape") setOuvert(false); };
+    document.addEventListener("mousedown", clic);
+    document.addEventListener("keydown", touche);
+    return () => { document.removeEventListener("mousedown", clic); document.removeEventListener("keydown", touche); };
+  }, [ouvert]);
+  const element = "flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium text-nuit transition hover:bg-white";
+  return (
+    <div ref={boite} className="relative">
+      <button type="button" onClick={() => setOuvert(!ouvert)} aria-expanded={ouvert} aria-label="Actions" title="Actions"
+        className={`flex h-10 w-10 items-center justify-center rounded-full bg-nuit text-white shadow-[0_8px_20px_-8px_rgba(11,26,63,0.6)] transition hover:bg-marque-700 ${ouvert ? "rotate-45" : ""}`}>
+        <IconePlus className="h-5 w-5" />
+      </button>
+      {ouvert && (
+        <div className="verre absolute right-0 top-12 z-50 w-64 rounded-2xl bg-white/85 p-1.5">
+          <Link href="/consultants/nouveau" className={element}><IconePlus className="h-4 w-4 text-marque-600" />Nouveau consultant</Link>
+          <Link href="/missions/nouvelle" className={element}><IconeFiche className="h-4 w-4 text-marque-600" />Nouvelle mission</Link>
+          {estAdmin && (
+            <>
+              <div className="my-1 border-t border-slate-200/70" />
+              <form method="post" action="/tableau/export">
+                <input type="hidden" name="onglet" value={ongletId} />
+                <input type="hidden" name="ids" value={JSON.stringify(idsVisibles)} />
+                <button disabled={!idsVisibles.length} className={element}><IconeExport className="h-4 w-4 text-marque-600" />Exporter en Excel ({idsVisibles.length.toLocaleString("fr-FR")} lignes)</button>
+              </form>
+              <Link href="/parametres/import" className={element}><IconeImport className="h-4 w-4 text-marque-600" />Importer un fichier Excel</Link>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

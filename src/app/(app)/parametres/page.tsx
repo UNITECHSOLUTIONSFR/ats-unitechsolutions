@@ -23,14 +23,14 @@ export default async function Utilisateurs() {
 
       <section className="overflow-x-auto carte">
         <table className="w-full text-sm">
-          <thead className="bg-zinc-50 text-left text-zinc-500">
+          <thead className="bg-white/50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
             <tr><th className="p-3">Personne</th><th className="p-3">Rôle</th><th className="p-3">Accès</th><th className="p-3"></th></tr>
           </thead>
           <tbody>
             {(utilisateurs ?? []).map((u) => {
               const moi = u.id === utilisateur.id;
               return (
-                <tr key={u.id} className={`border-t border-zinc-100 ${u.actif ? "" : "text-zinc-400"}`}>
+                <tr key={u.id} className={`border-t border-white/70 ${u.actif ? "" : "text-zinc-400"}`}>
                   <td className="p-3">
                     <div className="font-medium">{u.nom_affiche ?? u.email}{moi && " (vous)"}</div>
                     <div className="text-xs text-zinc-500">{u.email}</div>
@@ -40,11 +40,11 @@ export default async function Utilisateurs() {
                       <form action={modifierUtilisateur} className="flex items-center gap-1">
                         <input type="hidden" name="id" value={u.id} />
                         <input type="hidden" name="action" value="role" />
-                        <select name="valeur" defaultValue={u.role} className="rounded border border-zinc-300 px-1 py-0.5">
+                        <select name="valeur" defaultValue={u.role} className="champ px-2 py-1 text-xs">
                           <option value="recruteur">Recruteur</option>
                           <option value="admin">Administrateur</option>
                         </select>
-                        <button className="rounded border border-zinc-300 px-2 py-0.5 text-xs hover:bg-zinc-50">OK</button>
+                        <button className="bouton-secondaire px-3 py-1 text-xs">OK</button>
                       </form>
                     )}
                   </td>

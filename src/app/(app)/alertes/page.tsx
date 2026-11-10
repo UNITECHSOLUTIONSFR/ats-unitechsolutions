@@ -17,21 +17,21 @@ export default async function Alertes({ searchParams }: { searchParams: Promise<
     <div className="space-y-4">
       <h1 className="titre-page">Cas à vérifier</h1>
       <div className="flex flex-wrap gap-2 text-sm">
-        <Link href="/alertes" className={`rounded-full px-3 py-1 ring-1 ring-zinc-300 ${!type ? "bg-marque-600 text-white ring-marque-600" : "bg-white"}`}>Tous ({toutes?.length ?? 0})</Link>
+        <Link href="/alertes" className={`rounded-full px-3 py-1 font-medium transition ${!type ? "bg-nuit text-white shadow-md" : "bg-white/60 text-slate-600 ring-1 ring-white/80 hover:bg-white"}`}>Tous ({toutes?.length ?? 0})</Link>
         {[...parType].sort((a, b) => b[1] - a[1]).map(([t, n]) => (
-          <Link key={t} href={`/alertes?type=${t}`} className={`rounded-full px-3 py-1 ring-1 ring-zinc-300 ${type === t ? "bg-marque-600 text-white ring-marque-600" : "bg-white"}`}>
+          <Link key={t} href={`/alertes?type=${t}`} className={`rounded-full px-3 py-1 font-medium transition ${type === t ? "bg-nuit text-white shadow-md" : "bg-white/60 text-slate-600 ring-1 ring-white/80 hover:bg-white"}`}>
             {LIBELLES_ALERTES[t] ?? t} ({n})
           </Link>
         ))}
       </div>
       <div className="carte overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-zinc-50 text-left text-zinc-500"><tr><th className="p-3">Cas</th><th className="p-3">Fiche</th><th className="p-3">Détail</th><th className="p-3"></th></tr></thead>
+          <thead className="bg-white/50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500"><tr><th className="p-3">Cas</th><th className="p-3">Fiche</th><th className="p-3">Détail</th><th className="p-3"></th></tr></thead>
           <tbody>
             {(alertes ?? []).map((a) => {
               const c = a.consultants as unknown as { prenom: string; nom: string; trigramme: string } | null;
               return (
-                <tr key={a.id} className="border-t border-zinc-100 align-top">
+                <tr key={a.id} className="border-t border-white/70 align-top">
                   <td className="p-3"><span className="pastille pastille-orange">{LIBELLES_ALERTES[a.type] ?? a.type}</span></td>
                   <td className="p-3">{c ? <Link href={`/consultants/${a.consultant_id}`} className="font-medium text-marque-700 hover:underline">{c.prenom} {c.nom} <span className="font-mono text-xs text-zinc-500">{c.trigramme}</span></Link> : "—"}</td>
                   <td className="p-3 text-zinc-600">{detailAlerte(a.details as Record<string, unknown>)}</td>

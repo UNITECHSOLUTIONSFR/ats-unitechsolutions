@@ -19,19 +19,19 @@ export default async function Missions({ searchParams }: { searchParams: Promise
       <div className="flex gap-2 text-sm">
         {["ouverte", "pourvue", "fermee", "toutes"].map((s) => (
           <Link key={s} href={`/missions?statut=${s}`}
-            className={`rounded-full px-3 py-1 ring-1 ring-zinc-300 ${s === statut ? "bg-marque-600 text-white ring-marque-600" : "bg-white"}`}>
+            className={`rounded-full px-3 py-1 font-medium transition ${s === statut ? "bg-nuit text-white shadow-md" : "bg-white/60 text-slate-600 ring-1 ring-white/80 hover:bg-white"}`}>
             {LIBELLES[s] ?? "Toutes"}
           </Link>
         ))}
       </div>
       <div className="overflow-x-auto carte">
         <table className="w-full text-sm">
-          <thead className="bg-zinc-50 text-left text-zinc-500">
+          <thead className="bg-white/50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
             <tr><th className="p-3">Intitulé</th><th className="p-3">Client</th><th className="p-3">Statut</th><th className="p-3">Suivis</th><th className="p-3">Créée le</th></tr>
           </thead>
           <tbody>
             {(missions ?? []).map((m) => (
-              <tr key={m.id} className="border-t border-zinc-100 hover:bg-zinc-50">
+              <tr key={m.id} className="border-t border-white/70 hover:bg-white/60">
                 <td className="p-3"><Link href={`/missions/${m.id}`} className="font-medium hover:underline">{m.intitule}</Link></td>
                 <td className="p-3">{m.client ?? "—"}</td>
                 <td className="p-3">{LIBELLES[m.statut]}</td>

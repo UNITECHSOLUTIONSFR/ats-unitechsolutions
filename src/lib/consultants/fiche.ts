@@ -25,6 +25,8 @@ export interface FicheResume {
   documents: { type: string; nom: string; url: string | null }[];
   propositions: { mission_id: string; mission: string; statut: string; score: number | null }[];
   alertes: string[];
+  /** Missions ouvertes sur lesquelles il n'est pas encore proposé (bouton « Proposer sur une mission »). */
+  missionsOuvertes: { id: string; intitule: string; client: string | null }[];
 }
 
 /** Fiche complète d'un consultant, pour le panneau latéral de l'écran Consultants. La consultation est journalisée. */
@@ -38,6 +40,7 @@ export async function chargerFiche(id: string): Promise<FicheResume | null> {
     supabase.from("propositions").select("mission_id, statut, score, missions(intitule)").eq("consultant_id", id).order("updated_at", { ascending: false }),
     supabase.from("alertes").select("type").eq("consultant_id", id).eq("statut", "ouverte"),
   ]);
+  const { data: ouvertes } = await supabase.from("missions").select("id, intitule, client").eq("statut", "ouverte").order("created_at", { ascending: false });
   if (!c) return null;
   await journaliser(supabase, utilisateur.id, "consultation", id, { ecran: "panneau" });
   return {
@@ -53,5 +56,6 @@ export async function chargerFiche(id: string): Promise<FicheResume | null> {
       mission: (p.missions as unknown as { intitule: string } | null)?.intitule ?? "Mission",
     })),
     alertes: [...new Set((alertes ?? []).map((a) => a.type as string))],
+    missionsOuvertes: (ouvertes ?? []).filter((m) => !(props ?? []).some((p) => p.mission_id === m.id)),
   };
 }

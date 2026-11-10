@@ -28,10 +28,10 @@ export default async function Synchronisations() {
       </div>
       <div className="carte overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-zinc-50 text-left text-zinc-500"><tr><th className="p-3">Début</th><th className="p-3">Traitement</th><th className="p-3">État</th><th className="p-3">Résultat</th></tr></thead>
+          <thead className="bg-white/50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500"><tr><th className="p-3">Début</th><th className="p-3">Traitement</th><th className="p-3">État</th><th className="p-3">Résultat</th></tr></thead>
           <tbody>
             {(executions ?? []).map((e, i) => (
-              <tr key={i} className="border-t border-zinc-100 align-top">
+              <tr key={i} className="border-t border-white/70 align-top">
                 <td className="whitespace-nowrap p-3">{new Date(e.debut).toLocaleString("fr-FR")}</td>
                 <td className="p-3">{Object.values(TACHES).find((t) => t.type === e.type)?.libelle}</td>
                 <td className="p-3"><span className={classePastille(e.statut === "termine" ? "disponible" : e.statut === "echec" ? "alerte" : "en cours")}>{e.statut}</span></td>

@@ -1,10 +1,11 @@
 import "server-only";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { configSupabase } from "./config";
 
 /** Client Supabase côté serveur, agissant au nom de l'utilisateur connecté (RLS appliquée). */
-export async function clientSupabaseServeur() {
+export const clientSupabaseServeur = cache(async () => {
   const config = configSupabase();
   if (!config) return null;
   const magasin = await cookies();
@@ -20,7 +21,7 @@ export async function clientSupabaseServeur() {
       },
     },
   });
-}
+});
 
 export type Role = "admin" | "recruteur";
 
@@ -35,16 +36,19 @@ export interface UtilisateurConnecte {
  * Renvoie l'utilisateur connecté s'il est invité ET actif, sinon null.
  * Un compte authentifié mais absent de la table « utilisateurs » n'a aucun accès.
  */
-export async function utilisateurConnecte(): Promise<UtilisateurConnecte | null> {
+// Une seule vérification par affichage de page (cache), et signature du jeton vérifiée localement (getClaims, clés publiques du projet) :
+// plus d'aller-retour vers le serveur d'authentification à chaque page. Un compte désactivé reste bloqué par la table « utilisateurs ».
+export const utilisateurConnecte = cache(async (): Promise<UtilisateurConnecte | null> => {
   const supabase = await clientSupabaseServeur();
   if (!supabase) return null;
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) return null;
+  const { data } = await supabase.auth.getClaims();
+  const id = data?.claims?.sub;
+  if (!id) return null;
   const { data: fiche } = await supabase
     .from("utilisateurs")
     .select("id, email, nom_affiche, role, actif")
-    .eq("id", data.user.id)
+    .eq("id", id)
     .maybeSingle();
   if (!fiche || !fiche.actif) return null;
   return { id: fiche.id, email: fiche.email, nomAffiche: fiche.nom_affiche, role: fiche.role };
-}
+});

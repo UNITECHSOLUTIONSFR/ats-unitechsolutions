@@ -21,3 +21,4 @@ export const IconeAlerte = ({ className }: P) => base(<><path d="M10.3 3.9 1.8 1
 export const IconePlus = ({ className }: P) => base(<path d="M12 5v14M5 12h14" />, className);
 export const IconeSortie = ({ className }: P) => base(<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5M21 12H9" /></>, className);
 export const IconeFleche = ({ className }: P) => base(<path d="m6 9 6 6 6-6" />, className);
+export const IconeImport = ({ className }: P) => base(<><path d="M12 15V3M7 8l5-5 5 5" /><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /></>, className);

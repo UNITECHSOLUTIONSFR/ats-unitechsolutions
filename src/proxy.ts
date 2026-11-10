@@ -27,10 +27,11 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  const { data } = await supabase.auth.getUser();
+  // getClaims : rafraîchit la session si besoin et vérifie la signature du jeton sans appel réseau.
+  const { data } = await supabase.auth.getClaims();
   const chemin = request.nextUrl.pathname;
   const publique = PAGES_PUBLIQUES.some((p) => chemin === p || chemin.startsWith(p));
-  if (!data.user && !publique) {
+  if (!data?.claims && !publique) {
     const url = request.nextUrl.clone();
     url.pathname = "/connexion";
     url.search = "";
@@ -40,5 +41,6 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // Fichiers publics (logo, images) exclus : ils doivent s'afficher sur la page de connexion.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$).*)"],
 };

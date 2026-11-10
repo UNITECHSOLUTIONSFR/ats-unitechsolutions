@@ -33,7 +33,7 @@ export default async function CoutsEtReglages() {
           <div><div className="text-2xl font-semibold">{plafond} $</div><div className="text-zinc-500">plafond mensuel</div></div>
           <div><div className="text-2xl font-semibold">{totalPrecedent.toFixed(2)} $</div><div className="text-zinc-500">mois précédent</div></div>
         </div>
-        <div className="h-2 rounded bg-zinc-100"><div className="h-2 rounded bg-marque-600" style={{ width: `${Math.min(100, (totalMois / Math.max(plafond, 0.01)) * 100)}%` }} /></div>
+        <div className="h-2 rounded-full bg-slate-200/60"><div className="h-2 rounded-full bg-gradient-to-r from-marque-600 to-marque-400" style={{ width: `${Math.min(100, (totalMois / Math.max(plafond, 0.01)) * 100)}%` }} /></div>
         <ul className="text-sm text-zinc-600">
           {[...ceMois].map(([u, c]) => <li key={u}>{USAGES[u] ?? u} : {c.toFixed(3)} $</li>)}
         </ul>

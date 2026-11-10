@@ -28,12 +28,12 @@ export default async function CandidaturesEmail() {
       <Bouton />
       <div className="carte overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-zinc-50 text-left text-zinc-500">
+          <thead className="bg-white/50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
             <tr><th className="p-3">Reçu le</th><th className="p-3">Expéditeur</th><th className="p-3">Objet</th><th className="p-3">Résultat</th></tr>
           </thead>
           <tbody>
             {(emails ?? []).map((e) => (
-              <tr key={e.id} className="border-t border-zinc-100">
+              <tr key={e.id} className="border-t border-white/70">
                 <td className="whitespace-nowrap p-3">{e.recu_le ? new Date(e.recu_le).toLocaleString("fr-FR") : "—"}</td>
                 <td className="p-3">{e.expediteur ?? "—"}</td>
                 <td className="p-3">{e.objet ?? "—"}</td>

@@ -17,7 +17,7 @@ export default function FormulaireAjout() {
       </label>
       <label className="flex flex-col">
         <span className="text-zinc-600">Rôle</span>
-        <select name="role" defaultValue="recruteur" className="mt-1 rounded-lg border border-zinc-300 px-2 py-1.5">
+        <select name="role" defaultValue="recruteur" className="champ mt-1">
           <option value="recruteur">Recruteur</option>
           <option value="admin">Administrateur</option>
         </select>

@@ -24,6 +24,13 @@ Toutes les tâches réalisables sans action de l'utilisatrice sont **terminées 
 | 12 | Sécurité et RGPD | ✅ Export, effacement, purge 24 mois ; mention et registre rédigés (`RGPD.md`) | **Jalon D : en attente** de validation |
 | 13 | Mise en service | 🟡 Guides prêts (`GUIDE_EXPLOITATION.md`, `GUIDE_UTILISATEUR.md`) ; reste : test de restauration, invitation de l'équipe | |
 
+## Point du 10/11/2026 (refonte et vitesse)
+- **Fait** : style « verre » sur tous les écrans, nouvelle page de connexion, accueil (missions ouvertes + 3 meilleurs profils, nouvelles fiches, cas à vérifier), fiche latérale (actions rapides, « Proposer sur une mission »), recherche par compétence (« java paris »), page Aide, message d'invitation (`INVITATION_EQUIPE.md`), largeurs de colonnes et bouton « + » d'actions. Vitesse : session vérifiée localement et une seule fois par page, lectures en parallèle, onglets Domaine sans rechargement, recherche indexée, écran de chargement immédiat.
+- **Corrigé** : doublons de la synchro Excel (57 fusionnés, ligne déplacée/modifiée désormais reconnue) ; CV comptés « modifiés » à chaque synchro (format de date) ; logo invisible sur la page de connexion.
+- **Reprise de l'historique** du groupe recrutement@ (3 mois, droit Group.Read.All temporaire) : en cours. **Ensuite : retirer Group.Read.All dans Entra.**
+- **À rappeler plus tard** : dépôt dans SharePoint (dossier métier) des CV reçus par email (nécessite l'accord pour écrire dans SharePoint).
+- **Proposés, pas encore lancés** : tri des alertes, relance automatique des synchronisations (planificateur externe), test de l'écran avec un compte recruteur.
+
 ## En attente de l'utilisatrice
 1. Copier l'historique des emails (2-3 semaines) du groupe recrutement dans la boîte ATS Candidatures, puis Paramètres → Candidatures email → « Traiter les nouveaux emails » (relancer tant qu'il en reste).
 2. Jalon C : 3 missions passées avec les bons profils.

@@ -61,7 +61,7 @@ export async function synchroniserCV(supabase: SupabaseClient): Promise<BilanSyn
         type, sharepoint_drive_id: driveId, sharepoint_item_id: f.id, chemin: f.cheminRelatif, url_web: f.webUrl,
         nom_fichier: f.name, metier_dossier: f.metier, modifie_sharepoint_le: f.lastModifiedDateTime, statut_association: "non_traite",
       });
-    } else if (existant.modifie_sharepoint_le !== f.lastModifiedDateTime || existant.nom_fichier !== f.name || existant.supprime_sharepoint) {
+    } else if (!memeDate(existant.modifie_sharepoint_le, f.lastModifiedDateTime) || existant.nom_fichier !== f.name || existant.supprime_sharepoint) {
       // Contenu modifié : l'empreinte est effacée, l'analyse sera refaite (seulement si le contenu a vraiment changé).
       await supabase.from("documents").update({
         nom_fichier: f.name, chemin: f.cheminRelatif, url_web: f.webUrl, metier_dossier: f.metier,
@@ -163,4 +163,10 @@ async function tous<T>(
     if (!data || data.length < 1000) break;
   }
   return lignes;
+}
+
+/** La base renvoie « 2026-01-01T10:00:00+00:00 », Graph « 2026-01-01T10:00:00Z » : on compare les instants, pas les textes. */
+export function memeDate(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (!a || !b) return a === b;
+  return new Date(a).getTime() === new Date(b).getTime();
 }

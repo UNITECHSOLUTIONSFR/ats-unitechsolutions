@@ -124,14 +124,14 @@ export default async function FicheConsultant({ params }: { params: Promise<{ id
           </p>
           <label className="block">
             <span className="text-zinc-600">Statut</span>
-            <select name="statut" defaultValue={c.statut} className="mt-1 w-full rounded-lg border border-zinc-300 px-2 py-1.5">
+            <select name="statut" defaultValue={c.statut} className="champ mt-1 w-full">
               <option value="candidat">Candidat</option><option value="consultant">Consultant</option>
               <option value="en_mission">En mission</option><option value="inactif">Inactif</option>
             </select>
           </label>
           <label className="block">
             <span className="text-zinc-600">Notes</span>
-            <textarea name="notes" defaultValue={c.notes ?? ""} rows={4} className="mt-1 w-full rounded-lg border border-zinc-300 px-2 py-1.5" />
+            <textarea name="notes" defaultValue={c.notes ?? ""} rows={4} className="champ mt-1 w-full" />
           </label>
           <button className="bouton-primaire w-full justify-center">Enregistrer</button>
         </form>
@@ -146,7 +146,7 @@ function Champ({ nom, libelle, valeur, type = "text" }: { nom: string; libelle: 
   return (
     <label className="block">
       <span className="text-zinc-600">{libelle}</span>
-      <input name={nom} type={type} defaultValue={valeur ?? ""} className="mt-1 w-full rounded-lg border border-zinc-300 px-2 py-1.5" />
+      <input name={nom} type={type} defaultValue={valeur ?? ""} className="champ mt-1 w-full" />
     </label>
   );
 }
