@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { IconeAccueil, IconeEnveloppe, IconeFiche, IconeMallette, IconePersonnes, IconeReglages, IconeSortie } from "./icones";
+import { IconeAccueil, IconeEnveloppe, IconeGraphique, IconeFiche, IconeMallette, IconePersonnes, IconeReglages, IconeSortie } from "./icones";
 
 const LIENS = [
   { href: "/", libelle: "Tableau de bord", Icone: IconeAccueil },
@@ -17,6 +17,7 @@ export default function MenuLateral({ nom, email, estAdmin }: { nom: string; ema
   const liens = [
     ...LIENS,
     ...(estAdmin ? [{ href: "/emails", libelle: "Emails", Icone: IconeEnveloppe }] : []),
+    { href: "/statistiques", libelle: "Statistiques", Icone: IconeGraphique },
     { href: "/aide", libelle: "Aide", Icone: IconeFiche },
     ...(estAdmin ? [{ href: "/parametres", libelle: "Paramètres", Icone: IconeReglages }] : []),
   ];
