@@ -26,7 +26,7 @@ export { PROMPT_VERSION };
 export type { ExigencesMission, ProfilCV, ReponseDisponibilite };
 
 export interface UsageIA {
-  usage: "fiche_cv" | "mission" | "tri_email" | "analyse_approfondie" | "reponse_disponibilite";
+  usage: "fiche_cv" | "mission" | "tri_email" | "analyse_approfondie" | "reponse_disponibilite" | "lecture_scan";
   modele: string;
   mode: "standard" | "batch";
   tokens_entree: number;
@@ -163,6 +163,29 @@ export async function lireReponseDisponibilite(texteReponse: string, aujourdhui:
   const r = await appeler(MODELES.reponseDisponibilite, CONSIGNES_REPONSE_DISPO, SchemaReponseDisponibilite, texte, MAX_TOKENS.reponseDisponibilite, "reponse_disponibilite");
   if (!r.donnees) throw Object.assign(new ErreurIA("Réponse impossible à lire."), { usages: [r.usage] });
   return { donnees: r.donnees, modele: MODELES.reponseDisponibilite, promptVersion: PROMPT_VERSION, usages: [r.usage] };
+}
+
+/**
+ * CV scanné (PDF sans texte, ou image) : l'IA recopie fidèlement le texte de la page, sans rien interpréter.
+ * Le texte obtenu suit ensuite le circuit normal (fiche de compétences).
+ */
+export async function lireDocumentScanne(contenu: Buffer, typeMedia: "application/pdf" | "image/png" | "image/jpeg"): Promise<{ texte: string; usages: UsageIA[] }> {
+  const modele = MODELES.lectureScan;
+  const { thinking, effort } = parametresReflexion(modele);
+  const donnees = contenu.toString("base64");
+  const piece = typeMedia === "application/pdf"
+    ? { type: "document" as const, source: { type: "base64" as const, media_type: typeMedia, data: donnees } }
+    : { type: "image" as const, source: { type: "base64" as const, media_type: typeMedia, data: donnees } };
+  const message = await anthropic().messages.create({
+    model: modele,
+    max_tokens: MAX_TOKENS.lectureScan,
+    thinking,
+    output_config: { effort },
+    system: "Tu recopies le texte d'un CV scanné, fidèlement et dans l'ordre de lecture, en texte brut. Pas de commentaire, pas de mise en forme Markdown, rien d'inventé. Si une partie est illisible, écris [illisible].",
+    messages: [{ role: "user", content: [piece, { type: "text", text: "Recopie le texte de ce document." }] }],
+  } as Anthropic.MessageCreateParamsNonStreaming);
+  const texte = message.stop_reason === "refusal" ? "" : message.content.map((b) => (b.type === "text" ? b.text : "")).join("\n").trim();
+  return { texte, usages: [usageDepuisReponse(message.usage, modele, "lecture_scan", "standard")] };
 }
 
 /** Requête de lot (Batch API, 50 % moins cher) pour structurer un CV : import initial et synchronisation de nuit. */

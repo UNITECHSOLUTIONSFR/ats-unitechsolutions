@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { extraireProfilCV, ErreurIA, type UsageIA } from "@/lib/ai";
+import { extraireProfilCV, ErreurIA, lireDocumentScanne, type UsageIA } from "@/lib/ai";
 import { MODELES } from "@/lib/ai/config";
 import { enregistrerUsages, etatBudgetMois } from "@/lib/ai/journal";
 import { enregistrerProfil } from "@/lib/analyse-cv/enregistrement";
@@ -103,7 +103,21 @@ export async function traiterMessage(
 
 const cle = (m: MessageBoite) => m.internetMessageId || m.id;
 
-async function traiterCandidature(
+/** Lecture d'un CV scanné par l'IA ; renvoie « extractible » si un vrai texte de CV en ressort. */
+export async function lireScan(contenu: Buffer, nom: string, usages: UsageIA[]): Promise<{ texte: string; extractible: boolean }> {
+  const ext = nom.toLowerCase().split(".").pop();
+  const type = ext === "pdf" ? "application/pdf" : ext === "png" ? "image/png" : ext === "jpg" || ext === "jpeg" ? "image/jpeg" : null;
+  if (!type || contenu.length > 20 * 1024 * 1024) return { texte: "", extractible: false };
+  try {
+    const r = await lireDocumentScanne(contenu, type);
+    usages.push(...r.usages);
+    return { texte: r.texte.slice(0, 30_000), extractible: r.texte.replace(/\[illisible\]/g, "").trim().length >= 200 };
+  } catch {
+    return { texte: "", extractible: false };
+  }
+}
+
+export async function traiterCandidature(
   supabase: SupabaseClient,
   m: MessageBoite,
   pj: { id: string; name: string; contentBytes?: string },
@@ -117,7 +131,9 @@ async function traiterCandidature(
   const { data: connu } = await supabase.from("documents").select("consultant_id").eq("empreinte_sha256", empreinte).not("consultant_id", "is", null).limit(1).maybeSingle();
   if (connu) return { statut: "candidature_traitee", consultantId: connu.consultant_id, dejaConnu: true };
 
-  const extrait = await extraireTexte(contenu, pj.name);
+  let extrait = await extraireTexte(contenu, pj.name);
+  // CV scanné (PDF ou image sans texte) : l'IA en recopie le texte, puis le circuit normal reprend.
+  if (!extrait.extractible) extrait = await lireScan(contenu, pj.name, usages);
   if (!extrait.extractible) {
     await supabase.from("alertes").insert({ type: "cv_illisible", details: { email: m.subject, fichier: pj.name } });
     return { statut: "erreur", consultantId: null };

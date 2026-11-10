@@ -5,6 +5,7 @@ import { traiterEmails } from "@/lib/emails/traitement";
 import { envoiActif } from "@/lib/relance/modele";
 import { envoyerLot } from "@/lib/relance/envoi";
 import { synchroniserCV } from "./cv";
+import { reprendreIllisibles } from "@/lib/analyse-cv/illisibles";
 import { sauvegarderDansSharePoint } from "./sauvegarde";
 import { synchroniserExcel } from "./excel";
 
@@ -28,8 +29,10 @@ export async function executerTache(nom: NomTache, supabase: SupabaseClient): Pr
       // Résultats de l'analyse lancée la veille, puis nouveaux fichiers, puis nouvelle analyse (lot à 50 %).
       const resultats = await collecterAnalyse(supabase);
       const synchro = await synchroniserCV(supabase);
+      // CV illisibles (vieux .doc, scans) : une dizaine repris par nuit, avant l'envoi de l'analyse.
+      const illisibles = await reprendreIllisibles(supabase).catch((e) => ({ erreur: (e as Error).message }));
       const envoi = await envoyerAnalyse(supabase);
-      rapport = { synchro, resultatsAnalyse: resultats.message ?? resultats.erreur, envoiAnalyse: envoi.message ?? envoi.erreur };
+      rapport = { synchro, illisibles, resultatsAnalyse: resultats.message ?? resultats.erreur, envoiAnalyse: envoi.message ?? envoi.erreur };
     }
     if (nom === "emails") rapport = { ...(await traiterEmails(supabase)) };
     if (nom === "sauvegarde") rapport = { ...(await sauvegarderDansSharePoint(supabase)) };

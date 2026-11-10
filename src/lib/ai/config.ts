@@ -10,6 +10,7 @@ export const MODELES = {
   mission: "claude-haiku-5-5",
   analyseApprofondie: "claude-sonnet-5-5",
   reponseDisponibilite: "claude-haiku-5-5", // lecture d'une réponse à la relance des disponibilités
+  lectureScan: "claude-haiku-5-5", // CV scannés : recopie du texte d'un PDF image
 } as const;
 
 export const MAX_TOKENS = {
@@ -18,6 +19,7 @@ export const MAX_TOKENS = {
   triEmail: 300,
   analyseApprofondie: 1500,
   reponseDisponibilite: 250,
+  lectureScan: 8000,
 } as const;
 
 /** Texte envoyé à l'IA tronqué à cette longueur (règle 4 du brief). */
