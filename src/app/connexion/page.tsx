@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 
 export default function PageConnexion() {
@@ -54,6 +55,7 @@ export default function PageConnexion() {
           </p>
 
           <div className="mt-8 max-w-md">
+            {etat !== "envoye" && <Suspense fallback={null}><MessageSession /></Suspense>}
             {etat === "envoye" ? (
               <div className="carte p-5 text-sm text-slate-700">
                 <p className="font-semibold text-nuit">Vérifiez votre boîte mail</p>
@@ -133,5 +135,16 @@ function Barre({ libelle, valeur }: { libelle: string; valeur: number }) {
         <div className="h-full rounded-full bg-gradient-to-r from-marque-600 to-marque-400" style={{ width: `${valeur}%` }} />
       </div>
     </div>
+  );
+}
+
+/** Explique pourquoi un nouveau lien est demandé (session de plus de 7 jours, ou 3 jours sans activité). */
+function MessageSession() {
+  const session = useSearchParams().get("session");
+  if (!session) return null;
+  return (
+    <p className="mb-3 rounded-2xl bg-marque-50 px-4 py-2.5 text-sm text-marque-700 ring-1 ring-marque-100">
+      {session === "duree" ? "Par sécurité, la connexion est renouvelée chaque semaine : demandez un nouveau lien." : "Vous n'avez pas utilisé l'outil depuis plus de 3 jours : demandez un nouveau lien."}
+    </p>
   );
 }

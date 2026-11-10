@@ -38,6 +38,8 @@ Toutes les tâches réalisables sans action de l'utilisatrice sont **terminées 
 
 - **14 améliorations (10/11, après-midi)** : double authentification (Paramètres → Double authentification, exigée une fois activée) ; journal d'accès consultable ; comparaison et fusion des doublons (migration 18) ; recherche dans le texte des CV (migration 19) ; « À relancer » et « profils à 80+ à appeler » sur le tableau de bord ; filtres rapides Consultants ; shortlist client et export Excel d'une mission ; historique de la fiche en frise ; bilan de santé ; version téléphone ; tests (147) ; documentation (guides mis à jour + `docs/presentation-fonctionnelle.html`).
 
+- **Durée des connexions (10/11)** : 7 jours maximum depuis la connexion, 3 jours sans activité ; appliqué par l'outil (réglage Supabase refusé : non inclus dans la formule).
+
 ## En attente de l'utilisatrice
 1. Copier l'historique des emails (2-3 semaines) du groupe recrutement dans la boîte ATS Candidatures, puis Paramètres → Candidatures email → « Traiter les nouveaux emails » (relancer tant qu'il en reste).
 2. Jalon C : 3 missions passées avec les bons profils.

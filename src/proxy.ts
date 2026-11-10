@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { configSupabase } from "@/lib/supabase/config";
+import { COOKIE_ACTIVITE, sessionExpiree } from "@/lib/securite/session";
 
 /** Pages accessibles sans être connecté. */
 // /api/cron/ : tâches planifiées, protégées par CRON_SECRET (pas de session utilisateur).
@@ -36,6 +37,27 @@ export async function proxy(request: NextRequest) {
     url.pathname = "/connexion";
     url.search = "";
     return NextResponse.redirect(url);
+  }
+
+  const maintenant = Date.now();
+  const activite = { httpOnly: true, secure: true, sameSite: "lax" as const, path: "/", maxAge: 30 * 86_400 };
+  // Nouvelle connexion (retour du lien magique) : le compteur d'inactivité repart de zéro.
+  if (chemin.startsWith("/auth/")) {
+    reponse.cookies.set(COOKIE_ACTIVITE, String(maintenant), activite);
+    return reponse;
+  }
+  if (data?.claims) {
+    // Au-delà de 7 jours depuis la connexion ou de 3 jours sans activité : déconnexion, puis lien (et code) redemandés.
+    const raison = sessionExpiree(data.claims.amr, request.cookies.get(COOKIE_ACTIVITE)?.value, maintenant);
+    if (raison) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/connexion";
+      url.search = `?session=${raison}`;
+      const sortie = NextResponse.redirect(url);
+      for (const c of request.cookies.getAll()) if (c.name.startsWith("sb-") || c.name === COOKIE_ACTIVITE) sortie.cookies.delete(c.name);
+      return sortie;
+    }
+    reponse.cookies.set(COOKIE_ACTIVITE, String(maintenant), activite);
   }
   return reponse;
 }
