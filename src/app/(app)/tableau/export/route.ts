@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { utilisateurConnecte, clientSupabaseServeur } from "@/lib/supabase/serveur";
 import { champsParEntete } from "@/lib/import/excel";
 import { valeurEcran } from "@/lib/tableau/modele";
+import { lignesHorsExcel, PREFIXE_HORS_EXCEL, type FicheHorsExcel } from "@/lib/tableau/hors-excel";
 
 /** Export Excel d'un onglet (lignes filtrées ou sélectionnées). Réservé aux administrateurs. */
 export async function POST(requete: Request) {
@@ -15,8 +16,7 @@ export async function POST(requete: Request) {
   const ongletId = String(form.get("onglet") ?? "");
   let ids: string[] = [];
   try {
-    // Les fiches ajoutées hors Excel ne sont pas des lignes du tableau : elles ne font pas partie de l'export de l'onglet.
-    ids = (JSON.parse(String(form.get("ids") ?? "[]")) as string[]).filter((id) => !id.startsWith("fiche:"));
+    ids = JSON.parse(String(form.get("ids") ?? "[]")) as string[];
   } catch {
     return new NextResponse("Demande invalide.", { status: 400 });
   }
@@ -24,10 +24,17 @@ export async function POST(requete: Request) {
   const { data: onglet } = await supabase.from("tableau_onglets").select("nom, entetes, principal").eq("id", ongletId).maybeSingle();
   if (!onglet) return new NextResponse("Onglet introuvable.", { status: 404 });
 
+  // Lignes de l'Excel (copie) et fiches ajoutées hors Excel (lues depuis la fiche), dans l'ordre affiché à l'écran.
+  const idsTableau = ids.filter((id) => !id.startsWith(PREFIXE_HORS_EXCEL));
+  const idsFiches = ids.filter((id) => id.startsWith(PREFIXE_HORS_EXCEL)).map((id) => id.slice(PREFIXE_HORS_EXCEL.length));
   const lignes: { id: string; consultant_id: string | null; valeurs: Record<string, string> }[] = [];
-  for (let i = 0; i < ids.length; i += 300) {
-    const { data } = await supabase.from("tableau_lignes").select("id, consultant_id, valeurs").in("id", ids.slice(i, i + 300));
+  for (let i = 0; i < idsTableau.length; i += 300) {
+    const { data } = await supabase.from("tableau_lignes").select("id, consultant_id, valeurs").in("id", idsTableau.slice(i, i + 300));
     lignes.push(...(data ?? []));
+  }
+  for (let i = 0; i < idsFiches.length; i += 300) {
+    const { data } = await supabase.from("consultants").select("*").in("id", idsFiches.slice(i, i + 300));
+    lignes.push(...lignesHorsExcel((data ?? []) as FicheHorsExcel[], onglet.entetes, 0));
   }
   const ordre = new Map(ids.map((id, i) => [id, i]));
   lignes.sort((a, b) => ordre.get(a.id)! - ordre.get(b.id)!);

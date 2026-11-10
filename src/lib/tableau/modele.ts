@@ -55,8 +55,11 @@ export function majFicheDepuisCellule(champ: ChampFiche, valeur: string): Record
     }
     case "statut":
       return { statut: statutDepuisTexte(v) };
+    case "email_2":
+      return { email_2: normaliserEmail(v) ?? ouNull };
     case "intitule_poste":
     case "localisation":
+    case "commentaire_email":
     case "notes":
     case "experience":
     case "tjm_salaire":

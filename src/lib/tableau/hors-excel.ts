@@ -11,12 +11,14 @@ export interface FicheHorsExcel {
   telephone_e164: string | null; telephone_brut: string | null; intitule_poste: string | null; disponibilite: string | null;
   disponible_le: string | null; disponibilite_maj_le: string | null; localisation: string | null; notes: string | null; statut: string;
   experience: string | null; tjm_salaire: string | null; linkedin: string | null; cv_lien: string | null; commentaire_email: string | null;
+  /** Colonnes du tableau sans champ dédié sur la fiche (modifiées depuis le tableau). */
+  colonnes_tableau?: Record<string, string> | null;
 }
 
 /**
  * Fiches créées hors du fichier Excel (candidatures email, CV SharePoint…) présentées comme des lignes du tableau,
- * dans les colonnes de l'Excel. Elles ne sont pas stockées dans le tableau : la synchronisation de nuit de l'Excel
- * (qui réécrit le tableau) ne peut donc pas les effacer. On les modifie depuis la fiche.
+ * dans les colonnes de l'Excel. Elles sont lues depuis la fiche (et non depuis la copie de l'Excel) : la synchronisation
+ * de nuit, qui réécrit la copie de l'Excel, ne peut donc pas les effacer. Une modification dans le tableau va dans la fiche.
  */
 export function lignesHorsExcel(fiches: FicheHorsExcel[], entetes: string[], premierePosition: number): LigneTableau[] {
   const colonneDe = new Map<ChampFiche, string>();
@@ -33,7 +35,8 @@ export function lignesHorsExcel(fiches: FicheHorsExcel[], entetes: string[], pre
     poser("localisation", f.localisation); poser("notes", f.notes); poser("statut", f.statut); poser("experience", f.experience);
     poser("tjm_salaire", f.tjm_salaire); poser("linkedin", f.linkedin); poser("cv_lien", f.cv_lien);
     poser("commentaire_email", f.commentaire_email); poser("date_maj", f.disponibilite_maj_le?.slice(0, 10));
-    if (entetes.includes(COLONNE_DOMAINE)) valeurs[COLONNE_DOMAINE] = DOMAINES_HORS_EXCEL[f.source] ?? "Ajoutés hors Excel";
+    for (const [colonne, v] of Object.entries(f.colonnes_tableau ?? {})) if (entetes.includes(colonne) && v) valeurs[colonne] = v;
+    if (entetes.includes(COLONNE_DOMAINE) && !valeurs[COLONNE_DOMAINE]) valeurs[COLONNE_DOMAINE] = DOMAINES_HORS_EXCEL[f.source] ?? "Ajoutés hors Excel";
     return { id: `${PREFIXE_HORS_EXCEL}${f.id}`, position: premierePosition + i, consultant_id: f.id, valeurs };
   });
 }

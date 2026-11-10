@@ -10,7 +10,6 @@ import {
 import { modifierCellules } from "@/lib/tableau/actions";
 import { classePastille } from "@/lib/statuts";
 import PanneauFiche from "./panneau-fiche";
-import { PREFIXE_HORS_EXCEL } from "@/lib/tableau/hors-excel";
 import { IconeCopier, IconeCrayon, IconeExport, IconeFiche, IconeFiltre, IconeRecherche } from "../icones";
 
 const PAR_PAGE = 100;
@@ -56,10 +55,7 @@ export default function TableauExcel({ vues, vueActive, ongletId, entetes, champ
     return () => clearTimeout(t);
   }, [message]);
 
-  function enregistrer(tous: string[], colonne: string, valeur: string) {
-    // Les fiches ajoutées hors Excel se modifient depuis leur fiche, pas dans le tableau.
-    const ids = tous.filter((id) => !id.startsWith(PREFIXE_HORS_EXCEL));
-    if (!ids.length) return;
+  function enregistrer(ids: string[], colonne: string, valeur: string) {
     const avant = lignes;
     const cibles = new Set(ids);
     setLignes((ls) =>
@@ -222,7 +218,7 @@ export default function TableauExcel({ vues, vueActive, ongletId, entetes, champ
                     const enEdition = edition?.id === l.id && edition.colonne === e;
                     const v = affiche(e, l.valeurs[e]);
                     return (
-                      <td key={e} onDoubleClick={() => { if (!l.id.startsWith(PREFIXE_HORS_EXCEL)) setEdition({ id: l.id, colonne: e }); }}
+                      <td key={e} onDoubleClick={() => setEdition({ id: l.id, colonne: e })}
                         className="max-w-[22rem] cursor-default border-b border-l border-zinc-100 px-3 py-2">
                         {enEdition ? (
                           <EditeurCellule valeur={l.valeurs[e] ?? ""}
