@@ -159,3 +159,6 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 3. Relevé de la consommation IA (jour et semaine) avec le plafond du mois.
 4. Planificateur de secours Supabase (pg_cron), en attente du go.
 5. Recherche : pour un résultat trouvé dans le CV, afficher l'extrait contenant le mot et préciser quel CV (SharePoint ou reçu par email). Option (a) validée, capture à montrer avant mise en ligne.
+6. Recherche en conversation (onglet Consultants) : phrase libre → critères (IA, ~0,1 centime/question) → matching sans IA sur toute la base ; affinage dans la conversation. Critère disponibilité ignoré pour l'instant.
+7. Nouveau champ « Mobilité » sur la fiche, saisi à la main (Paris, Île-de-France, France, Monde entier…), utilisé dans les filtres et la recherche.
+8. Nouvelle page Consultants (modèle fourni le 11/11) : filtres à gauche, résultats en cartes à droite mis à jour en temps réel ; capture à montrer avant mise en ligne.
