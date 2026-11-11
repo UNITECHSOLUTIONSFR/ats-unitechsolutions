@@ -147,3 +147,8 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Fait : liens CV Word inutilisables (Outlook) remplacés dans les missions ; 13 CV SharePoint restés au modèle Unitech vierge signalés avec ce motif ; coût des seconds essais (Sonnet) compté au bon tarif.
 - Testé : 156 tests, matching sur les 3 missions, tableau, accès sans connexion refusés.
 - À surveiller : aucune exécution planifiée GitHub depuis la création du workflow (seulement les lancements manuels) ; vérifier après 2 h.
+
+### 11/11/2026 (2 h 50) — Contrôle des tâches de nuit
+- Constat : une seule exécution planifiée GitHub depuis la création (emails, 21 h 50 UTC au lieu de 21 h 17) ; rien depuis : ni emails horaires, ni Excel (01 h 00 UTC), ni CV (01 h 30 UTC).
+- Cause : planificateur GitHub non fiable (retards, exécutions sautées), le code et le secret fonctionnent (lancements manuels et exécution de 21 h 50 réussis).
+- Proposition (à valider) : planification de secours par Supabase (pg_cron) appelant les mêmes adresses, clé stockée dans le coffre Supabase par l'utilisatrice.
