@@ -13,15 +13,15 @@ const EXEMPLES = [
   "Un développeur Java Spring Boot senior qui a travaillé chez Orange",
   "Chef de projet SAP FI avec 10 ans d'expérience dans la banque",
 ];
-const TRIS = { pertinence: "Pertinence", experience: "Expérience", nom: "Nom (A → Z)" } as const;
+const TRIS = { pertinence: "Pertinence", recent: "Arrivés récemment", experience: "Expérience", nom: "Nom (A → Z)" } as const;
 const PAR_PAGE = 30;
 
 interface Message { de: "moi" | "outil"; texte: string }
-interface Filtres { complets: boolean; scoreMin: number; anneesMin: string; anneesMax: string; lieu: "tous" | "compatibles" | "compatibles_inconnus"; statuts: string[]; avecWord: boolean; avecPdf: boolean; texte: string }
-const FILTRES_INITIAUX: Filtres = { complets: true, scoreMin: 0, anneesMin: "", anneesMax: "", lieu: "tous", statuts: [], avecWord: false, avecPdf: false, texte: "" };
+interface Filtres { complets: boolean; scoreMin: number; anneesMin: string; anneesMax: string; lieu: "tous" | "compatibles" | "compatibles_inconnus"; statuts: string[]; avecWord: boolean; avecPdf: boolean; analyse: boolean; texte: string }
+const FILTRES_INITIAUX: Filtres = { complets: true, scoreMin: 0, anneesMin: "", anneesMax: "", lieu: "tous", statuts: [], avecWord: false, avecPdf: false, analyse: false, texte: "" };
 
 /** Section « Recherche » : conversation en haut, filtres à gauche, profils en cartes à droite (mis à jour en temps réel). */
-export default function Recherche() {
+export default function Recherche({ recents }: { recents: ResultatRecherche[] }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [saisie, setSaisie] = useState("");
   const [criteres, setCriteres] = useState<Criteres | null>(null);
@@ -29,7 +29,7 @@ export default function Recherche() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, demarrer] = useTransition();
   const [filtres, setFiltres] = useState<Filtres>(FILTRES_INITIAUX);
-  const [tri, setTri] = useState<keyof typeof TRIS>("pertinence");
+  const [tri, setTri] = useState<keyof typeof TRIS>("recent");
   const [nbAffiches, setNbAffiches] = useState(PAR_PAGE);
   const [ficheOuverte, setFicheOuverte] = useState<string | null>(null);
   const fil = useRef<HTMLDivElement>(null);
@@ -47,6 +47,7 @@ export default function Recherche() {
       if (r.erreur) { setErreur(r.erreur); return; }
       setCriteres(r.criteres ?? null);
       setResultats(r.resultats ?? []);
+      setTri("pertinence");
       setNbAffiches(PAR_PAGE);
       setMessages((m) => [...m, { de: "outil", texte: `${r.reponse ?? ""} ${r.resultats?.length ? `${r.resultats.length} profil(s) trouvé(s).` : "Aucun profil trouvé : élargissez la demande."}`.trim() }]);
     });
@@ -62,49 +63,51 @@ export default function Recherche() {
   }
 
   function recommencer() {
-    setMessages([]); setCriteres(null); setResultats(null); setErreur(null); setFiltres(FILTRES_INITIAUX); setSaisie("");
+    setMessages([]); setCriteres(null); setResultats(null); setErreur(null); setFiltres(FILTRES_INITIAUX); setSaisie(""); setTri("recent");
   }
 
-  const visibles = useMemo(() => filtrer(resultats ?? [], filtres, tri), [resultats, filtres, tri]);
+  // Avant toute recherche : les profils arrivés récemment ; ensuite : le classement de la demande.
+  const enRecherche = resultats !== null;
+  const liste = resultats ?? recents;
+  const visibles = useMemo(() => filtrer(liste, enRecherche ? filtres : { ...filtres, complets: false }, tri), [liste, filtres, tri, enRecherche]);
   const nbFiltres = compterFiltres(filtres);
 
   return (
     <div className="min-w-0 space-y-5">
-      {/* Conversation */}
-      <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-nuit via-marque-700 to-marque-500 p-5 text-white shadow-[0_30px_60px_-30px_rgba(31,69,163,0.6)] sm:p-7">
-        <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-        <div className="relative flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold tracking-[-0.03em] sm:text-3xl">Décrivez le consultant que vous cherchez</h1>
-            <p className="mt-1 text-sm text-white/70">Écrivez comme à un collègue, puis affinez : « plutôt freelance », « sans Kubernetes », « avec 8 ans minimum »…</p>
-          </div>
-          {messages.length > 0 && <button onClick={recommencer} className="rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold ring-1 ring-white/25 hover:bg-white/25">Nouvelle recherche</button>}
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-nuit">
+          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-marque-600 shadow-sm ring-1 ring-slate-200">🔎</span>
+          Recherche
+        </h1>
+        {messages.length > 0 && <button onClick={recommencer} className="bouton-secondaire">Nouvelle recherche</button>}
+      </div>
 
+      {/* Dialogue : une barre de saisie sobre, l'échange s'affiche au-dessus */}
+      <section className="carte p-4">
         {messages.length > 0 && (
-          <div ref={fil} className="relative mt-4 max-h-56 space-y-2 overflow-y-auto pr-1">
+          <div ref={fil} className="mb-3 max-h-48 space-y-2 overflow-y-auto pr-1">
             {messages.map((m, i) => (
               <div key={i} className={`flex ${m.de === "moi" ? "justify-end" : "justify-start"}`}>
-                <p className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm ${m.de === "moi" ? "rounded-br-md bg-white text-nuit" : "rounded-bl-md bg-white/15 text-white ring-1 ring-white/20"}`}>{m.texte}</p>
+                <p className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm ${m.de === "moi" ? "rounded-br-md bg-nuit text-white" : "rounded-bl-md bg-slate-100 text-slate-700"}`}>{m.texte}</p>
               </div>
             ))}
-            {enCours && <div className="flex"><p className="rounded-2xl rounded-bl-md bg-white/15 px-4 py-2 text-sm text-white/80 ring-1 ring-white/20"><span className="animate-pulse">Recherche en cours…</span></p></div>}
+            {enCours && <div className="flex"><p className="animate-pulse rounded-2xl rounded-bl-md bg-slate-100 px-3.5 py-2 text-sm text-slate-500">Recherche en cours…</p></div>}
           </div>
         )}
-
-        <form onSubmit={(e) => { e.preventDefault(); envoyer(saisie); }} className="relative mt-4 flex items-end gap-2 rounded-[1.4rem] bg-white p-2 shadow-lg">
+        <form onSubmit={(e) => { e.preventDefault(); envoyer(saisie); }} className="flex items-center gap-2 rounded-2xl bg-white px-3 py-1.5 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-marque-300">
+          <span className="text-slate-400" aria-hidden>🔎</span>
           <textarea value={saisie} onChange={(e) => setSaisie(e.target.value)} rows={1} maxLength={2000}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); envoyer(saisie); } }}
-            placeholder={messages.length ? "Affinez la recherche…" : "Ex. Je cherche un DevOps, 5-6 ans d'expérience, Jenkins et Kubernetes, mobile sur Paris"}
-            className="max-h-32 min-h-[2.75rem] flex-1 resize-none bg-transparent px-3 py-2.5 text-sm text-nuit outline-none placeholder:text-slate-400" />
-          <button disabled={enCours || !saisie.trim()} className="bouton-primaire shrink-0 px-5 py-2.5">{enCours ? "…" : "Rechercher"}</button>
+            placeholder={messages.length ? "Affinez : « sans Kubernetes », « 8 ans minimum », « mobile sur Lyon »…" : "Décrivez le profil : « un DevOps, 5-6 ans, Jenkins et Kubernetes, mobile sur Paris »"}
+            className="max-h-32 min-h-[2.5rem] flex-1 resize-none bg-transparent px-1 py-2 text-[15px] text-nuit outline-none placeholder:text-slate-400" />
+          <button disabled={enCours || !saisie.trim()} className="bouton-primaire shrink-0">{enCours ? "…" : "Rechercher"}</button>
         </form>
-        {erreur && <p className="relative mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800">{erreur}</p>}
-
+        {erreur && <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800">{erreur}</p>}
         {!messages.length && (
-          <div className="relative mt-3 flex flex-wrap gap-2">
+          <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-slate-400">Exemples :</span>
             {EXEMPLES.map((e) => (
-              <button key={e} onClick={() => envoyer(e)} className="rounded-full bg-white/10 px-3 py-1.5 text-left text-xs text-white/85 ring-1 ring-white/20 transition hover:bg-white/20">{e}</button>
+              <button key={e} onClick={() => envoyer(e)} className="rounded-full bg-slate-50 px-3 py-1 text-left text-slate-600 ring-1 ring-slate-200 transition hover:bg-marque-50 hover:text-marque-700">{e}</button>
             ))}
           </div>
         )}
@@ -113,7 +116,7 @@ export default function Recherche() {
       {/* Critères compris, modifiables d'un clic */}
       {criteres && <BarreCriteres criteres={criteres} onChange={modifier} desactive={enCours} texteMission={messages.filter((m) => m.de === "moi").map((m) => m.texte).join("\n")} />}
 
-      {resultats && (
+      {(
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[17rem_minmax(0,1fr)] [&>*]:min-w-0">
           {/* Filtres */}
           <aside className="carte h-fit space-y-5 p-5 text-sm lg:sticky lg:top-4">
@@ -124,13 +127,15 @@ export default function Recherche() {
             <Groupe titre="Dans les résultats">
               <input value={filtres.texte} onChange={(e) => setFiltres({ ...filtres, texte: e.target.value })} placeholder="Nom, poste, compétence…" className="champ w-full" />
             </Groupe>
-            <Groupe titre="Pertinence">
-              <Case label="Toutes les compétences obligatoires" checked={filtres.complets} onChange={(v) => setFiltres({ ...filtres, complets: v })} />
-              <label className="mt-2 block">
-                <span className="flex justify-between text-slate-500"><span>Score minimum</span><span className="font-semibold tabular-nums text-nuit">{filtres.scoreMin}</span></span>
-                <input type="range" min={0} max={100} step={5} value={filtres.scoreMin} onChange={(e) => setFiltres({ ...filtres, scoreMin: Number(e.target.value) })} className="mt-1 w-full accent-marque-600" />
-              </label>
-            </Groupe>
+            {enRecherche && (
+              <Groupe titre="Pertinence">
+                <Case label="Toutes les compétences obligatoires" checked={filtres.complets} onChange={(v) => setFiltres({ ...filtres, complets: v })} />
+                <label className="mt-2 block">
+                  <span className="flex justify-between text-slate-500"><span>Score minimum</span><span className="font-semibold tabular-nums text-nuit">{filtres.scoreMin}</span></span>
+                  <input type="range" min={0} max={100} step={5} value={filtres.scoreMin} onChange={(e) => setFiltres({ ...filtres, scoreMin: Number(e.target.value) })} className="mt-1 w-full accent-marque-600" />
+                </label>
+              </Groupe>
+            )}
             <Groupe titre="Années d'expérience">
               <div className="flex items-center gap-2">
                 <input type="number" min={0} value={filtres.anneesMin} onChange={(e) => setFiltres({ ...filtres, anneesMin: e.target.value })} placeholder="Min" className="champ w-full" />
@@ -151,6 +156,7 @@ export default function Recherche() {
             <Groupe titre="Documents">
               <Case label="Avec CV Word" checked={filtres.avecWord} onChange={(v) => setFiltres({ ...filtres, avecWord: v })} />
               <Case label="Avec PDF anonymisé" checked={filtres.avecPdf} onChange={(v) => setFiltres({ ...filtres, avecPdf: v })} />
+              <Case label="CV analysé (compétences connues)" checked={filtres.analyse} onChange={(v) => setFiltres({ ...filtres, analyse: v })} />
             </Groupe>
           </aside>
 
@@ -158,16 +164,16 @@ export default function Recherche() {
           <section className={`space-y-3 transition ${enCours ? "opacity-60" : ""}`}>
             <div className="flex flex-wrap items-center justify-between gap-3 px-1">
               <h2 className="text-xl font-bold tracking-tight text-nuit">
-                {visibles.length.toLocaleString("fr-FR")} profil{visibles.length > 1 ? "s" : ""}
-                {visibles.length !== resultats.length && <span className="text-base font-medium text-slate-400"> sur {resultats.length}</span>}
+                {enRecherche ? `${visibles.length.toLocaleString("fr-FR")} profil${visibles.length > 1 ? "s" : ""}` : "Profils récents"}
+                {enRecherche && visibles.length !== liste.length && <span className="text-base font-medium text-slate-400"> sur {liste.length}</span>}
               </h2>
               <label className="flex items-center gap-2 text-sm text-slate-500">Trier par
                 <select value={tri} onChange={(e) => setTri(e.target.value as keyof typeof TRIS)} className="champ py-1.5">
-                  {Object.entries(TRIS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  {Object.entries(TRIS).filter(([v]) => enRecherche || v !== "pertinence").map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                 </select>
               </label>
             </div>
-            {visibles.slice(0, nbAffiches).map((r) => <Carte key={r.id} r={r} lieu={criteres?.lieu ?? null} onOuvrir={() => setFicheOuverte(r.id)} />)}
+            {visibles.slice(0, nbAffiches).map((r) => <Carte key={r.id} r={r} lieu={criteres?.lieu ?? null} avecScore={enRecherche} onOuvrir={() => setFicheOuverte(r.id)} />)}
             {visibles.length > nbAffiches && (
               <button onClick={() => setNbAffiches((n) => n + PAR_PAGE)} className="bouton-secondaire mx-auto flex">Afficher {Math.min(PAR_PAGE, visibles.length - nbAffiches)} profils de plus</button>
             )}
@@ -228,7 +234,7 @@ function Puce({ texte, icone, onRetirer, desactive }: { texte: string; icone: st
 }
 
 /** Carte d'un profil : identité, pastilles, compétences (★ = demandée), résumé, raisons du score, extrait du CV, actions. */
-function Carte({ r, lieu, onOuvrir }: { r: ResultatRecherche; lieu: string | null; onOuvrir: () => void }) {
+function Carte({ r, lieu, avecScore, onOuvrir }: { r: ResultatRecherche; lieu: string | null; avecScore: boolean; onOuvrir: () => void }) {
   const initiales = `${r.prenom?.[0] ?? ""}${r.nom?.[0] ?? ""}`.replace("—", "").toUpperCase() || "?";
   const couleur = r.elimine ? "text-slate-400" : r.score >= 75 ? "text-emerald-600" : r.score >= 50 ? "text-marque-600" : "text-slate-500";
   const tel = formaterTelephone(r.telephone);
@@ -242,23 +248,24 @@ function Carte({ r, lieu, onOuvrir }: { r: ResultatRecherche; lieu: string | nul
             <div className="text-lg font-bold leading-snug tracking-tight text-nuit hover:text-marque-700">{r.intitule_poste ?? "Poste non renseigné"}</div>
           </button>
         </div>
-        <div className="shrink-0 text-right">
+        {avecScore && <div className="shrink-0 text-right">
           <div className={`text-3xl font-extrabold tabular-nums ${couleur}`}>{r.score}<span className="text-sm font-semibold text-slate-400">/100</span></div>
           {r.elimine && <div className="text-[11px] font-semibold text-red-600">Manque : {r.manquantes.join(", ")}</div>}
-        </div>
+        </div>}
       </div>
 
       <div className="mt-3 flex flex-wrap gap-1.5">
         {r.annees !== null && <span className="pastille bg-marque-50/90 text-marque-700 ring-marque-100">⏱ {r.annees} an{r.annees > 1 ? "s" : ""} d&apos;expérience{r.seniorite ? ` · ${r.seniorite === "confirme" ? "confirmé" : r.seniorite}` : ""}</span>}
         {r.localisation && <span className="pastille">📍 {r.localisation}</span>}
-        <span className="pastille">🌍 Mobilité : {r.mobilite ?? "non renseignée"}</span>
+        {r.mobilite && <span className="pastille">🌍 Mobilité : {r.mobilite}</span>}
         {lieu && r.lieu === "ok" && <span className="pastille pastille-vert">✓ Compatible {lieu}</span>}
         {lieu && r.lieu === "autre" && <span className="pastille pastille-orange">Hors {lieu}</span>}
         {r.disponibilite && <span className="pastille" title="Information indicative : la disponibilité sera mise à jour">Dispo : {r.disponibilite}</span>}
       </div>
 
       {r.competences.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-1.5">
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          <span className="mr-1 text-xs font-semibold text-slate-400">Compétences</span>
           {r.competences.map((k) => (
             <span key={k.nom} className={`rounded-lg px-2 py-1 text-xs font-medium ${k.demandee ? "bg-amber-50 text-amber-800 ring-1 ring-amber-200" : "bg-slate-50 text-slate-600"}`}>{k.demandee && "★ "}{k.nom}</span>
           ))}
@@ -317,13 +324,15 @@ export function filtrer(liste: ResultatRecherche[], f: Filtres, tri: keyof typeo
     && (!f.statuts.length || f.statuts.includes(r.statut))
     && (!f.avecWord || !!r.word_url)
     && (!f.avecPdf || !!r.pdf_url)
+    && (!f.analyse || r.competences.length > 0)
     && (!texte || sansAccents(`${r.prenom} ${r.nom} ${r.trigramme} ${r.intitule_poste ?? ""} ${r.competences.map((k) => k.nom).join(" ")} ${r.localisation ?? ""} ${r.mobilite ?? ""}`).includes(texte)));
   if (tri === "experience") return [...res].sort((a, b) => (b.annees ?? -1) - (a.annees ?? -1));
+  if (tri === "recent") return res;
   if (tri === "nom") return [...res].sort((a, b) => `${a.nom} ${a.prenom}`.localeCompare(`${b.nom} ${b.prenom}`, "fr"));
   return res;
 }
 
 function compterFiltres(f: Filtres): number {
   return Number(!f.complets) + Number(f.scoreMin > 0) + Number(f.anneesMin !== "") + Number(f.anneesMax !== "") + Number(f.lieu !== "tous")
-    + f.statuts.length + Number(f.avecWord) + Number(f.avecPdf) + Number(!!f.texte.trim());
+    + f.statuts.length + Number(f.avecWord) + Number(f.avecPdf) + Number(f.analyse) + Number(!!f.texte.trim());
 }

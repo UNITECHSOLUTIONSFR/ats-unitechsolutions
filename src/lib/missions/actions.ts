@@ -181,3 +181,25 @@ export async function assignerMission(formData: FormData) {
   revalidatePath("/missions");
   revalidatePath("/");
 }
+
+/** Exigence modifiée depuis l'écran de la mission (interrupteur, importance, retrait), sans rechargement de formulaire. */
+export async function modifierExigenceDirect(missionId: string, competenceId: string, action: "obligatoire" | "importance" | "retirer", valeur?: string) {
+  const f = new FormData();
+  f.set("mission_id", missionId);
+  f.set("competence_id", competenceId);
+  f.set("action", action);
+  if (valeur !== undefined) f.set("valeur", valeur);
+  await modifierExigence(f);
+}
+
+/** Ajoute une compétence à une mission (souhaitée, importante). */
+export async function ajouterExigence(missionId: string, nom: string) {
+  const { supabase } = await exigerUtilisateur();
+  const n = nom.trim().slice(0, 100);
+  if (!n) return;
+  const correspondance = await resoudreCompetences(supabase, [n]);
+  for (const id of correspondance.get(n) ?? []) {
+    await supabase.from("mission_competences").upsert({ mission_id: missionId, competence_id: id, obligatoire: false, importance: 2 }, { onConflict: "mission_id,competence_id", ignoreDuplicates: true });
+  }
+  revalidatePath(`/missions/${missionId}`);
+}

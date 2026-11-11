@@ -71,3 +71,22 @@ export async function changerCampagne(formData: FormData) {
   if (action === "annuler") await supabase.from("campagnes_relance").update({ statut: "annulee" }).eq("id", id).in("statut", ["preparee", "en_cours"]);
   revalidatePath("/emails");
 }
+
+export interface EtatModele { message?: string; erreur?: string }
+
+/** Crée ou modifie un modèle depuis l'onglet « Créer un modèle ». */
+export async function sauverModele(_e: EtatModele, formData: FormData): Promise<EtatModele> {
+  const { utilisateur, supabase } = await exigerAdmin();
+  const id = String(formData.get("id") ?? "");
+  const nom = String(formData.get("nom") ?? "").trim().slice(0, 120);
+  const objet = String(formData.get("objet") ?? "").trim().slice(0, 200);
+  const corps = String(formData.get("corps") ?? "").trim().slice(0, 10_000);
+  const type = formData.get("type") === "libre" ? "libre" : "disponibilite";
+  if (!nom || !objet || !corps) return { erreur: "Le nom, l'objet et le message sont obligatoires." };
+  const { error } = id
+    ? await supabase.from("modeles_email").update({ nom, objet, corps, type }).eq("id", id)
+    : await supabase.from("modeles_email").insert({ nom, objet, corps, type, cree_par: utilisateur.id });
+  if (error) return { erreur: error.message };
+  revalidatePath("/emails");
+  return { message: id ? "Modèle mis à jour." : "Modèle enregistré : il est dans la bibliothèque." };
+}

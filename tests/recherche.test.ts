@@ -39,7 +39,7 @@ describe("recherche en conversation", () => {
       { ...base, id: "2", score: 40, elimine: false, annees: 2 },
       { ...base, id: "3", score: 80, elimine: true, annees: 8 },
     ] as ResultatRecherche[];
-    const f = { complets: true, scoreMin: 0, anneesMin: "", anneesMax: "", lieu: "tous" as const, statuts: [], avecWord: false, avecPdf: false, texte: "" };
+    const f = { complets: true, scoreMin: 0, anneesMin: "", anneesMax: "", lieu: "tous" as const, statuts: [], avecWord: false, avecPdf: false, analyse: false, texte: "" };
     expect(filtrer(liste, f, "pertinence").map((r) => r.id)).toEqual(["1", "2"]);
     expect(filtrer(liste, { ...f, scoreMin: 50 }, "pertinence").map((r) => r.id)).toEqual(["1"]);
     expect(filtrer(liste, { ...f, complets: false, anneesMin: "5" }, "pertinence").map((r) => r.id)).toEqual(["1", "3"]);

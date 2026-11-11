@@ -7,7 +7,7 @@ import { rendreMessage } from "@/lib/relance/modele";
 interface Modele { id: string; nom: string; objet: string; corps: string; type: string }
 
 /** Trois étapes : à qui écrire, quoi écrire, puis préparation de l'envoi. */
-export default function Redaction({ modeles }: { modeles: Modele[] }) {
+export default function Redaction({ modeles, modeleInitial }: { modeles: Modele[]; modeleInitial?: string }) {
   const [etat, action, enCours] = useActionState<EtatRelance, FormData>(creerCampagne, {});
   // 1. Destinataires
   const [fonction, setFonction] = useState("");
@@ -25,10 +25,16 @@ export default function Redaction({ modeles }: { modeles: Modele[] }) {
     return () => { actif = false; clearTimeout(t); };
   }, [fonction, jours, avant, exclus]);
   // 2. Message
-  const premier = modeles[0];
-  const [type, setType] = useState(premier?.type ?? "disponibilite");
+  const premier = modeles.find((m) => m.id === modeleInitial);
+  const [depart, setDepart] = useState<string>(premier?.id ?? "vierge");
+  const choisir = (id: string) => {
+    setDepart(id);
+    const m = modeles.find((x) => x.id === id);
+    if (m) { setObjet(m.objet); setCorps(m.corps); setType(m.type); } else { setObjet(""); setCorps("Bonjour {prenom},\n\n"); setType("libre"); }
+  };
+  const [type, setType] = useState(premier?.type ?? "libre");
   const [objet, setObjet] = useState(premier?.objet ?? "");
-  const [corps, setCorps] = useState(premier?.corps ?? "");
+  const [corps, setCorps] = useState(premier?.corps ?? "Bonjour {prenom},\n\n");
   const [nomModele, setNomModele] = useState("");
   const exemple = apercu?.exemples[0];
   const rendu = useMemo(() => rendreMessage(corps, { prenom: exemple?.nom.split(" ")[0] ?? "Marie", nom: "" }, "https://ats-unitechsolutions.vercel.app/desinscription/…"), [corps, exemple]);
@@ -40,7 +46,15 @@ export default function Redaction({ modeles }: { modeles: Modele[] }) {
       <input type="hidden" name="type" value={type} />
 
       <div className="carte space-y-4 p-6">
-        <Etape n={1} titre="À qui écrire ?" texte="Combinez les critères ; décochez une personne pour l'exclure." />
+        <Etape n={1} titre="Point de départ" texte="Un modèle de la bibliothèque, ou un email écrit à la main." />
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <Depart actif={depart === "vierge"} titre="✍️ Écrire à la main" texte="Email vierge" onClick={() => choisir("vierge")} />
+          {modeles.map((m) => <Depart key={m.id} actif={depart === m.id} titre={m.nom} texte={m.objet} etiquette={m.type === "libre" ? "Email libre" : "Disponibilité"} onClick={() => choisir(m.id)} />)}
+        </div>
+      </div>
+
+      <div className="carte space-y-4 p-6">
+        <Etape n={2} titre="À qui écrire ?" texte="Combinez les critères ; décochez une personne pour l'exclure." />
         <div className="grid gap-4 lg:grid-cols-4">
           <label className="block text-sm font-medium text-nuit lg:col-span-2">Fonction ou compétence
             <input name="fonction" value={fonction} onChange={(e) => setFonction(e.target.value)} placeholder="ex. java, chef de projet, SAP" className="champ mt-1 w-full" />
@@ -60,15 +74,11 @@ export default function Redaction({ modeles }: { modeles: Modele[] }) {
       </div>
 
       <div className="carte space-y-4 p-6">
-        <Etape n={2} titre="Quoi écrire ?" texte="Partez d'un modèle ou écrivez librement. {prenom} est remplacé par le prénom de chaque consultant." />
+        <Etape n={3} titre="Le message" texte="Modifiable librement. {prenom} est remplacé par le prénom de chaque consultant." />
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="space-y-3 text-sm">
             <div className="flex flex-wrap gap-2">
-              <select onChange={(e) => { const m = modeles.find((x) => x.id === e.target.value); if (m) { setObjet(m.objet); setCorps(m.corps); setType(m.type); } }}
-                defaultValue={premier?.id ?? ""} className="champ flex-1" aria-label="Modèle">
-                <option value="" disabled>Choisir un modèle…</option>
-                {modeles.map((m) => <option key={m.id} value={m.id}>{m.nom}</option>)}
-              </select>
+
               <div className="flex rounded-full bg-slate-100/80 p-1">
                 {([["disponibilite", "Disponibilité"], ["libre", "Email libre"]] as const).map(([v, l]) => (
                   <button key={v} type="button" onClick={() => setType(v)} className={`rounded-full px-3 py-1 text-xs font-semibold ${type === v ? "bg-white text-nuit shadow-sm" : "text-slate-500"}`}>{l}</button>
@@ -92,12 +102,21 @@ export default function Redaction({ modeles }: { modeles: Modele[] }) {
       </div>
 
       <div className="carte flex flex-wrap items-center justify-between gap-3 p-6">
-        <Etape n={3} titre="Préparer l'envoi" texte="Rien ne part à cette étape : l'envoi se lance ensuite, dans « Envois »." />
+        <Etape n={4} titre="Préparer l'envoi" texte="Rien ne part à cette étape : l'envoi se lance ensuite, dans « Envois »." />
         <button disabled={enCours || !apercu?.total} className="bouton-primaire px-6 py-2.5">{enCours ? "Préparation…" : `Préparer pour ${apercu?.total.toLocaleString("fr-FR") ?? "…"} consultant(s)`}</button>
         {etat.erreur && <p className="w-full text-sm text-red-700">{etat.erreur}</p>}
         {etat.message && <p className="w-full text-sm text-emerald-700">{etat.message}</p>}
       </div>
     </form>
+  );
+}
+
+function Depart({ actif, titre, texte, etiquette, onClick }: { actif: boolean; titre: string; texte: string; etiquette?: string; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className={`rounded-2xl p-4 text-left text-sm ring-1 transition ${actif ? "bg-marque-50 ring-2 ring-marque-400" : "bg-white/70 ring-slate-200 hover:ring-marque-200"}`}>
+      <div className="flex items-start justify-between gap-2"><span className="font-semibold text-nuit">{titre}</span>{etiquette && <span className="pastille shrink-0">{etiquette}</span>}</div>
+      <div className="mt-1 line-clamp-2 text-slate-500">{texte}</div>
+    </button>
   );
 }
 

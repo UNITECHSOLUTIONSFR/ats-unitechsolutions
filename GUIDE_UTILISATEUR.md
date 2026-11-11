@@ -36,7 +36,7 @@ Sur la fiche (bloc « CV Unitech ») ou sur un profil classé d'une mission : «
 « Échanges de l'équipe » sur la fiche : une note datée et signée (« appelé, dispo mars »), visible par tous. Le menu **Statistiques** montre l'arrivée des profils, leurs sources et le suivi des propositions.
 
 ## Emails (administrateurs)
-Choisir des consultants (fonction ou compétence, disponibilité, statut) → « Aperçu des destinataires » → partir d'un **modèle** ou écrire → **Préparer** → **Lancer l'envoi**. Pour un email « Disponibilité », chaque réponse met à jour la fiche, le tableau et l'Excel automatiquement ; chaque email contient un lien de désinscription.
+Onglets **Envois** (suivi), **Rédiger** (partir d'un modèle ou d'un email vierge → choisir les consultants → message → **Préparer** → **Lancer l'envoi**), **Modèles** (bibliothèque : utiliser, modifier, supprimer) et **Créer un modèle** (aperçu en direct, variables Prénom / Nom). Pour un email « Disponibilité », chaque réponse met à jour la fiche, le tableau et l'Excel automatiquement ; chaque email contient un lien de désinscription.
 
 ## Pendant la transition
 Continuez à remplir le fichier Excel : il est relu chaque nuit et reçoit les fiches créées dans l'outil. Les CV déposés dans SharePoint (« UNITECH SOLUTIONS - CV Prénom Nom - Métier » et « … - CV TRI - … ») et les candidatures envoyées à recrutement@ sont traités automatiquement.

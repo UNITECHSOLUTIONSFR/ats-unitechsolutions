@@ -7,16 +7,16 @@ import { responsablesPossibles } from "@/lib/missions/responsables";
 import ChoixResponsable from "../responsable";
 import Shortlist, { type ProfilShortlist } from "./shortlist";
 import BoutonCVMission from "./cv-mission";
+import Exigences from "./exigences";
 
 // Génération des CV Unitech (IA + SharePoint) depuis cet écran : jusqu'à 2 minutes.
 export const maxDuration = 120;
-import { modifierExigence, suivreProposition } from "@/lib/missions/actions";
+import { suivreProposition } from "@/lib/missions/actions";
 import ChoixStatut from "../statut";
 
 const STATUTS_PROPOSITION: Record<string, string> = {
   propose: "Proposé", appele: "Appelé", envoye_client: "Envoyé au client", retenu: "Retenu", refuse: "Refusé",
 };
-const IMPORTANCE = ["", "secondaire", "importante", "essentielle"];
 
 export default async function PageMission({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -46,16 +46,26 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
     competence_id: string; obligatoire: boolean; importance: number; annees_min: number | null; competences: { nom_canonique: string } | null;
   }[];
   exigences.sort((a, b) => Number(b.obligatoire) - Number(a.obligatoire) || b.importance - a.importance);
+  // Nombre de profils qui ont chaque compétence (analysée) : repère les exigences trop pointues.
+  const { data: possedees } = exigences.length
+    ? await supabase.from("consultant_competences").select("competence_id").in("competence_id", exigences.map((e) => e.competence_id)).limit(20000)
+    : { data: [] };
+  const profilsParCompetence = new Map<string, number>();
+  for (const p of possedees ?? []) profilsParCompetence.set(p.competence_id, (profilsParCompetence.get(p.competence_id) ?? 0) + 1);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="titre-page">{mission.intitule}</h1>
-          <p className="text-zinc-600">
-            {[mission.client, mission.localisation, mission.date_debut && `début ${new Date(mission.date_debut).toLocaleDateString("fr-FR")}`,
-              mission.annees_min && `${mission.annees_min} ans min.`, mission.seniorite].filter(Boolean).join(" · ")}
-          </p>
+          <Link href="/missions" className="text-sm font-medium text-slate-500 hover:text-nuit">← Missions</Link>
+          <h1 className="titre-page mt-1">{mission.intitule}</h1>
+          <div className="mt-2 flex flex-wrap gap-2 text-sm">
+            {mission.client && <span className="rounded-full bg-white px-3 py-1 font-medium text-nuit ring-1 ring-slate-200">🏢 {mission.client}</span>}
+            {mission.localisation && <span className="rounded-full bg-white px-3 py-1 text-slate-700 ring-1 ring-slate-200">📍 {mission.localisation}</span>}
+            {mission.date_debut && <span className="rounded-full bg-marque-50 px-3 py-1 font-semibold text-marque-700 ring-1 ring-marque-100">Démarrage le {new Date(mission.date_debut).toLocaleDateString("fr-FR")}</span>}
+            {mission.annees_min && <span className="rounded-full bg-white px-3 py-1 text-slate-700 ring-1 ring-slate-200">⏱ {mission.annees_min} ans minimum</span>}
+            {mission.seniorite && <span className="rounded-full bg-white px-3 py-1 text-slate-700 ring-1 ring-slate-200">★ {mission.seniorite === "confirme" ? "confirmé" : mission.seniorite}</span>}
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
         <Shortlist mission={mission.intitule} profils={shortlist} />
@@ -68,39 +78,9 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
         </div>
       </div>
 
-      <section className="carte p-6">
-        <h2 className="font-semibold text-nuit">Exigences extraites</h2>
-        <p className="text-sm text-zinc-500">Ajustez-les si besoin : le classement se recalcule aussitôt.</p>
-        <ul className="mt-3 divide-y divide-white/70">
-          {exigences.map((e) => (
-            <li key={e.competence_id} className="flex flex-wrap items-center gap-3 py-2 text-sm">
-              <span className="min-w-40 font-medium">{e.competences?.nom_canonique}</span>
-              <span className={`pastille ${e.obligatoire ? "pastille-rouge" : ""}`}>
-                {e.obligatoire ? "obligatoire" : "souhaitée"}
-              </span>
-              <span className="text-zinc-500">{IMPORTANCE[e.importance]}{e.annees_min ? ` · ${e.annees_min} an(s) min.` : ""}</span>
-              <form action={modifierExigence} className="ml-auto flex gap-2">
-                <input type="hidden" name="mission_id" value={id} />
-                <input type="hidden" name="competence_id" value={e.competence_id} />
-                <input type="hidden" name="action" value="obligatoire" />
-                <input type="hidden" name="valeur" value={String(!e.obligatoire)} />
-                <button className="rounded-full px-2.5 py-1 text-xs font-medium text-slate-500 transition hover:bg-white hover:text-nuit">{e.obligatoire ? "rendre souhaitée" : "rendre obligatoire"}</button>
-              </form>
-              <form action={modifierExigence}>
-                <input type="hidden" name="mission_id" value={id} />
-                <input type="hidden" name="competence_id" value={e.competence_id} />
-                <input type="hidden" name="action" value="retirer" />
-                <button className="rounded-full px-2.5 py-1 text-xs font-medium text-slate-500 transition hover:bg-red-50 hover:text-red-700">retirer</button>
-              </form>
-            </li>
-          ))}
-          {!exigences.length && <li className="py-2 text-sm text-zinc-500">Aucune compétence identifiée.</li>}
-        </ul>
-        <details className="mt-3 text-sm">
-          <summary className="cursor-pointer text-zinc-500">Texte du besoin</summary>
-          <pre className="mt-2 whitespace-pre-wrap font-sans text-zinc-700">{mission.texte_besoin}</pre>
-        </details>
-      </section>
+      <Exigences missionId={id} texteBesoin={mission.texte_besoin} exigences={exigences.map((e) => ({
+        competence_id: e.competence_id, nom: e.competences?.nom_canonique ?? "?", obligatoire: e.obligatoire, importance: e.importance, profils: profilsParCompetence.get(e.competence_id) ?? 0,
+      }))} />
 
       <section className="space-y-4">
         {/* Synthèse */}

@@ -192,3 +192,22 @@ export function motsSignificatifs(poste: string | null): string[] {
   const precis = mots.filter((m) => !GENERIQUES.has(m));
   return precis.length ? precis : mots;
 }
+
+/** Liste affichée à l'arrivée (avant toute recherche) : les profils analysés les plus récents. Sans IA. */
+export async function profilsRecents(supabase: SupabaseClient, limite = 150): Promise<ResultatRecherche[]> {
+  // Profils dont le CV est analysé (compétences connues), du plus récent au plus ancien.
+  const { data: recents } = await supabase.from("profils").select("consultant_id, created_at")
+    .order("created_at", { ascending: false }).limit(limite);
+  const ordre = new Map((recents ?? []).map((c, i) => [c.consultant_id as string, i]));
+  if (!ordre.size) return [];
+  const { data } = await supabase.rpc("candidats_recherche", { p_competences: [], p_motifs_poste: [], p_ids: [...ordre.keys()] });
+  return ((data ?? []) as Ligne[])
+    .sort((a, b) => (ordre.get(a.consultant_id) ?? 0) - (ordre.get(b.consultant_id) ?? 0))
+    .map((c) => ({
+      id: c.consultant_id, prenom: c.prenom, nom: c.nom, trigramme: c.trigramme, intitule_poste: c.intitule_poste, statut: c.statut,
+      localisation: c.localisation, mobilite: c.mobilite, annees: c.annees_experience === null ? null : Number(c.annees_experience), seniorite: c.seniorite,
+      resume: c.resume, disponibilite: c.disponibilite, telephone: c.telephone_e164, email: c.email, word_url: c.word_url, pdf_url: c.pdf_anonyme_url,
+      competences: [...c.competences].sort((a, b) => (b.annees ?? 0) - (a.annees ?? 0)).slice(0, 10).map((k) => ({ nom: k.nom, demandee: false })),
+      score: 0, elimine: false, manquantes: [], raisons: [], lieu: null, extrait: null,
+    }));
+}
