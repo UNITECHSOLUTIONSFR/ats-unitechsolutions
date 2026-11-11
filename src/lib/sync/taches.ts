@@ -41,7 +41,14 @@ export async function tacheDejaFaite(nom: NomTache, supabase: SupabaseClient, ma
 export async function executerTache(nom: NomTache, supabase: SupabaseClient, options: { planifiee?: boolean } = {}): Promise<{ ok: boolean; rapport: Record<string, unknown> }> {
   if (options.planifiee) {
     const deja = await tacheDejaFaite(nom, supabase);
-    if (deja) return { ok: true, rapport: { ignoree: deja } };
+    if (deja) {
+      // Lecture des CV déjà faite : on récupère quand même les résultats d'une analyse IA terminée (sans rien relancer).
+      if (nom === "cv") {
+        const r = await collecterAnalyse(supabase).catch((e) => ({ erreur: (e as Error).message, message: undefined }));
+        return { ok: true, rapport: { ignoree: deja, resultatsAnalyse: r.message ?? r.erreur } };
+      }
+      return { ok: true, rapport: { ignoree: deja } };
+    }
   }
   const { data: execution } = await supabase.from("executions").insert({ type: TACHES[nom].type }).select("id").single();
   let rapport: Record<string, unknown> = {};
