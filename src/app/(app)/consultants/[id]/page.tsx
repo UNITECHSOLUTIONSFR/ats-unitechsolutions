@@ -165,6 +165,11 @@ export default async function FicheConsultant({ params }: { params: Promise<{ id
           <Champ nom="email" libelle="Email" valeur={c.email} />
           <Champ nom="intitule_poste" libelle="Intitulé de poste" valeur={c.intitule_poste} />
           <Champ nom="localisation" libelle="Localisation" valeur={c.localisation} />
+          <label className="block">
+            <span className="text-slate-600">Mobilité</span>
+            <input name="mobilite" list="mobilites" defaultValue={c.mobilite ?? ""} placeholder="Ex. Île-de-France" className="champ mt-1 w-full" />
+            <datalist id="mobilites">{MOBILITES.map((m) => <option key={m} value={m} />)}</datalist>
+          </label>
           <Champ nom="disponibilite" libelle="Disponibilité (texte)" valeur={c.disponibilite} />
           <Champ nom="disponible_le" libelle="Disponible le" valeur={c.disponible_le} type="date" />
           <p className={`text-xs ${dispoAncienne ? "text-amber-700" : "text-slate-500"}`}>
@@ -194,6 +199,9 @@ export default async function FicheConsultant({ params }: { params: Promise<{ id
     </div>
   );
 }
+
+/** Suggestions de mobilité (texte libre possible). */
+const MOBILITES = ["Paris", "Île-de-France", "France", "Europe", "Monde entier", "Télétravail uniquement"];
 
 function Champ({ nom, libelle, valeur, type = "text" }: { nom: string; libelle: string; valeur: string | null; type?: string }) {
   return (

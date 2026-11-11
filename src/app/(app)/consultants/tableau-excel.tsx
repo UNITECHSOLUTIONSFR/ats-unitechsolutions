@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { Fragment, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import type { ChampFiche } from "@/lib/import/excel";
 import {
   filtreRapide, filtrerEtTrier, valeurEcran, valeursDistinctes, VIDE,
@@ -13,6 +13,15 @@ import PanneauFiche, { prechargerFiche } from "./panneau-fiche";
 import { IconeCopier, IconeCrayon, IconeExport, IconeFiche, IconeFiltre, IconeImport, IconePlus, IconeRecherche } from "../icones";
 
 const PAR_PAGE = 100;
+
+export interface ExtraitCV { extrait: string; source: string }
+
+/** Extrait du CV où le mot cherché apparaît (balisé [[…]] par la base), mot surligné. */
+export function TexteSurligne({ texte }: { texte: string }) {
+  return <>« {texte.split(/(\[\[.*?\]\])/).map((m, i) => m.startsWith("[[")
+    ? <mark key={i} className="rounded bg-amber-100 px-0.5 font-semibold text-nuit">{m.slice(2, -2)}</mark>
+    : <Fragment key={i}>{m}</Fragment>)} »</>;
+}
 
 /** Largeur de chaque colonne selon ce qu'elle contient : compacte pour un trigramme, large pour des notes. Texte trop long = coupé, visible au survol. */
 const LARGEURS: Partial<Record<ChampFiche, string>> = {
@@ -75,13 +84,15 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
       rapides.every((f) => filtreRapide(l, f, maintenant)));
   }, [lignes, vueActive, colonneDomaine, rapides]);
   // La recherche porte aussi sur le texte complet des CV (côté base, index plein texte).
-  const [dansCV, setDansCV] = useState<{ q: string; ids: Set<string> }>({ q: "", ids: new Set() });
+  const [dansCV, setDansCV] = useState<{ q: string; ids: Set<string>; extraits: Map<string, ExtraitCV> }>({ q: "", ids: new Set(), extraits: new Map() });
   useEffect(() => {
     const q = rechercheDifferee.trim();
     if (q.length < 3) return;
     let actif = true;
     const t = setTimeout(() => {
-      fetch(`/api/consultants/recherche-cv?q=${encodeURIComponent(q)}`).then((r) => (r.ok ? r.json() : [])).then((ids: string[]) => { if (actif) setDansCV({ q, ids: new Set(ids) }); }).catch(() => undefined);
+      fetch(`/api/consultants/recherche-cv?q=${encodeURIComponent(q)}`).then((r) => (r.ok ? r.json() : [])).then((res: ({ id: string } & ExtraitCV)[]) => {
+        if (actif) setDansCV({ q, ids: new Set(res.map((x) => x.id)), extraits: new Map(res.map((x) => [x.id, { extrait: x.extrait, source: x.source }])) });
+      }).catch(() => undefined);
     }, 300);
     return () => { actif = false; clearTimeout(t); };
   }, [rechercheDifferee]);
@@ -260,8 +271,10 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
           <tbody>
             {affichees.map((l) => {
               const cochee = selection.has(l.id);
+              const extrait = parLeCV.has(l.id) && l.consultant_id ? dansCV.extraits.get(l.consultant_id) : undefined;
               return (
-                <tr key={l.id}
+                <Fragment key={l.id}>
+                <tr
                   onMouseEnter={l.consultant_id ? () => prechargerFiche(l.consultant_id!) : undefined}
                   onClick={(ev) => {
                     // Clic sur la ligne : fiche dans le panneau de droite (sauf case à cocher, lien ou cellule en édition).
@@ -309,6 +322,17 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
                     );
                   })}
                 </tr>
+                {extrait && (
+                  <tr className={cochee ? "bg-marque-50" : "bg-white/90"}>
+                    <td colSpan={entetes.length + 1} className="px-4 pb-2.5 pt-0">
+                      <div className="sm:sticky sm:left-4 max-w-3xl text-[12.5px] leading-snug text-slate-500">
+                        <span className="mr-1.5 font-semibold text-violet-700">{extrait.source === "email" ? "CV reçu par email :" : "CV SharePoint :"}</span>
+                        <TexteSurligne texte={extrait.extrait} />
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               );
             })}
             {!affichees.length && (

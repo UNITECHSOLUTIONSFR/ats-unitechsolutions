@@ -14,6 +14,7 @@ export interface FicheResume {
   email: string | null;
   email_2: string | null;
   localisation: string | null;
+  mobilite: string | null;
   disponibilite: string | null;
   disponibilite_maj_le: string | null;
   linkedin: string | null;
@@ -54,7 +55,7 @@ export async function chargerFiche(supabase: SupabaseClient, utilisateurId: stri
   return {
     id: c.id, prenom: c.prenom, nom: c.nom, trigramme: c.trigramme, statut: c.statut,
     intitule_poste: c.intitule_poste, telephone: formaterTelephone(c.telephone_e164) || c.telephone_brut || "",
-    email: c.email, email_2: c.email_2, localisation: c.localisation, disponibilite: c.disponible_le ?? c.disponibilite,
+    email: c.email, email_2: c.email_2, localisation: c.localisation, mobilite: c.mobilite ?? null, disponibilite: c.disponible_le ?? c.disponibilite,
     disponibilite_maj_le: c.disponibilite_maj_le, linkedin: c.linkedin, notes: c.notes,
     resume: profil?.resume ?? null, annees_experience: profil?.annees_experience ?? null, seniorite: profil?.seniorite ?? null,
     competences: (comp ?? []).map((k) => ({ nom: (k.competences as unknown as { nom_canonique: string } | null)?.nom_canonique ?? "?", annees: k.annees })),

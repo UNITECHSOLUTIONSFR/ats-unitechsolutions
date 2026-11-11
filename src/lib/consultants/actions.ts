@@ -15,7 +15,7 @@ export async function modifierConsultant(formData: FormData) {
   const id = String(formData.get("id"));
   const { data: avant } = await supabase
     .from("consultants")
-    .select("intitule_poste, disponibilite, disponible_le, telephone_e164, email, localisation, statut, notes")
+    .select("intitule_poste, disponibilite, disponible_le, telephone_e164, email, localisation, mobilite, statut, notes")
     .eq("id", id)
     .maybeSingle();
   if (!avant) return;
@@ -33,6 +33,7 @@ export async function modifierConsultant(formData: FormData) {
     telephone_e164: tel.e164 ?? (tel.statut === "vide" ? null : avant.telephone_e164),
     email: normaliserEmail(texte("email")) ?? (texte("email") ? avant.email : null),
     localisation: texte("localisation"),
+    mobilite: texte("mobilite"),
     statut: STATUTS.includes(statut) ? statut : avant.statut,
     notes: texte("notes"),
   };

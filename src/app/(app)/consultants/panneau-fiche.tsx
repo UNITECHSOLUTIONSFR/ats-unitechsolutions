@@ -96,6 +96,7 @@ export default function PanneauFiche({ id, onFermer }: { id: string; onFermer: (
               <Ligne libelle="Email">{fiche.email ?? "—"}</Ligne>
               {fiche.email_2 && <Ligne libelle="Email 2">{fiche.email_2}</Ligne>}
               <Ligne libelle="Localisation">{fiche.localisation ?? "—"}</Ligne>
+              <Ligne libelle="Mobilité">{fiche.mobilite ?? "—"}</Ligne>
               {fiche.linkedin && <Ligne libelle="LinkedIn"><a href={fiche.linkedin.startsWith("http") ? fiche.linkedin : `https://${fiche.linkedin}`} target="_blank" rel="noreferrer" className="lien">Voir le profil</a></Ligne>}
             </Bloc>
 
