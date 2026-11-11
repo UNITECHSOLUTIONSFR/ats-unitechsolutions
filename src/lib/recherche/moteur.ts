@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CriteresRecherche } from "@/lib/ai";
 import { indexerReferentiel, resoudreCompetence, type CompetenceReferentiel } from "@/lib/matching/referentiel";
 import { PONDERATIONS_PAR_DEFAUT, scorerConsultant, type ExigenceCompetence, type Seniorite } from "@/lib/matching/score";
-import { ponderationsReglees } from "@/lib/matching/classement";
+import { avecTextes, competencesDansLesTextes, ponderationsReglees } from "@/lib/matching/classement";
 import { sansAccents } from "@/lib/metier/texte";
 
 /**
@@ -104,7 +104,10 @@ export async function rechercherProfils(supabase: SupabaseClient, criteres: Crit
     : null;
 
   const idsConnus = exigences.filter((e) => !e.competence_id.startsWith("texte:")).map((e) => e.competence_id);
+  // Compétences connues retrouvées dans les textes (CV non analysés, lignes Excel) : points partiels.
+  const dansLesTextes = await competencesDansLesTextes(supabase, idsConnus);
   const idsTexte = new Set<string>([...parTexte.values()].flatMap((m) => [...m.keys()]));
+  for (const id of dansLesTextes.keys()) idsTexte.add(id);
   // Sans compétence ni poste, les mots-clés seuls désignent les candidats.
   if (avecMotsCles && !idsConnus.length && !criteres.poste) for (const id of avecMotsCles) idsTexte.add(id);
   if (!idsConnus.length && !idsTexte.size && !criteres.poste) return [];
@@ -117,13 +120,13 @@ export async function rechercherProfils(supabase: SupabaseClient, criteres: Crit
   // La disponibilité ne compte pas pour l'instant ; pas de proximité sémantique sans mission enregistrée.
   const ponderations = { ...PONDERATIONS_PAR_DEFAUT, ...ponderationsBase, disponibilite: 0 };
   const mission = { competences: exigences, annees_min: criteres.annees_min, seniorite: criteres.seniorite, localisation: null };
-  const motsPoste = criteres.poste ? min(criteres.poste).split(/[\s/,-]+/).filter((m) => m.length >= 3) : [];
+  const motsPoste = motsSignificatifs(criteres.poste);
 
   const lignes = ((data ?? []) as Ligne[])
     .filter((c) => !avecMotsCles || avecMotsCles.has(c.consultant_id))
     .map((c) => {
-      const possedees = c.competences.map((k) => ({ competence_id: k.competence_id, annees: k.annees }));
-      for (const [id, m] of parTexte) if (m.has(c.consultant_id)) possedees.push({ competence_id: id, annees: null });
+      const possedees: { competence_id: string; annees: number | null; partiel?: boolean }[] = avecTextes(c.competences.map((k) => ({ competence_id: k.competence_id, annees: k.annees })), dansLesTextes.get(c.consultant_id));
+      for (const [id, m] of parTexte) if (m.has(c.consultant_id)) possedees.push({ competence_id: id, annees: null, partiel: true });
       const r = scorerConsultant(mission, {
         competences: possedees, annees_experience: c.annees_experience === null ? null : Number(c.annees_experience),
         seniorite: c.seniorite, disponible_le: null, disponibilite: null, disponibilite_maj_le: null, localisation: c.localisation, similarite: null,
@@ -157,7 +160,7 @@ export async function rechercherProfils(supabase: SupabaseClient, criteres: Crit
           telephone: c.telephone_e164, email: c.email, word_url: c.word_url, pdf_url: c.pdf_anonyme_url,
           competences: [
             ...c.competences.filter((k) => demandees.has(k.competence_id)).map((k) => ({ nom: k.nom, demandee: true })),
-            ...[...parTexte.entries()].filter(([, m]) => m.has(c.consultant_id)).map(([id]) => ({ nom: exigences.find((e) => e.competence_id === id)!.nom, demandee: true })),
+            ...possedees.filter((p) => p.partiel).map((p) => ({ nom: `${exigences.find((e) => e.competence_id === p.competence_id)?.nom ?? "?"} (CV)`, demandee: true })),
             ...c.competences.filter((k) => !demandees.has(k.competence_id)).sort((a, b) => (b.annees ?? 0) - (a.annees ?? 0)).slice(0, 8).map((k) => ({ nom: k.nom, demandee: false })),
           ],
           score: Math.round(score), elimine: r.elimine,
@@ -177,4 +180,15 @@ export async function rechercherProfils(supabase: SupabaseClient, criteres: Crit
     || ecart(a.annees) - ecart(b.annees)
     || b.competences.filter((k) => k.demandee).length - a.competences.filter((k) => k.demandee).length,
   ).slice(0, 300);
+}
+
+const GENERIQUES = new Set(["developpeur", "developpeuse", "consultant", "consultante", "ingenieur", "ingenieure", "senior", "junior", "confirme",
+  "confirmee", "expert", "experte", "chef", "lead", "tech", "technique", "projet", "analyste", "architecte", "manager", "responsable", "full", "stack", "fullstack"]);
+
+/** Mots de l'intitulé recherché ; les mots génériques (« développeur », « senior »…) sont ignorés s'il reste un mot précis (« .NET »). */
+export function motsSignificatifs(poste: string | null): string[] {
+  if (!poste) return [];
+  const mots = min(poste).split(/[\s/,()–-]+/).filter((m) => m.length >= 3 || /[#+.]/.test(m));
+  const precis = mots.filter((m) => !GENERIQUES.has(m));
+  return precis.length ? precis : mots;
 }

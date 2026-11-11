@@ -64,11 +64,14 @@ export function borner(p: ProfilCV): ProfilCV {
   };
 }
 
+/** Au plus 4 compétences obligatoires (les plus importantes) : au-delà, plus personne ne passe le filtre. */
+export const MAX_OBLIGATOIRES = 4;
+
 export function bornerMission(m: ExigencesMission): ExigencesMission {
-  return {
-    ...m,
-    competences: m.competences.map((c) => ({ ...c, importance: Math.min(3, Math.max(1, Math.round(c.importance))) })),
-  };
+  const competences = m.competences.slice(0, 20).map((c) => ({ ...c, importance: Math.min(3, Math.max(1, Math.round(c.importance))) }));
+  const gardees = new Set(competences.map((c, i) => ({ c, i })).filter((x) => x.c.obligatoire)
+    .sort((a, b) => b.c.importance - a.c.importance || a.i - b.i).slice(0, MAX_OBLIGATOIRES).map((x) => x.i));
+  return { ...m, competences: competences.map((c, i) => ({ ...c, obligatoire: c.obligatoire && gardees.has(i), importance: c.obligatoire && !gardees.has(i) ? 3 : c.importance })) };
 }
 
 /** Lecture d'une réponse à la relance des disponibilités (consignes : CONSIGNES_REPONSE_DISPO). */

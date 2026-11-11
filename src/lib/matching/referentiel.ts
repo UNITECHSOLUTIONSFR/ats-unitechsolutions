@@ -107,3 +107,16 @@ export function nomPourNouvelle(nom: string): string {
   const sansVersion = nom.replace(/\([^)]*\)/g, " ").replace(/\b(version|v)\s*\d+(\.\d+)*\+?/gi, " ").replace(/(^|\s)\d+(\.\d+|\.x)*\+?(?=\s|$)/g, " ").replace(/\s+/g, " ").trim();
   return sansVersion || nom.trim();
 }
+
+/** Familles de compétences citées dans un texte court (intitulé de mission) : « Développeur .NET / Angular » → [« .NET », « Angular »]. */
+export function famillesDansTexte(texte: string): string[] {
+  const mots = normaliserCompetence(texte).split(/[\s/,;()–\-|]+/).filter(Boolean);
+  const trouvees = new Set<string>();
+  for (let i = 0; i < mots.length; i++) {
+    for (const n of [2, 1]) {
+      const f = FAMILLES[mots.slice(i, i + n).join(" ")];
+      if (f && !["Agile", "Scrum", "Excel", "Git", "Linux", "API REST"].includes(f)) trouvees.add(f);
+    }
+  }
+  return [...trouvees];
+}

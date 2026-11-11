@@ -135,6 +135,13 @@ describe("règles d'accès", () => {
     await expect(commeUtilisateur(RECRUTEUR, "select lancer_tache_planifiee('excel')")).rejects.toThrow(/permission denied/);
   });
 
+  it("textes des consultants : jamais lus directement, seulement par la fonction de matching", async () => {
+    await expect(commeUtilisateur(RECRUTEUR, "select * from textes_consultants")).rejects.toThrow(/permission denied/);
+    await expect(commeUtilisateur(null, "select * from consultants_par_motifs(array['java'])")).rejects.toThrow(/permission denied/);
+    expect(await commeUtilisateur(INACTIF, "select * from consultants_par_motifs(array['java'])")).toEqual([]);
+    await commeUtilisateur(RECRUTEUR, "select * from consultants_par_motifs(array['java'])");
+  });
+
   it("recherche : un recruteur lit les candidats et les extraits ; un visiteur n'y a pas accès", async () => {
     await expect(commeUtilisateur(null, "select * from candidats_recherche('{}', '{}', '{}')")).rejects.toThrow(/permission denied/);
     await expect(commeUtilisateur(null, "select * from rechercher_dans_cv_extraits('java')")).rejects.toThrow(/permission denied/);

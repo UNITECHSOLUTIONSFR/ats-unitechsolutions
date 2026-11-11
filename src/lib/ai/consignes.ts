@@ -50,13 +50,16 @@ Consignes de remplissage :
 - duree : telle qu'indiquée (ex. « 6 mois renouvelable »), sinon null.
 - annees_min : nombre minimal d'années d'expérience demandé, sinon null.
 - seniorite : junior, confirme, senior ou expert si c'est indiqué ou clairement déductible, sinon null.
-- competences : chaque compétence demandée, avec le nom usuel le plus courant (ex. « React », « PostgreSQL »).
-  obligatoire = true seulement si le besoin la présente comme impérative (« obligatoire », « indispensable »,
-  « maîtrise impérative », « requis ») ; les « souhaitée », « un plus », « apprécié » sont false.
+- competences : les technologies, langages, outils, plateformes et méthodes demandés, avec le nom usuel le plus
+  courant et sans numéro de version (« React », « PostgreSQL », « .NET », « SQL Server »). Pas de tâches ni d'activités :
+  « Optimisation des requêtes SQL », « Backup et restore », « Jobs SQL Server » => « SQL Server » ; « Webservices REST
+  et JSON » => « API REST » et « JSON ». La technologie principale du poste (celle de l'intitulé) figure toujours dans la liste.
+  obligatoire = true seulement pour 1 à 4 compétences au cœur du poste, présentées comme impératives (« obligatoire »,
+  « indispensable », « maîtrise impérative », « requis ») ; toutes les autres sont false, même importantes.
   importance : 3 = cœur du poste, 2 = important, 1 = secondaire. annees_min si une durée est précisée pour
   cette compétence, sinon null.
-  25 compétences au maximum : garde les plus importantes pour le poste (une liste « Expertise avérée sur »
-  ou « très bon, voire excellent » désigne des compétences obligatoires d'importance 3) ; regroupe les variantes
+  15 compétences au maximum : garde les plus importantes pour le poste (une liste « Expertise avérée sur »
+  ou « très bon, voire excellent » désigne des compétences d'importance 3) ; regroupe les variantes
   (« Spring Boot 3.3+ » et « Spring MVC » => « Spring Boot » ; « Angular 11 » et « Angular 18+ » => « Angular »).
   Les savoir-être (autonomie, communication…) ne sont pas des compétences : ignore-les.
 - resume : 2 phrases au maximum décrivant la mission.

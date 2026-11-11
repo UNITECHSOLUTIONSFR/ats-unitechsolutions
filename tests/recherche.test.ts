@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { SchemaCriteresRecherche } from "@/lib/ai/schemas";
-import { compatibiliteLieu, motifsPoste } from "@/lib/recherche/moteur";
+import { compatibiliteLieu, motifsPoste, motsSignificatifs } from "@/lib/recherche/moteur";
 import { filtrer } from "@/app/(app)/recherche/recherche";
 import type { ResultatRecherche } from "@/lib/recherche/moteur";
 
@@ -20,6 +20,11 @@ describe("recherche en conversation", () => {
     expect(compatibiliteLieu("Paris", null, null)).toBe("inconnu");
     expect(compatibiliteLieu("Lyon", "Lyon 3e", null)).toBe("ok");
     expect(compatibiliteLieu(null, "Lyon", null)).toBe(null);
+  });
+
+  it("mots précis de l'intitulé recherché", () => {
+    expect(motsSignificatifs("Développeur .NET senior")).toEqual([".net"]);
+    expect(motsSignificatifs("Chef de projet")).toEqual(["chef", "projet"]);
   });
 
   it("motifs du poste avec et sans accents", () => {

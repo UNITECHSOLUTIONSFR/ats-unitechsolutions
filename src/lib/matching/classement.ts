@@ -10,6 +10,8 @@ import {
   type ResultatScore,
   type Seniorite,
 } from "./score";
+import { motifCompetence } from "./motifs";
+import { famillesDansTexte } from "./referentiel";
 
 export interface LigneClassement {
   consultant_id: string;
@@ -65,6 +67,13 @@ export async function chargerMissionAScorer(supabase: SupabaseClient, missionId:
       annees_min: mc.annees_min === null ? null : Number(mc.annees_min),
     }),
   );
+  // Technologie citée dans l'intitulé (« Développeur .NET ») : compte comme une compétence essentielle, même oubliée à la lecture.
+  const { data: intitule } = await supabase.from("missions").select("intitule").eq("id", missionId).maybeSingle();
+  for (const famille of famillesDansTexte(intitule?.intitule ?? "")) {
+    if (competences.some((c) => c.nom.toLowerCase() === famille.toLowerCase())) continue;
+    const { data: k } = await supabase.from("competences").select("id, nom_canonique").eq("nom_canonique", famille).maybeSingle();
+    if (k && !competences.some((c) => c.competence_id === k.id)) competences.push({ competence_id: k.id, nom: k.nom_canonique, obligatoire: false, importance: 3, annees_min: null });
+  }
   return {
     competences,
     annees_min: m.annees_min === null ? null : Number(m.annees_min),
@@ -85,12 +94,17 @@ export async function ponderationsReglees(supabase: SupabaseClient): Promise<Pon
 export async function classementMission(supabase: SupabaseClient, missionId: string, limite = 50): Promise<LigneClassement[]> {
   const mission = await chargerMissionAScorer(supabase, missionId);
   if (!mission) return [];
-  const [ponderations, { data, error }] = await Promise.all([
+  const [ponderations, { data, error }, dansLesTextes] = await Promise.all([
     ponderationsReglees(supabase),
     supabase.rpc("candidats_mission", { p_mission_id: missionId }),
+    competencesDansLesTextes(supabase, mission.competences.map((e) => e.competence_id)),
   ]);
   if (error) throw new Error(error.message);
-  const lignes = ((data ?? []) as LigneCandidat[]).map((c) => ({
+  // Personnes dont le CV ou la ligne Excel cite une compétence demandée, sans fiche analysée : ajoutées au classement.
+  const connus = new Set(((data ?? []) as LigneCandidat[]).map((c) => c.consultant_id));
+  const absents = [...dansLesTextes.keys()].filter((id) => !connus.has(id));
+  const supplementaires = absents.length ? await chargerCandidats(supabase, absents) : [];
+  const lignes = [...((data ?? []) as LigneCandidat[]), ...supplementaires].map((c) => ({
     consultant_id: c.consultant_id,
     prenom: c.prenom,
     nom: c.nom,
@@ -105,7 +119,7 @@ export async function classementMission(supabase: SupabaseClient, missionId: str
     word_url: c.word_url?.includes("sharepoint.com") ? c.word_url : null,
     annees_experience: c.annees_experience === null ? null : Number(c.annees_experience),
     resultat: scorerConsultant(mission, {
-      competences: c.competences.map((x) => ({ competence_id: x.competence_id, annees: x.annees === null ? null : Number(x.annees) })),
+      competences: avecTextes(c.competences.map((x) => ({ competence_id: x.competence_id, annees: x.annees === null ? null : Number(x.annees) })), dansLesTextes.get(c.consultant_id)),
       annees_experience: c.annees_experience === null ? null : Number(c.annees_experience),
       seniorite: c.seniorite,
       disponible_le: c.disponible_le,
@@ -127,4 +141,39 @@ export async function classementMission(supabase: SupabaseClient, missionId: str
     for (const l of retenus) l.word_url ??= parConsultant.get(l.consultant_id) ?? null;
   }
   return retenus;
+}
+
+/**
+ * Compétences demandées retrouvées dans les textes (CV, CV reçus, PDF anonymisés, ligne de l'Excel, poste) :
+ * personne -> identifiants des compétences trouvées. Sans IA.
+ */
+export async function competencesDansLesTextes(supabase: SupabaseClient, competenceIds: string[]): Promise<Map<string, Set<string>>> {
+  const ids = competenceIds.filter((id) => !id.startsWith("texte:"));
+  const resultat = new Map<string, Set<string>>();
+  if (!ids.length) return resultat;
+  const { data: comps } = await supabase.from("competences").select("id, nom_canonique, synonymes").in("id", ids);
+  const avecMotif = (comps ?? []).map((k) => ({ id: k.id as string, motif: motifCompetence(k.nom_canonique, k.synonymes ?? []) })).filter((k) => k.motif);
+  if (!avecMotif.length) return resultat;
+  const { data } = await supabase.rpc("consultants_par_motifs", { p_motifs: avecMotif.map((k) => k.motif) });
+  for (const r of (data ?? []) as { consultant_id: string; trouves: number[] }[]) {
+    resultat.set(r.consultant_id, new Set(r.trouves.map((i) => avecMotif[i - 1].id)));
+  }
+  return resultat;
+}
+
+/** Ajoute les compétences trouvées seulement dans les textes (points partiels). */
+export function avecTextes(competences: { competence_id: string; annees: number | null }[], trouvees?: Set<string>) {
+  if (!trouvees?.size) return competences;
+  const deja = new Set(competences.map((c) => c.competence_id));
+  return [...competences, ...[...trouvees].filter((id) => !deja.has(id)).map((id) => ({ competence_id: id, annees: null, partiel: true }))];
+}
+
+/** Données de classement pour des personnes données (mêmes champs que candidats_mission, sans proximité sémantique). */
+async function chargerCandidats(supabase: SupabaseClient, ids: string[]): Promise<LigneCandidat[]> {
+  const lignes: LigneCandidat[] = [];
+  for (let i = 0; i < ids.length; i += 1000) {
+    const { data } = await supabase.rpc("candidats_recherche", { p_competences: [], p_motifs_poste: [], p_ids: ids.slice(i, i + 1000) });
+    for (const c of (data ?? []) as (LigneCandidat & { competences: { competence_id: string; annees: number | null }[] })[]) lignes.push({ ...c, similarite: null });
+  }
+  return lignes;
 }

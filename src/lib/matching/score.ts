@@ -44,7 +44,8 @@ export interface MissionAScorer {
 }
 
 export interface ConsultantAScorer {
-  competences: { competence_id: string; annees?: number | null }[];
+  /** partiel : compétence trouvée seulement dans le texte du CV ou de l'Excel (non analysée) → 60 % des points. */
+  competences: { competence_id: string; annees?: number | null; partiel?: boolean }[];
   annees_experience?: number | null;
   seniorite?: Seniorite | null;
   disponible_le?: string | null;
@@ -76,6 +77,9 @@ const sansAccentsMin = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "")
 export function estDisponibleImmediatement(texte?: string | null): boolean {
   return !!texte && /immediat|de suite|tout de suite|disponible|asap|libre/.test(sansAccentsMin(texte));
 }
+
+/** Part des points d'une compétence trouvée seulement dans le texte (CV non analysé, ligne Excel). */
+export const POIDS_TEXTE = 0.6;
 
 export function scorerConsultant(
   mission: MissionAScorer,
@@ -113,12 +117,12 @@ export function scorerConsultant(
   if (mission.competences.length) {
     const total = mission.competences.reduce((s, e) => s + e.importance, 0);
     const communes = mission.competences.filter((e) => parId.has(e.competence_id));
-    const obtenu = communes.reduce((s, e) => s + e.importance, 0);
+    const obtenu = communes.reduce((s, e) => s + e.importance * (parId.get(e.competence_id)!.partiel ? POIDS_TEXTE : 1), 0);
     criteres.push({
       cle: "competences",
       ratio: obtenu / total,
       texte: `${communes.length}/${mission.competences.length} compétences : ${
-        communes.map((c) => c.nom).join(", ") || "aucune"
+        communes.map((c) => (parId.get(c.competence_id)!.partiel ? `${c.nom} (dans le CV)` : c.nom)).join(", ") || "aucune"
       }${
         communes.length < mission.competences.length
           ? ` (manque : ${mission.competences.filter((e) => !parId.has(e.competence_id)).map((e) => e.nom).join(", ")})`
