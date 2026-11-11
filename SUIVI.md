@@ -152,3 +152,9 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Constat : une seule exécution planifiée GitHub depuis la création (emails, 21 h 50 UTC au lieu de 21 h 17) ; rien depuis : ni emails horaires, ni Excel (01 h 00 UTC), ni CV (01 h 30 UTC).
 - Cause : planificateur GitHub non fiable (retards, exécutions sautées), le code et le secret fonctionnent (lancements manuels et exécution de 21 h 50 réussis).
 - Proposition (à valider) : planification de secours par Supabase (pg_cron) appelant les mêmes adresses, clé stockée dans le coffre Supabase par l'utilisatrice.
+
+### À faire (noté le 11/11/2026, ne pas lancer sans go)
+1. Bilan quotidien pour les administrateurs : ce qui a réussi ou échoué dans les tâches de la nuit (Excel, CV, emails, sauvegarde).
+2. Rappel avant expiration de chaque secret (Microsoft, Vercel, GitHub, Supabase, IA…) : date saisie par un admin, rappel 30 jours et 7 jours avant.
+3. Relevé de la consommation IA (jour et semaine) avec le plafond du mois.
+4. Planificateur de secours Supabase (pg_cron), en attente du go.
