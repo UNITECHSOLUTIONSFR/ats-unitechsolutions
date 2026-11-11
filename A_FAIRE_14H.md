@@ -16,3 +16,10 @@
 5. **Avant d'inviter l'équipe** : inviter une adresse de test (rôle recruteur) et vérifier ensemble ce qu'elle voit.
 
 6. **Jalons** : C (3 missions passées pour valider le matching), D (relecture de la note RGPD, adresse de contact des candidats).
+
+7. **Planificateur de secours : enregistrer la clé des tâches dans Supabase** — 5 minutes
+   - Récupérer la valeur de `CRON_SECRET` : Vercel → projet ats-unitechsolutions → Settings → Environment Variables. Si elle est masquée (« Sensitive »), on en crée une nouvelle ensemble et on la met aux 3 endroits (Vercel, GitHub, Supabase).
+   - Supabase → projet ats-unitech → **Integrations → Vault** (ou chercher « Vault ») → **Add new secret** : nom `cron_secret`, valeur = celle de `CRON_SECRET`. Ne jamais la coller ailleurs (ni dans l'éditeur SQL, ni dans la conversation).
+   - Vérification : le Bilan du jour (tableau de bord) affiche « ✓ Planificateur de secours (Supabase) actif ».
+
+8. **Échéances des secrets** : Paramètres → Échéances des secrets → saisir la date d'expiration du secret Microsoft (Entra → Inscriptions d'applications → ATS Unitech – Synchronisation → Certificats et secrets → colonne « Expire »), et les dates de renouvellement des abonnements.

@@ -19,8 +19,30 @@ export const TACHES = {
 } as const;
 export type NomTache = keyof typeof TACHES;
 
+/**
+ * Deux planificateurs (GitHub et, en secours, Supabase) appellent les mêmes tâches : une tâche planifiée déjà faite
+ * récemment, ou en cours, n'est pas relancée. Délai en minutes. Les lancements depuis l'application ne sont pas concernés.
+ */
+const DEJA_FAITE_MINUTES: Partial<Record<NomTache, number>> = { excel: 360, cv: 360, emails: 30, sauvegarde: 3 * 24 * 60 };
+
+export async function tacheDejaFaite(nom: NomTache, supabase: SupabaseClient, maintenant = Date.now()): Promise<string | null> {
+  const delai = DEJA_FAITE_MINUTES[nom];
+  if (!delai) return null;
+  const { data } = await supabase.from("executions").select("debut, statut").eq("type", TACHES[nom].type)
+    .gte("debut", new Date(maintenant - Math.max(delai, 15) * 60_000).toISOString()).order("debut", { ascending: false }).limit(5);
+  for (const e of data ?? []) {
+    if (e.statut === "termine") return `déjà faite à ${new Date(e.debut).toISOString()}`;
+    if (e.statut === "en_cours" && maintenant - Date.parse(e.debut) < 15 * 60_000) return "déjà en cours";
+  }
+  return null;
+}
+
 /** Exécute une tâche planifiée et la trace dans le journal des traitements (rapport du matin). */
-export async function executerTache(nom: NomTache, supabase: SupabaseClient): Promise<{ ok: boolean; rapport: Record<string, unknown> }> {
+export async function executerTache(nom: NomTache, supabase: SupabaseClient, options: { planifiee?: boolean } = {}): Promise<{ ok: boolean; rapport: Record<string, unknown> }> {
+  if (options.planifiee) {
+    const deja = await tacheDejaFaite(nom, supabase);
+    if (deja) return { ok: true, rapport: { ignoree: deja } };
+  }
   const { data: execution } = await supabase.from("executions").insert({ type: TACHES[nom].type }).select("id").single();
   let rapport: Record<string, unknown> = {};
   let ok = true;

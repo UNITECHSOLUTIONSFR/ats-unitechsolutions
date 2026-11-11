@@ -153,7 +153,7 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Cause : planificateur GitHub non fiable (retards, exécutions sautées), le code et le secret fonctionnent (lancements manuels et exécution de 21 h 50 réussis).
 - Proposition (à valider) : planification de secours par Supabase (pg_cron) appelant les mêmes adresses, clé stockée dans le coffre Supabase par l'utilisatrice.
 
-### À faire (noté le 11/11/2026, ne pas lancer sans go)
+### Liste du 11/11/2026 (go donné) — FAIT, sauf actions de l'utilisatrice
 1. Bilan quotidien pour les administrateurs : ce qui a réussi ou échoué dans les tâches de la nuit (Excel, CV, emails, sauvegarde).
 2. Rappel avant expiration de chaque secret (Microsoft, Vercel, GitHub, Supabase, IA…) : date saisie par un admin, rappel 30 jours et 7 jours avant.
 3. Relevé de la consommation IA (jour et semaine) avec le plafond du mois.
@@ -162,3 +162,8 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 6. Recherche en conversation (onglet Consultants) : phrase libre → critères (IA, ~0,1 centime/question) → matching sans IA sur toute la base ; affinage dans la conversation. Critère disponibilité ignoré pour l'instant.
 7. Nouveau champ « Mobilité » sur la fiche, saisi à la main (Paris, Île-de-France, France, Monde entier…), utilisé dans les filtres et la recherche.
 8. Nouvelle page Consultants (modèle fourni le 11/11) : filtres à gauche, résultats en cartes à droite mis à jour en temps réel ; capture à montrer avant mise en ligne.
+
+### 11/11/2026 — Liste réalisée
+- Fait : mobilité (champ fiche) ; extraits de CV dans la recherche ; bilan du jour administrateurs (tâches, échéances des secrets, consommation IA) ; section Recherche (conversation, filtres, cartes) ; planificateur de secours Supabase (pg_cron, 5 min après GitHub) + protection contre les doubles passages.
+- Testé : 166 tests, moteur de recherche sur données réelles (DevOps, Orange, banque), aperçu écran ordinateur et téléphone, planificateur inactif sans clé.
+- Suite (utilisatrice) : clé `cron_secret` dans Supabase Vault ; dates des secrets ; puis la liste A_FAIRE_14H.md.

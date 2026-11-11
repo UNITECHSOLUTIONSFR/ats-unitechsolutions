@@ -16,7 +16,7 @@ export interface EtatTache { nom: string; libelle: string; etat: Etat; derniereR
 export interface Echeance { id: string; nom: string; ouRenouveler: string | null; expireLe: string | null; note: string | null; joursRestants: number | null; niveau: "ok" | "bientot" | "urgent" | "expire" | "inconnu" }
 export interface ConsoIA { jour: number; semaine: number; mois: number; plafond: number; parUsageSemaine: { usage: string; cout: number }[] }
 
-export interface BilanAdmin { taches: EtatTache[]; echeances: Echeance[]; ia: ConsoIA; problemes: number }
+export interface BilanAdmin { taches: EtatTache[]; echeances: Echeance[]; ia: ConsoIA; secoursPret: boolean; problemes: number }
 
 export function etatTache(nom: string, maintenant: number, reussite: string | null, echec: string | null): Etat {
   if (echec && (!reussite || echec > reussite)) return "echec";
@@ -38,7 +38,7 @@ export async function chargerBilanAdmin(supabase: SupabaseClient, maintenant = D
   const depuis = new Date(Math.min(debutMois.getTime(), debutSemaine.getTime())).toISOString();
   const planifiees = (["excel", "cv", "emails", "sauvegarde"] as const);
 
-  const [executions, { data: secrets }, { data: usages }, { data: reglage }] = await Promise.all([
+  const [executions, { data: secrets }, { data: usages }, { data: reglage }, { data: secours }] = await Promise.all([
     Promise.all(planifiees.map(async (nom) => {
       const type = TACHES[nom].type;
       const [ok, ko] = await Promise.all([
@@ -50,6 +50,7 @@ export async function chargerBilanAdmin(supabase: SupabaseClient, maintenant = D
     supabase.from("echeances_secrets").select("id, nom, ou_renouveler, expire_le, note").order("expire_le", { ascending: true, nullsFirst: false }),
     supabase.from("ai_usage").select("usage, cout_estime_usd, created_at").gte("created_at", depuis).limit(20000),
     supabase.from("reglages").select("valeur").eq("cle", "plafond_ia_mensuel_usd").maybeSingle(),
+    supabase.rpc("planificateur_secours_pret"),
   ]);
 
   const taches: EtatTache[] = executions.map((e) => ({
@@ -78,5 +79,6 @@ export async function chargerBilanAdmin(supabase: SupabaseClient, maintenant = D
   const problemes = taches.filter((t) => t.etat !== "ok").length
     + echeances.filter((e) => e.niveau === "urgent" || e.niveau === "expire" || e.niveau === "bientot").length
     + (ia.mois >= ia.plafond * 0.8 ? 1 : 0);
-  return { taches, echeances, ia, problemes };
+  const secoursPret = secours === true;
+  return { taches, echeances, ia, secoursPret, problemes: problemes + (secoursPret ? 0 : 1) };
 }

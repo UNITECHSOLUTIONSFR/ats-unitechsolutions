@@ -44,6 +44,9 @@ export default async function BilanAdmin() {
               </li>
             ))}
           </ul>
+          <p className={`mt-2 text-xs ${b.secoursPret ? "text-emerald-700" : "text-amber-700"}`}>
+            {b.secoursPret ? "✓ Planificateur de secours (Supabase) actif" : "Planificateur de secours : clé à enregistrer dans Supabase"}
+          </p>
           <Link href="/parametres/sante" className="mt-2 inline-block text-xs font-medium text-marque-600 hover:underline">Bilan de santé →</Link>
         </div>
 
