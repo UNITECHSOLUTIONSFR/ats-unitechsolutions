@@ -158,3 +158,4 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 2. Rappel avant expiration de chaque secret (Microsoft, Vercel, GitHub, Supabase, IA…) : date saisie par un admin, rappel 30 jours et 7 jours avant.
 3. Relevé de la consommation IA (jour et semaine) avec le plafond du mois.
 4. Planificateur de secours Supabase (pg_cron), en attente du go.
+5. Recherche : pour un résultat trouvé dans le CV, afficher l'extrait contenant le mot et préciser quel CV (SharePoint ou reçu par email). Option (a) validée, capture à montrer avant mise en ligne.
