@@ -5,6 +5,7 @@ import { classementMission } from "@/lib/matching/classement";
 import { FILTRE_MES_MISSIONS } from "@/lib/missions/responsables";
 import { resumerRapport } from "@/lib/sync/resume";
 import { TACHES } from "@/lib/sync/taches";
+import BilanAdmin from "./bilan-admin";
 import { IconeAlerte, IconeMallette, IconePersonnes, IconePlus, IconeTableau } from "./icones";
 
 const LIBELLES_ALERTES: Record<string, string> = {
@@ -56,6 +57,9 @@ export default async function Accueil() {
           </Link>
         </div>
       </div>
+
+      {/* Bilan du jour : tâches automatiques, échéances des secrets, consommation IA (administrateurs) */}
+      {utilisateur.role === "admin" && <Suspense fallback={<div className="squelette h-48" />}><BilanAdmin /></Suspense>}
 
       {/* Chiffres clés */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

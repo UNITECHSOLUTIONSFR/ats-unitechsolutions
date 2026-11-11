@@ -18,6 +18,7 @@ export const SECTIONS: Section[] = [
   { href: "/parametres/emails", titre: "Candidatures email", texte: "Emails reçus sur recrutement@ et ce que l'outil en a fait.", groupe: "Automatisations", icone: "✉️" },
   { href: "/parametres/sante", titre: "Bilan de santé", texte: "Tout tourne-t-il ? Derniers passages, erreurs, coûts, cas à vérifier.", groupe: "Automatisations", icone: "🩺" },
   { href: "/parametres/synchronisations", titre: "Synchronisations", texte: "Excel, CV et emails : passages automatiques et lancement à la main.", groupe: "Automatisations", icone: "🔄" },
+  { href: "/parametres/echeances", titre: "Échéances des secrets", texte: "Dates d'expiration des accès (Microsoft, IA, Supabase…) : rappel 30 et 7 jours avant.", groupe: "Automatisations", icone: "⏰" },
   { href: "/parametres/couts", titre: "Coûts et réglages", texte: "Dépenses d'IA du mois, plafond, pondérations du matching.", groupe: "Automatisations", icone: "💶" },
   { href: "/parametres/rgpd", titre: "RGPD : purge à 24 mois", texte: "Personnes sans contact depuis 24 mois, export et effacement.", groupe: "Conformité", icone: "🛡️" },
   { href: "/parametres/journal", titre: "Journal d'accès", texte: "Qui a consulté, modifié, exporté ou supprimé quelle fiche, et quand.", groupe: "Conformité", icone: "📜" },

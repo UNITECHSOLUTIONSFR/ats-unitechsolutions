@@ -7,6 +7,7 @@
 - **Nouveaux profils · 7 derniers jours** (emails, SharePoint, saisie) : un clic ouvre la fiche.
 - **À relancer** : consultants proposés, appelés ou envoyés au client sans suite depuis 7 jours.
 - **À vérifier** : les cas à traiter (doublons possibles, téléphones, CV illisibles…).
+- **Bilan du jour** (administrateurs) : tâches automatiques (OK, en retard, échec), échéances des secrets à moins de 30 jours, consommation de l'IA (jour, 7 jours, mois). Les dates des secrets se saisissent dans Paramètres › Échéances des secrets.
 
 ## Trouver des consultants pour une mission
 1. **+ Nouvelle mission** → importez la fiche du client (PDF ou Word) **ou** collez son texte → « Lire la fiche et pré-remplir ».
