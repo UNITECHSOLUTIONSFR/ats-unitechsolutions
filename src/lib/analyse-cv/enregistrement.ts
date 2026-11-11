@@ -14,7 +14,7 @@ export async function enregistrerProfil(
   documentId: string,
   p: ProfilCV,
   modele: string,
-  correspondance: Map<string, string>,
+  correspondance: Map<string, string[]>,
 ): Promise<boolean> {
   const { error } = await supabase.from("profils").upsert({
     consultant_id: consultantId, document_id: documentId, annees_experience: p.annees_experience, seniorite: p.seniorite,
@@ -24,8 +24,7 @@ export async function enregistrerProfil(
   if (error) return false;
   const lignes = new Map<string, { niveau: number | null; annees: number | null }>();
   for (const c of p.competences) {
-    const id = correspondance.get(c.nom);
-    if (id && !lignes.has(id)) lignes.set(id, { niveau: c.niveau, annees: c.annees });
+    for (const id of correspondance.get(c.nom) ?? []) if (!lignes.has(id)) lignes.set(id, { niveau: c.niveau, annees: c.annees });
   }
   await supabase.from("consultant_competences").delete().eq("consultant_id", consultantId);
   if (lignes.size) {

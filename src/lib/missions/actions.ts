@@ -94,9 +94,7 @@ export async function creerMission(_e: EtatFormulaireMission, formData: FormData
     missionId = mission.id;
 
     const lignes = new Map<string, { obligatoire: boolean; importance: number; annees_min: number | null }>();
-    for (const c of competences) {
-      const id = correspondance.get(c.nom);
-      if (!id) continue;
+    for (const c of competences) for (const id of correspondance.get(c.nom) ?? []) {
       const deja = lignes.get(id);
       lignes.set(id, {
         obligatoire: c.obligatoire || !!deja?.obligatoire,
