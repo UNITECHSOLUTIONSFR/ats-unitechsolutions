@@ -167,3 +167,8 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Fait : mobilité (champ fiche) ; extraits de CV dans la recherche ; bilan du jour administrateurs (tâches, échéances des secrets, consommation IA) ; section Recherche (conversation, filtres, cartes) ; planificateur de secours Supabase (pg_cron, 5 min après GitHub) + protection contre les doubles passages.
 - Testé : 166 tests, moteur de recherche sur données réelles (DevOps, Orange, banque), aperçu écran ordinateur et téléphone, planificateur inactif sans clé.
 - Suite (utilisatrice) : clé `cron_secret` dans Supabase Vault ; dates des secrets ; puis la liste A_FAIRE_14H.md.
+
+### 12/11/2026 (nuit) — Matching contextuel, récupération des CV, écrans
+- Fait : statuts (tous candidats, filtre retiré des Emails et de la Recherche, 72 « en mission » corrigées) ; référentiel de compétences regroupé (5 601 → 5 117, familles .NET, versions ignorées) ; matching contextuel (compétence trouvée dans le CV ou la ligne Excel = 60 % des points, technologie de l'intitulé, 4 obligatoires au plus) ; 1 408 fichiers SharePoint lus, 219 CV reliés, 161 fiches créées, 189 PDF anonymisés rattachés ; analyse IA de 241 CV lancée (≈ 0,17 $) ; écrans Missions, Exigences, Recherche, Emails (modèles), Cas à vérifier refaits.
+- Testé : 180 tests (dont 24 règles d'accès), classements .NET (24 → 44 profils ≥ 50), Full Stack (11 → 39), recherche « Développeur .NET », captures des écrans.
+- Suite : point du matin ; actions de l'utilisatrice (clé du planificateur de secours, dates des secrets, A_FAIRE_14H.md).
