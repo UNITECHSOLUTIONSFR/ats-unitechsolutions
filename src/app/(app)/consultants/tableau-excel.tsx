@@ -10,18 +10,12 @@ import {
 import { modifierCellules } from "@/lib/tableau/actions";
 import { classePastille } from "@/lib/statuts";
 import PanneauFiche, { prechargerFiche } from "./panneau-fiche";
+import { TexteSurligne, type ExtraitCV } from "./texte-surligne";
 import { IconeCopier, IconeCrayon, IconeExport, IconeFiche, IconeFiltre, IconeImport, IconePlus, IconeRecherche } from "../icones";
 
 const PAR_PAGE = 100;
 
-export interface ExtraitCV { extrait: string; source: string }
 
-/** Extrait du CV où le mot cherché apparaît (balisé [[…]] par la base), mot surligné. */
-export function TexteSurligne({ texte }: { texte: string }) {
-  return <>« {texte.split(/(\[\[.*?\]\])/).map((m, i) => m.startsWith("[[")
-    ? <mark key={i} className="rounded bg-amber-100 px-0.5 font-semibold text-nuit">{m.slice(2, -2)}</mark>
-    : <Fragment key={i}>{m}</Fragment>)} »</>;
-}
 
 /** Largeur de chaque colonne selon ce qu'elle contient : compacte pour un trigramme, large pour des notes. Texte trop long = coupé, visible au survol. */
 const LARGEURS: Partial<Record<ChampFiche, string>> = {

@@ -13,6 +13,7 @@ export const MODELES = {
   lectureScan: "claude-haiku-5-5", // CV scannés : recopie du texte d'un PDF image
   cvUnitech: "claude-haiku-5-5", // réécriture d'un CV dans le modèle Unitech
   adequation: "claude-haiku-5-5", // section « Adéquation à la mission »
+  recherche: "claude-haiku-5-5", // section « Recherche » : phrase du recruteur → critères
 } as const;
 
 export const MAX_TOKENS = {
@@ -24,6 +25,7 @@ export const MAX_TOKENS = {
   lectureScan: 8000,
   cvUnitech: 8000,
   adequation: 1200,
+  recherche: 700,
 } as const;
 
 /** Texte envoyé à l'IA tronqué à cette longueur (règle 4 du brief). */

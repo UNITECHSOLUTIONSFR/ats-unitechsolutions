@@ -6,13 +6,13 @@ import { analyserBesoin, creerMission, type BrouillonMission, type EtatAnalyseMi
 const SENIORITES = [["", "Non précisée"], ["junior", "Junior (< 3 ans)"], ["confirme", "Confirmé (3 à 6 ans)"], ["senior", "Senior (7 à 12 ans)"], ["expert", "Expert (> 12 ans)"]] as const;
 
 /** Nouvelle mission en deux temps : 1. importer la fiche (ou coller le texte) ; 2. relire les champs pré-remplis et créer. */
-export default function FormulaireMission() {
+export default function FormulaireMission({ texteInitial }: { texteInitial?: string }) {
   const [analyse, analyser, enAnalyse] = useActionState<EtatAnalyseMission, FormData>(analyserBesoin, {});
-  if (!analyse.brouillon) return <Etape1 action={analyser} enCours={enAnalyse} erreur={analyse.erreur} />;
+  if (!analyse.brouillon) return <Etape1 action={analyser} enCours={enAnalyse} erreur={analyse.erreur} texteInitial={texteInitial} />;
   return <Etape2 key={analyse.brouillon.texte.length} brouillon={analyse.brouillon} />;
 }
 
-function Etape1({ action, enCours, erreur }: { action: (f: FormData) => void; enCours: boolean; erreur?: string }) {
+function Etape1({ action, enCours, erreur, texteInitial }: { action: (f: FormData) => void; enCours: boolean; erreur?: string; texteInitial?: string }) {
   const [nomFichier, setNomFichier] = useState("");
   return (
     <form action={action} className="carte space-y-5 p-6">
@@ -24,7 +24,7 @@ function Etape1({ action, enCours, erreur }: { action: (f: FormData) => void; en
         <input type="file" name="fichier" accept=".pdf,.docx,.doc,.txt" className="sr-only" onChange={(e) => setNomFichier(e.target.files?.[0]?.name ?? "")} />
       </label>
       <div className="flex items-center gap-3 text-xs text-slate-400"><span className="h-px flex-1 bg-slate-200" />ou<span className="h-px flex-1 bg-slate-200" /></div>
-      <textarea name="texte_besoin" rows={8} className="champ w-full" placeholder="Collez ici l'email ou la fiche de poste du client…" />
+      <textarea name="texte_besoin" rows={8} defaultValue={texteInitial} className="champ w-full" placeholder="Collez ici l'email ou la fiche de poste du client…" />
       {erreur && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{erreur}</p>}
       <div className="flex justify-end">
         <button disabled={enCours} className="bouton-primaire px-6 py-2.5">{enCours ? "Lecture de la fiche…" : "Lire la fiche et pré-remplir"}</button>

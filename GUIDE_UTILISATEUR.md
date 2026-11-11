@@ -9,6 +9,9 @@
 - **À vérifier** : les cas à traiter (doublons possibles, téléphones, CV illisibles…).
 - **Bilan du jour** (administrateurs) : tâches automatiques (OK, en retard, échec), échéances des secrets à moins de 30 jours, consommation de l'IA (jour, 7 jours, mois). Les dates des secrets se saisissent dans Paramètres › Échéances des secrets.
 
+## Recherche (en conversation)
+Menu **Recherche** : décrivez le profil comme à un collègue (« un DevOps, 5-6 ans, Jenkins et Kubernetes, mobile sur Paris »), puis affinez (« sans Kubernetes », « plutôt 8 ans minimum », « qui a travaillé chez Orange »). Les critères compris s'affichent : un clic rend une compétence obligatoire ou souhaitée, ✕ la retire. À gauche, les filtres (score, expérience, lieu, statut, documents) mettent la liste à jour immédiatement. « Créer une mission à partir de cette recherche » reprend le texte. L'IA ne lit que votre phrase (environ 0,1 centime) ; le classement se fait sans IA. La disponibilité n'est pas prise en compte pour l'instant ; la **mobilité** se saisit sur la fiche.
+
 ## Trouver des consultants pour une mission
 1. **+ Nouvelle mission** → importez la fiche du client (PDF ou Word) **ou** collez son texte → « Lire la fiche et pré-remplir ».
 2. Vérifiez les champs (client, poste, lieu, démarrage, expérience) et les compétences : un clic rend une compétence **obligatoire** (foncée) ou **souhaitée** (claire) ; ✕ la retire ; vous pouvez en ajouter.

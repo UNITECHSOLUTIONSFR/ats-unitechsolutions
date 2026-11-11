@@ -8,7 +8,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
 import { LONGUEUR_MAX_TEXTE, MAX_TOKENS, MODELES, estimerCoutUSD } from "./config";
-import { CONSIGNES_ADEQUATION, CONSIGNES_CV_UNITECH, CONSIGNES_MISSION, CONSIGNES_PROFIL_CV, CONSIGNES_REPONSE_DISPO } from "./consignes";
+import { CONSIGNES_ADEQUATION, CONSIGNES_CV_UNITECH, CONSIGNES_MISSION, CONSIGNES_PROFIL_CV, CONSIGNES_RECHERCHE, CONSIGNES_REPONSE_DISPO } from "./consignes";
 import {
   PROMPT_VERSION,
   SchemaExigencesMission,
@@ -16,6 +16,7 @@ import {
   SchemaReponseDisponibilite,
   SchemaCVUnitech,
   SchemaAdequation,
+  SchemaCriteresRecherche,
   borner,
   bornerMission,
   ficheCVValide,
@@ -24,13 +25,14 @@ import {
   type ReponseDisponibilite,
   type CVStructure,
   type Adequation,
+  type CriteresRecherche,
 } from "./schemas";
 
 export { PROMPT_VERSION };
-export type { ExigencesMission, ProfilCV, ReponseDisponibilite, CVStructure, Adequation };
+export type { ExigencesMission, ProfilCV, ReponseDisponibilite, CVStructure, Adequation, CriteresRecherche };
 
 export interface UsageIA {
-  usage: "fiche_cv" | "mission" | "tri_email" | "analyse_approfondie" | "reponse_disponibilite" | "lecture_scan" | "cv_unitech" | "adequation";
+  usage: "fiche_cv" | "mission" | "tri_email" | "analyse_approfondie" | "reponse_disponibilite" | "lecture_scan" | "cv_unitech" | "adequation" | "recherche";
   modele: string;
   mode: "standard" | "batch";
   tokens_entree: number;
@@ -250,4 +252,16 @@ export async function lireLotProfilsCV(idLot: string): Promise<{ termine: boolea
     });
   }
   return { termine: true, enCours: 0, resultats };
+}
+
+/** Recherche en conversation : met à jour les critères à partir du nouveau message (l'IA ne voit aucun candidat). */
+export async function lireRecherche(message: string, criteresActuels: Omit<CriteresRecherche, "reponse"> | null): Promise<ResultatIA<CriteresRecherche>> {
+  const texte = `CRITÈRES ACTUELS :\n${JSON.stringify(criteresActuels ?? {})}\n\nNOUVEAU MESSAGE DU RECRUTEUR :\n${message.slice(0, 2000)}`;
+  const r = await appeler(MODELES.recherche, CONSIGNES_RECHERCHE, SchemaCriteresRecherche, texte, MAX_TOKENS.recherche, "recherche");
+  if (!r.donnees) throw Object.assign(new ErreurIA("Recherche impossible à comprendre."), { usages: [r.usage] });
+  const d = r.donnees;
+  return {
+    donnees: { ...d, competences: d.competences.slice(0, 12), mots_cles: d.mots_cles.slice(0, 5) },
+    modele: MODELES.recherche, promptVersion: PROMPT_VERSION, usages: [r.usage],
+  };
 }

@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { IconeAccueil, IconeEnveloppe, IconeGraphique, IconeFiche, IconeMallette, IconePersonnes, IconeReglages, IconeSortie } from "./icones";
+import { IconeAccueil, IconeEnveloppe, IconeGraphique, IconeFiche, IconeMallette, IconePersonnes, IconeRecherche, IconeReglages, IconeSortie } from "./icones";
 
 const LIENS = [
   { href: "/", libelle: "Tableau de bord", Icone: IconeAccueil },
+  { href: "/recherche", libelle: "Recherche", Icone: IconeRecherche },
   { href: "/consultants", libelle: "Consultants", Icone: IconePersonnes },
   { href: "/missions", libelle: "Missions", Icone: IconeMallette },
 ];

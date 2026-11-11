@@ -103,3 +103,16 @@ export const SchemaAdequation = z.object({
   points: z.array(z.object({ libelle: z.string(), detail: z.string() })),
 });
 export type Adequation = z.infer<typeof SchemaAdequation>;
+
+/** Critères d'une recherche en conversation (section « Recherche ») : mis à jour à chaque message. */
+export const SchemaCriteresRecherche = z.object({
+  poste: z.string().nullable(),
+  competences: z.array(z.object({ nom: z.string(), obligatoire: z.boolean() })),
+  annees_min: z.number().nullable(),
+  annees_max: z.number().nullable(),
+  seniorite: z.enum(SENIORITES).nullable(),
+  lieu: z.string().nullable(),
+  mots_cles: z.array(z.string()),
+  reponse: z.string(),
+});
+export type CriteresRecherche = z.infer<typeof SchemaCriteresRecherche>;
