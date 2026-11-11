@@ -127,6 +127,21 @@ describe("règles d'accès", () => {
     expect(j.rows[0].details.trigramme).toBe("LPE");
   });
 
+  it("les échéances des secrets sont réservées aux administrateurs ; le planificateur ne se déclenche pas depuis l'application", async () => {
+    expect(await commeUtilisateur(RECRUTEUR, "select * from echeances_secrets")).toEqual([]);
+    expect((await commeUtilisateur(ADMIN, "select * from echeances_secrets")).length).toBeGreaterThan(0);
+    expect(await commeUtilisateur(RECRUTEUR, `update echeances_secrets set expire_le='2030-01-01' returning id`)).toEqual([]);
+    await expect(commeUtilisateur(ADMIN, "select lancer_tache_planifiee('emails')")).rejects.toThrow(/permission denied/);
+    await expect(commeUtilisateur(RECRUTEUR, "select lancer_tache_planifiee('excel')")).rejects.toThrow(/permission denied/);
+  });
+
+  it("recherche : un recruteur lit les candidats et les extraits ; un visiteur n'y a pas accès", async () => {
+    await expect(commeUtilisateur(null, "select * from candidats_recherche('{}', '{}', '{}')")).rejects.toThrow(/permission denied/);
+    await expect(commeUtilisateur(null, "select * from rechercher_dans_cv_extraits('java')")).rejects.toThrow(/permission denied/);
+    await commeUtilisateur(RECRUTEUR, "select * from candidats_recherche('{}', array['%dev%'], '{}')");
+    await commeUtilisateur(RECRUTEUR, "select * from rechercher_dans_cv_extraits('java')");
+  });
+
   it("le journal d'accès est réservé aux administrateurs", async () => {
     await commeUtilisateur(RECRUTEUR, `insert into journal_acces (utilisateur_id, action) values ($1,'consultation')`, [RECRUTEUR]);
     await expect(commeUtilisateur(RECRUTEUR, `insert into journal_acces (utilisateur_id, action) values ($1,'export')`, [ADMIN])).rejects.toThrow();
