@@ -62,7 +62,7 @@ describe("tableau de suivi", () => {
     expect(majFicheDepuisCellule("email", " Jean@Ex.FR ")).toEqual({ email: "jean@ex.fr" });
     expect(majFicheDepuisCellule("disponibilite", "01/12/2026")).toMatchObject({ disponible_le: "2026-12-01", disponibilite: null });
     expect(majFicheDepuisCellule("disponibilite", "Immédiate")).toMatchObject({ disponible_le: null, disponibilite: "Immédiate" });
-    expect(majFicheDepuisCellule("statut", "En mission")).toEqual({ statut: "en_mission" });
+    expect(majFicheDepuisCellule("statut", "En mission")).toEqual({ statut: "candidat" });
     expect(majFicheDepuisCellule("nom", "")).toBeNull();
     expect(majFicheDepuisCellule("date_maj", "01/01/2026")).toBeNull();
   });

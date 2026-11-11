@@ -13,7 +13,6 @@ const EXEMPLES = [
   "Un développeur Java Spring Boot senior qui a travaillé chez Orange",
   "Chef de projet SAP FI avec 10 ans d'expérience dans la banque",
 ];
-const STATUTS: Record<string, string> = { candidat: "Candidat", consultant: "Consultant", en_mission: "En mission" };
 const TRIS = { pertinence: "Pertinence", experience: "Expérience", nom: "Nom (A → Z)" } as const;
 const PAR_PAGE = 30;
 
@@ -149,12 +148,6 @@ export default function Recherche() {
                 <p className="mt-1 text-xs text-slate-400">D&apos;après la mobilité, sinon la localisation.</p>
               </Groupe>
             )}
-            <Groupe titre="Statut">
-              {Object.entries(STATUTS).map(([v, l]) => (
-                <Case key={v} label={l} checked={filtres.statuts.includes(v)}
-                  onChange={(c) => setFiltres({ ...filtres, statuts: c ? [...filtres.statuts, v] : filtres.statuts.filter((x) => x !== v) })} />
-              ))}
-            </Groupe>
             <Groupe titre="Documents">
               <Case label="Avec CV Word" checked={filtres.avecWord} onChange={(v) => setFiltres({ ...filtres, avecWord: v })} />
               <Case label="Avec PDF anonymisé" checked={filtres.avecPdf} onChange={(v) => setFiltres({ ...filtres, avecPdf: v })} />
@@ -261,7 +254,6 @@ function Carte({ r, lieu, onOuvrir }: { r: ResultatRecherche; lieu: string | nul
         <span className="pastille">🌍 Mobilité : {r.mobilite ?? "non renseignée"}</span>
         {lieu && r.lieu === "ok" && <span className="pastille pastille-vert">✓ Compatible {lieu}</span>}
         {lieu && r.lieu === "autre" && <span className="pastille pastille-orange">Hors {lieu}</span>}
-        <span className="pastille">{STATUTS[r.statut] ?? r.statut}</span>
         {r.disponibilite && <span className="pastille" title="Information indicative : la disponibilité sera mise à jour">Dispo : {r.disponibilite}</span>}
       </div>
 

@@ -5,13 +5,11 @@ import { apercuDestinataires, creerCampagne, enregistrerModele, type ApercuDesti
 import { rendreMessage } from "@/lib/relance/modele";
 
 interface Modele { id: string; nom: string; objet: string; corps: string; type: string }
-const STATUTS = [["candidat", "Candidats"], ["consultant", "Consultants"], ["en_mission", "En mission"]] as const;
 
 /** Trois étapes : à qui écrire, quoi écrire, puis préparation de l'envoi. */
 export default function Redaction({ modeles }: { modeles: Modele[] }) {
   const [etat, action, enCours] = useActionState<EtatRelance, FormData>(creerCampagne, {});
   // 1. Destinataires
-  const [statuts, setStatuts] = useState<string[]>([]);
   const [fonction, setFonction] = useState("");
   const [jours, setJours] = useState(90);
   const [avant, setAvant] = useState("");
@@ -21,11 +19,11 @@ export default function Redaction({ modeles }: { modeles: Modele[] }) {
   useEffect(() => {
     let actif = true;
     const t = setTimeout(() => {
-      apercuDestinataires({ statuts, fonction: fonction || undefined, dispoPlusVieilleQueJours: jours || undefined, disponibleAvant: avant || undefined, exclus })
+      apercuDestinataires({ fonction: fonction || undefined, dispoPlusVieilleQueJours: jours || undefined, disponibleAvant: avant || undefined, exclus })
         .then((a) => { if (actif) setApercu(a); });
     }, 350);
     return () => { actif = false; clearTimeout(t); };
-  }, [statuts, fonction, jours, avant, exclus]);
+  }, [fonction, jours, avant, exclus]);
   // 2. Message
   const premier = modeles[0];
   const [type, setType] = useState(premier?.type ?? "disponibilite");
@@ -55,16 +53,6 @@ export default function Redaction({ modeles }: { modeles: Modele[] }) {
           <label className="block text-sm font-medium text-nuit">Disponible avant le
             <input type="date" name="disponible_avant" value={avant} onChange={(e) => setAvant(e.target.value)} className="champ mt-1 w-full" />
           </label>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="text-xs font-semibold text-slate-400">Statut</span>
-          {STATUTS.map(([v, l]) => (
-            <label key={v} className={`cursor-pointer rounded-full px-3.5 py-1 font-medium ring-1 transition ${statuts.includes(v) ? "bg-nuit text-white ring-nuit" : "bg-white/70 text-slate-600 ring-slate-200"}`}>
-              <input type="checkbox" name="statuts" value={v} className="sr-only" checked={statuts.includes(v)}
-                onChange={() => setStatuts((s) => (s.includes(v) ? s.filter((x) => x !== v) : [...s, v]))} />{l}
-            </label>
-          ))}
-          <span className="text-xs text-slate-400">Aucun choix = tous (hors inactifs et désinscrits)</span>
         </div>
         <div className="flex justify-end">
           <button type="button" onClick={() => setApercuOuvert(true)} className="bouton-secondaire">Aperçu des destinataires</button>

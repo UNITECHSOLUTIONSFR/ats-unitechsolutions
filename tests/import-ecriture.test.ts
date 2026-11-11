@@ -56,7 +56,7 @@ describe("écriture de l'import", () => {
     expect(jean.disponibilite).toBe("Immédiate");
     expect(tables.consultants_historique).toHaveLength(1);
     expect(tables.alertes.map((a) => a.type).sort()).toEqual(["doublon_possible", "telephone_invalide"]);
-    expect(tables.consultants.find((c) => c.nom === "Smith")!.statut).toBe("en_mission");
+    expect(tables.consultants.find((c) => c.nom === "Smith")!.statut).toBe("candidat");
     expect(tables.consultants.every((c) => !("_ligne" in c))).toBe(true);
   });
 
@@ -83,7 +83,7 @@ describe("écriture de l'import", () => {
       consultants: [{ id: "a", prenom: "Jean", nom: "Dupont", email: "jean@ex.fr", telephone_e164: "+33600000000", disponibilite: "Mars", statut: "candidat" }],
     });
     await ecrireFiches(client, [fiche({ email: "jean@ex.fr", telephone_e164: "+33611111111", disponibilite: "Immédiate", statut_texte: "En mission" })], null, { excelFaitFoi: true });
-    expect(tables.consultants[0]).toMatchObject({ telephone_e164: "+33611111111", disponibilite: "Immédiate", statut: "en_mission" });
+    expect(tables.consultants[0]).toMatchObject({ telephone_e164: "+33611111111", disponibilite: "Immédiate", statut: "candidat" });
     expect(tables.consultants_historique[0].source).toBe("synchro_excel");
   });
 
@@ -127,8 +127,8 @@ describe("écriture de l'import", () => {
 
 import { statutDepuisTexte } from "@/lib/tableau/modele";
 describe("statut lu dans l'Excel", () => {
-  it("« CDI » ou « Freelance » restent des candidats ; « En mission » = déjà en mission", () => {
+  it("« CDI », « Freelance » ou « En mission » restent des candidats", () => {
     for (const t of ["Freelance - CDI", "CDI", "Free/CDI", "en CDI avec 1 mois de préavis", "consultant", null]) expect(statutDepuisTexte(t)).toBe("candidat");
-    expect(statutDepuisTexte("En Mission")).toBe("en_mission");
+    expect(statutDepuisTexte("En Mission")).toBe("candidat");
   });
 });

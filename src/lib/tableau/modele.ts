@@ -11,9 +11,8 @@ export type StatutFiche = "candidat" | "consultant" | "en_mission" | "inactif";
 
 export function statutDepuisTexte(t: string | null): StatutFiche {
   const s = (t ?? "").toLowerCase();
-  if (/mission/.test(s)) return "en_mission";
   if (/inactif|parti|archiv/.test(s)) return "inactif";
-  // Jamais « consultant » depuis l'Excel : il ne contient que des candidats (« CDI », « Freelance » = type de contrat).
+  // L'Excel ne contient que des candidats : « CDI », « Freelance » (contrat) ou « En mission » (disponibilité) restent des candidats.
   return "candidat";
 }
 
