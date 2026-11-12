@@ -6,7 +6,7 @@ import { calculerTrigramme } from "@/lib/metier/trigramme";
 import { exigerUtilisateur } from "@/lib/acces";
 import { normaliserTelephone } from "@/lib/metier/telephone";
 import { normaliserEmail } from "@/lib/metier/dedoublonnage";
-import { ajouterCVJoint } from "./cv-joint";
+import { enregistrerCVJoint, lireCVJoint } from "./cv-joint";
 
 const STATUTS = ["candidat", "consultant", "en_mission", "inactif"];
 
@@ -62,9 +62,20 @@ export interface EtatCreation { erreur?: string }
 /** Crée une fiche à la main. Elle apparaît dans l'écran Consultants et sera ajoutée au fichier Excel la nuit suivante. */
 export async function creerConsultant(_e: EtatCreation, formData: FormData): Promise<EtatCreation> {
   const { utilisateur, supabase } = await exigerUtilisateur();
-  const texte = (k: string) => String(formData.get(k) ?? "").trim() || null;
+  const saisi = (k: string) => String(formData.get(k) ?? "").trim() || null;
+  // CV joint : lu d'abord ; les champs laissés vides sont remplis à partir du CV (ce que l'équipe a saisi est prioritaire).
+  const fichier = formData.get("cv");
+  const lecture = fichier instanceof File && fichier.size > 0 ? await lireCVJoint(fichier) : null;
+  if (lecture && "erreur" in lecture) return { erreur: lecture.erreur };
+  const p = lecture?.profil;
+  const duCV: Record<string, string | null> = {
+    prenom: p?.prenom ?? null, nom: p?.nom ?? null, email: p?.email ?? null, telephone: p?.telephone ?? null,
+    intitule_poste: p?.intitule_poste ?? null, localisation: p?.localisation ?? null,
+    experience: p?.annees_experience ? `${p.annees_experience} ans` : null, linkedin: lecture?.linkedin ?? null,
+  };
+  const texte = (k: string) => saisi(k) ?? duCV[k] ?? null;
   const prenom = texte("prenom"), nom = texte("nom");
-  if (!nom) return { erreur: "Le nom est obligatoire." };
+  if (!nom) return { erreur: lecture ? "Le nom n'a pas été trouvé dans le CV : saisissez-le." : "Le nom est obligatoire (ou joignez le CV)." };
   const email = normaliserEmail(texte("email"));
   if (texte("email") && !email) return { erreur: "Email invalide." };
   const tel = normaliserTelephone(texte("telephone"));
@@ -92,10 +103,8 @@ export async function creerConsultant(_e: EtatCreation, formData: FormData): Pro
   }).select("id").single();
   if (error || !cree) return { erreur: error?.message ?? "Fiche non créée." };
   await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "creation", consultant_id: cree.id, details: {} });
-  // CV joint (facultatif) : rangé dans SharePoint et analysé, la fiche sort ensuite dans la recherche et le matching.
-  const cv = formData.get("cv");
-  let avertissement: string | null = null;
-  if (cv instanceof File && cv.size > 0) avertissement = await ajouterCVJoint(cree.id, cv, { prenom: prenom ?? "—", nom });
+  // CV joint : rangé dans SharePoint, compétences enregistrées (lecture déjà faite) ; la fiche sort dans la recherche et le matching.
+  const avertissement = lecture ? await enregistrerCVJoint(cree.id, lecture, { prenom: prenom ?? "—", nom }) : null;
   revalidatePath("/consultants");
   redirect(`/consultants/${cree.id}${avertissement ? `?cv=${encodeURIComponent(avertissement)}` : ""}`);
 }

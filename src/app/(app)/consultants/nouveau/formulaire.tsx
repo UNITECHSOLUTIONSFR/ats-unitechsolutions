@@ -16,11 +16,14 @@ export default function Formulaire() {
 
   return (
     <form action={action} className="carte grid gap-3 p-5 text-sm sm:grid-cols-2">
+      <p className="rounded-xl bg-marque-50 px-3 py-2 text-sm text-marque-800 sm:col-span-2">
+        Astuce : joignez le CV (en bas) et laissez les champs vides : l&apos;outil les remplit à partir du CV. Ce que vous saisissez reste prioritaire.
+      </p>
       <Champ nom="prenom" libelle="Prénoms" valeur={prenom} onChange={setPrenom} />
-      <Champ nom="nom" libelle="Nom *" valeur={nom} onChange={setNom} requis />
+      <Champ nom="nom" libelle={fichier ? "Nom" : "Nom *"} valeur={nom} onChange={setNom} requis={!fichier} />
       <label className="block">
         <span className="text-zinc-600">Trigramme <span className="text-xs text-slate-400">(calculé, modifiable)</span></span>
-        <input name="trigramme" value={trigramme ?? trigrammeAuto} onChange={(e) => setTrigramme(e.target.value.toUpperCase().slice(0, 4))} className="champ mt-1 w-full font-mono" />
+        <input name="trigramme" value={trigramme ?? (nom ? trigrammeAuto : "")} placeholder={fichier ? "calculé depuis le CV" : ""} onChange={(e) => setTrigramme(e.target.value.toUpperCase().slice(0, 4))} className="champ mt-1 w-full font-mono" />
       </label>
       <Champ nom="email" libelle="Email" type="email" />
       <Champ nom="telephone" libelle="Téléphone" type="tel" />
