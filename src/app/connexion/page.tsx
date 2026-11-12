@@ -91,6 +91,9 @@ export default function PageConnexion() {
                   </div>
                 ) : etat === "oubli" ? (
                   <form onSubmit={oubli} className="space-y-3">
+                    <p className="rounded-xl bg-marque-50 px-3 py-2.5 text-sm text-marque-800">
+                      Le plus rapide : demandez à un administrateur un <b>nouveau mot de passe</b> (Paramètres › Utilisateurs). Sinon, recevez un lien par email (l&apos;envoi peut prendre du temps).
+                    </p>
                     <label className="block text-sm font-medium text-nuit">Email professionnel
                       <input type="email" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} className="champ mt-1 w-full !border-slate-300 !bg-slate-50 py-3" autoFocus />
                     </label>
