@@ -24,7 +24,7 @@ export const MAX_TOKENS = {
   analyseApprofondie: 1500,
   reponseDisponibilite: 250,
   lectureScan: 8000,
-  cvUnitech: 8000,
+  cvUnitech: 16000, // CV longs : toutes les tâches de chaque mission sont reprises, rien n'est coupé
   adequation: 1200,
   recherche: 700,
   avisMission: 700,

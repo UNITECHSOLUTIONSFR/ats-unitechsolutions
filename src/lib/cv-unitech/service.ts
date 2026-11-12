@@ -11,7 +11,12 @@ import { genererDocx, nomsFichiers, type CVUnitech } from "./generation";
 /** Dossier où sont déposés les essais (validation du rendu avant de généraliser). */
 export const DOSSIER_ESSAIS = "General/0 - Recrutement/Sauvegardes ATS/Essais CV Unitech - version 2";
 
-export interface ResultatCVUnitech { id: string; word: { nom: string; url: string }; dossier: string; coutUSD: number }
+export interface ResultatCVUnitech { id: string; word: { nom: string; url: string }; dossier: string; coutUSD: number; avertissement?: string }
+
+/** Nombre de lignes à puce d'un CV (tâches listées) : sert à vérifier que le Word n'en a pas perdu. */
+export function compterPuces(texte: string): number {
+  return texte.split("\n").filter((l) => /^\s*(?:[-•▪●◦■□➢►✓✔*–]|\d{1,2}[.)])\s+\S/.test(l)).length;
+}
 export interface ResultatPDFUnitech { pdf: { nom: string; url: string } }
 
 /** Familles de métiers : mot repéré dans le poste → nom du dossier à créer s'il n'existe pas encore. */
@@ -99,7 +104,12 @@ export async function genererCVUnitech(supabase: SupabaseClient, consultantId: s
       consultant_id: consultantId, mission_id: options.missionId ?? null, word_nom: word.name, word_url: word.webUrl,
       drive_id: driveId, word_item_id: word.id, pdf_nom_prevu: noms.pdf, dossier, cout_usd: coutUSD, par: options.par ?? null,
     }).select("id").single();
-    return { id: ligne?.id ?? "", word: { nom: word.name, url: word.webUrl }, dossier, coutUSD };
+    // Contrôle : le Word doit reprendre au moins autant de tâches que le CV d'origine en liste (à 20 % près).
+    const puces = compterPuces(source.texte_extrait);
+    const taches = cv.donnees.experiences.reduce((t, e) => t + e.missions.length, 0);
+    const avertissement = puces >= 6 && taches < puces * 0.8
+      ? `Le Word reprend ${taches} tâches pour environ ${puces} lignes listées dans le CV d'origine : vérifiez les missions avant envoi.` : undefined;
+    return { id: ligne?.id ?? "", word: { nom: word.name, url: word.webUrl }, dossier, coutUSD, avertissement };
   } finally {
     await enregistrerUsages(usages, `cv_unitech:${consultantId}`);
   }

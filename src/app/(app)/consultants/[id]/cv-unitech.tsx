@@ -28,9 +28,10 @@ export default function BlocCVUnitech({ consultantId, missions, generes }: { con
         {etat.erreur && <p className="text-red-700">{etat.erreur}</p>}
         {etat.resultat && (
           <p className="rounded-xl bg-emerald-50/80 p-3 text-emerald-800 ring-1 ring-emerald-200">
-            Word déposé dans SharePoint · dossier <b>{etat.resultat.dossier.split("/").slice(-1)[0]}</b>. Relisez-le, puis produisez le PDF ci-dessous.
+            Word déposé dans SharePoint · dossier <b>{etat.resultat.dossier.split("/").slice(-1)[0]}</b>. Relisez-le (les notes surlignées en jaune sont à compléter), puis produisez le PDF ci-dessous.
           </p>
         )}
+        {etat.resultat?.avertissement && <p className="rounded-xl bg-amber-50 p-3 text-amber-800 ring-1 ring-amber-200">{etat.resultat.avertissement}</p>}
       </form>
       {generes.length > 0 && (
         <div className="space-y-2 border-t border-slate-100 pt-3">

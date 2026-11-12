@@ -56,7 +56,13 @@ export function blocsDuCorps(xml: string): { debut: string; blocs: string[]; fin
   return { debut: xml.slice(0, i), blocs, fin: xml.slice(j) };
 }
 
-interface Style { gras?: boolean; bleu?: boolean; italique?: boolean }
+interface Style { gras?: boolean; bleu?: boolean; italique?: boolean; surligne?: boolean }
+
+/** Surlignage jaune Word (note « À compléter » pour l'équipe). */
+function surligner(rPr: string): string {
+  const marque = '<w:highlight w:val="yellow"/>';
+  return rPr ? rPr.replace("</w:rPr>", `${marque}</w:rPr>`) : `<w:rPr>${marque}</w:rPr>`;
+}
 
 /** Nouveau paragraphe sur le modèle d'un bloc : même mise en page, mêmes puces, mises en forme de texte reprises du bloc. */
 export function paragraphe(modele: string, segments: { texte: string; style?: Style }[]): string {
@@ -72,7 +78,7 @@ export function paragraphe(modele: string, segments: { texte: string; style?: St
     const ok = (x: string) => /<w:b\/>/.test(x) === !!s.gras && /5B9BD5|1189D0/.test(x) === !!s.bleu;
     return candidats.find(ok) ?? candidats.find((x) => /<w:b\/>/.test(x) === !!s.gras) ?? candidats[0] ?? "";
   };
-  const contenu = segments.filter((s) => s.texte).map((s) => `<w:r>${rPr(s.style)}<w:t xml:space="preserve">${echapper(s.texte)}</w:t></w:r>`).join("");
+  const contenu = segments.filter((s) => s.texte).map((s) => `<w:r>${s.style?.surligne ? surligner(rPr(s.style)) : rPr(s.style)}<w:t xml:space="preserve">${echapper(s.texte)}</w:t></w:r>`).join("");
   return `<w:p>${pPr}${prefixe}${contenu}</w:p>`;
 }
 
@@ -125,23 +131,59 @@ export async function genererDocx(gabarit: Buffer | Uint8Array, cv: CVUnitech): 
   }
   if (cv.experiences.length) {
     out.push(b[B.rubriqueExperiences], b[B.videExp]);
+    // Chaque mission garde toutes ses rubriques ; une information absente du CV devient une note surlignée en jaune « À compléter ».
+    const aCompleter = (quoi: string) => ({ texte: `À compléter : ${quoi}`, style: { surligne: true } });
     for (const e of cv.experiences) {
-      out.push(paragraphe(b[B.expTitre], [{ texte: e.entreprise, style: { gras: true, bleu: true } }, { texte: ` – ${e.poste}`, style: { gras: true } }]));
-      if (e.periode) out.push(paragraphe(b[B.expDates], [{ texte: e.periode, style: { italique: true } }]));
+      const periode = e.periode?.trim();
+      const duree = periode ? dureeDepuisPeriode(periode) : null;
+      out.push(paragraphe(b[B.expTitre], [{ texte: e.entreprise || "Entreprise", style: { gras: true, bleu: true } }, ...(e.poste ? [{ texte: ` – ${e.poste}`, style: { gras: true } }] : [{ texte: " – " }, aCompleter("intitulé du poste")])]));
+      out.push(paragraphe(b[B.expDates], periode
+        ? [{ texte: `${periode}${duree ? ` (${duree})` : ""}`, style: { italique: true } }]
+        : [aCompleter("dates et durée de la mission")]));
       out.push(b[B.expVide]);
-      if (e.projet) out.push(paragraphe(b[B.expProjet], [{ texte: "Projet", style: { gras: true, bleu: true } }, { texte: " : ", style: { gras: true } }, { texte: e.projet }]), b[B.expVide2]);
-      if (e.missions.length) {
-        out.push(paragraphe(b[B.expDetail], [{ texte: "Détail de la mission", style: { gras: true, bleu: true } }]));
-        for (const m of e.missions) out.push(paragraphe(b[B.expPuce], [{ texte: m }]));
-        out.push(b[B.expVide3]);
-      }
-      if (e.environnement) out.push(paragraphe(b[B.expEnvironnement], [{ texte: "Environnement", style: { gras: true, bleu: true } }, { texte: ` : ${e.environnement}` }]));
+      out.push(paragraphe(b[B.expProjet], [{ texte: "Projet / Contexte", style: { gras: true, bleu: true } }, { texte: " : ", style: { gras: true } },
+        e.projet?.trim() ? { texte: e.projet.trim() } : aCompleter("contexte du projet, enjeux et rôle du consultant")]), b[B.expVide2]);
+      out.push(paragraphe(b[B.expDetail], [{ texte: "Détail des tâches", style: { gras: true, bleu: true } }]));
+      const taches = e.missions.filter((m) => m.trim());
+      if (taches.length) for (const m of taches) out.push(paragraphe(b[B.expPuce], [{ texte: m }]));
+      else out.push(paragraphe(b[B.expPuce], [aCompleter("tâches réalisées pendant la mission")]));
+      out.push(b[B.expVide3]);
+      out.push(paragraphe(b[B.expEnvironnement], [{ texte: "Environnement technique", style: { gras: true, bleu: true } }, { texte: " : " },
+        e.environnement?.trim() ? { texte: e.environnement.trim() } : aCompleter("outils et technologies utilisés")]));
       out.push(b[B.expFin1], b[B.expFin2]);
     }
   }
   out.push(b[B.section]);
   zip.file("word/document.xml", debut + out.join("") + fin);
   return zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
+}
+
+const MOIS: Record<string, number> = { janvier: 1, fevrier: 2, mars: 3, avril: 4, mai: 5, juin: 6, juillet: 7, aout: 8, septembre: 9, octobre: 10, novembre: 11, decembre: 12,
+  janv: 1, fev: 2, avr: 4, juil: 7, sept: 9, oct: 10, nov: 11, dec: 12 };
+
+/**
+ * Durée lisible d'une période « Janvier 2024 – Juin 2026 », « 03/2021 - aujourd'hui », « 2019 – 2021 » : « 2 ans 5 mois ».
+ * Null si la période ne se lit pas (la période reste affichée telle quelle).
+ */
+export function dureeDepuisPeriode(periode: string, aujourdhui = new Date()): string | null {
+  const t = periode.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  // Séparateurs : tiret, « à », « au », « jusqu'à » (accents déjà retirés), suivis d'une date ou de « aujourd'hui ».
+  const parties = t.split(/(?:\s*(?:–|—|-|>)\s*|\s+(?:a|au|jusqu'a|jusqu’a)\s+)(?=[a-z]*\.?\s*\d|aujourd|present|actuel|ce jour|en cours)/);
+  if (parties.length < 2) return null;
+  const lire = (x: string, fin: boolean): [number, number] | null => {
+    if (/aujourd|present|actuel|ce jour|en cours/.test(x)) return [aujourdhui.getFullYear(), aujourdhui.getMonth() + 1];
+    const a = /(19|20)\d{2}/.exec(x)?.[0];
+    if (!a) return null;
+    const mNum = /(\d{1,2})\s*\/\s*(19|20)\d{2}/.exec(x)?.[1];
+    const mNom = Object.entries(MOIS).find(([k]) => new RegExp(`\\b${k}`).test(x))?.[1];
+    return [Number(a), Number(mNum ?? mNom ?? (fin ? 12 : 1))];
+  };
+  const debut = lire(parties[0], false), fin = lire(parties[parties.length - 1], true);
+  if (!debut || !fin) return null;
+  const mois = (fin[0] - debut[0]) * 12 + (fin[1] - debut[1]) + 1;
+  if (mois <= 0 || mois > 600) return null;
+  const ans = Math.floor(mois / 12), reste = mois % 12;
+  return [ans ? `${ans} an${ans > 1 ? "s" : ""}` : "", reste ? `${reste} mois` : ""].filter(Boolean).join(" ");
 }
 
 /** Noms des fichiers selon la convention Unitech. */

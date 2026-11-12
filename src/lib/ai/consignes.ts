@@ -106,22 +106,30 @@ ${NON_DISCRIMINATION}
 N'écris jamais le nom, le prénom, l'email, le téléphone, l'adresse ni les liens personnels du candidat : le CV Unitech est anonyme.
 
 Règles de fidélité (impératives) :
-- N'invente rien : aucune expérience, date, compétence, certification ou chiffre absent du CV.
-- Reformule le moins possible : corrige seulement l'orthographe et rends les phrases nettes, à l'infinitif pour les missions
-  (« Développer… », « Piloter… »). Garde les noms d'entreprises, de projets et d'outils tels quels.
-- Traduis en français si le CV est dans une autre langue.
+- N'invente rien : aucune expérience, entreprise, date, compétence, certification, chiffre ou résultat absent du CV.
+- Ne réduis jamais : chaque mission garde TOUTES ses tâches (jamais moins que dans le CV ; aucune fusion qui fait disparaître
+  une tâche, aucune omission). Une liste de 10 tâches dans le CV donne au moins 10 tâches. Garde aussi chaque expérience, même courte.
+- Mets le consultant en avant : réécris chaque tâche de façon professionnelle et valorisante, à l'infinitif, avec un verbe d'action
+  précis (« Concevoir… », « Piloter… », « Automatiser… »), en faisant ressortir l'apport, l'ampleur, les volumes et les résultats
+  quand le CV les donne. Une tâche très courte peut être développée avec ce que le CV dit du contexte et des outils, sans ajouter de fait.
+- Garde les noms d'entreprises, de clients, de projets et d'outils tels quels. Traduis en français si le CV est dans une autre langue.
 
 Rubriques :
 - titre : le métier principal, court (ex. « Tech Lead Java », « Chef de projet MOA »).
 - annees_experience : total des années d'expérience professionnelle d'après les dates ; null si impossible.
-- resume : 2 à 3 phrases de présentation du profil (sans « je »).
-- points_forts : 4 à 5 points forts, chacun avec un libellé court et un détail d'une phrase tiré du CV.
-- competences_metier : 3 à 6 domaines de compétence (« Architecture & expertise Java »…), 2 à 3 points chacun.
-- outils : regroupe les outils et technologies par catégorie (« Langages & frontend », « Bases de données »…), séparés par des virgules.
+- resume : 3 à 4 phrases de présentation qui mettent en valeur le profil (sans « je »).
+- points_forts : 4 à 6 points forts, chacun avec un libellé court et un détail d'une phrase tiré du CV.
+- competences_metier : 3 à 6 domaines de compétence (« Architecture & expertise Java »…), 2 à 4 points chacun.
+- outils : regroupe tous les outils et technologies cités par catégorie (« Langages & frontend », « Bases de données »…), séparés par des virgules.
 - langues : langue et niveau tels qu'indiqués (« Anglais : Professionnel »).
-- formations : diplômes et certifications, du plus récent au plus ancien ; annee peut être null.
-- experiences : du plus récent au plus ancien ; periode au format « Janvier 2024 – Juin 2026 » (ou « 2019 – 2021 ») ;
-  projet : une phrase si le CV décrit le projet, sinon null ; missions : 3 à 6 points ; environnement : outils de la mission, sinon null.`;
+- formations : tous les diplômes et certifications, du plus récent au plus ancien ; annee peut être null.
+- experiences : toutes, du plus récent au plus ancien. Pour chacune :
+  entreprise ; poste (chaîne vide si absent) ;
+  periode : les dates telles que le CV les donne, au format « Janvier 2024 – Juin 2026 » (ou « 2019 – 2021 », ou « Mars 2023 – Aujourd'hui ») ;
+    chaîne vide si le CV ne les donne pas (l'outil signalera « À compléter ») ;
+  projet : 2 à 3 phrases qui expliquent le contexte, l'enjeu et le rôle du consultant, à partir de ce que dit le CV ; null si le CV n'en dit rien ;
+  missions : toutes les tâches, réécrites comme indiqué ; liste vide seulement si le CV n'en décrit aucune ;
+  environnement : tous les outils et technologies de la mission, séparés par des virgules ; null si le CV n'en cite pas.`;
 
 export const CONSIGNES_ADEQUATION = `Tu es un assistant de recrutement pour une ESN française (Unitech Solution).
 Tu reçois un besoin client (mission) et le CV structuré d'un consultant pressenti. Tu rédiges, en français, la section
