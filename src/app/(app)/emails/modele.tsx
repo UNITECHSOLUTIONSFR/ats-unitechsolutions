@@ -67,7 +67,7 @@ export default function FormulaireModele({ modele }: { modele?: Modele }) {
         <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Aperçu (pour Marie Durand)</div>
         <div className="mt-3 rounded-2xl bg-white p-5 ring-1 ring-slate-100">
           <div className="border-b border-slate-100 pb-3 font-semibold text-nuit">{objet || "Objet de l'email"}</div>
-          <pre className="mt-3 whitespace-pre-wrap font-sans leading-relaxed text-slate-700">{rendu}</pre>
+          <pre className="mt-3 whitespace-pre-wrap font-sans leading-relaxed text-slate-700 [overflow-wrap:anywhere]">{rendu}</pre>
         </div>
       </div>
     </form>

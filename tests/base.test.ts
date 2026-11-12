@@ -140,6 +140,10 @@ describe("règles d'accès", () => {
     await expect(commeUtilisateur(null, "select * from consultants_par_motifs(array['java'])")).rejects.toThrow(/permission denied/);
     expect(await commeUtilisateur(INACTIF, "select * from consultants_par_motifs(array['java'])")).toEqual([]);
     await commeUtilisateur(RECRUTEUR, "select * from consultants_par_motifs(array['java'])");
+    await expect(commeUtilisateur(RECRUTEUR, "select * from competences_textes")).rejects.toThrow(/permission denied/);
+    await expect(commeUtilisateur(null, "select * from consultants_par_competences('{}', '{}')")).rejects.toThrow(/permission denied/);
+    expect(await commeUtilisateur(INACTIF, "select * from consultants_par_competences('{}', '{}')")).toEqual([]);
+    await expect(commeUtilisateur(RECRUTEUR, "select preparer_competences_textes()")).rejects.toThrow(/permission denied/);
   });
 
   it("recherche : un recruteur lit les candidats et les extraits ; un visiteur n'y a pas accès", async () => {

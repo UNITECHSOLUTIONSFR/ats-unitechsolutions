@@ -90,7 +90,7 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
             </h2>
             <p className="sous-titre">{classement.length} consultant(s) classé(s) · le score est une aide à la décision, jamais un refus automatique.</p>
           </div>
-          <div className="flex gap-2 text-xs">
+          <div className="flex flex-wrap gap-2 text-xs">
             <span className="pastille pastille-vert">≥ 75 : très bonne adéquation</span>
             <span className="pastille">50 – 74 : à étudier</span>
           </div>

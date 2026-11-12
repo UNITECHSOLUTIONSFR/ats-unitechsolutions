@@ -69,7 +69,7 @@ export default async function Accueil() {
         <Tuile titre="Cas à vérifier" valeur={alertes} lien="/alertes" Icone={IconeAlerte} attention={alertes > 0} />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3 [&>*]:min-w-0">
         {/* Missions ouvertes et meilleurs profils */}
         <section className="carte p-6 xl:col-span-2">
           <EnTete titre="Mes missions" lien="/missions?vue=toutes" libelle="Voir aussi celles des autres" />

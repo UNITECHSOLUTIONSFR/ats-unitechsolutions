@@ -42,15 +42,15 @@ export default function MenuLateral({ nom, email, estAdmin }: { nom: string; ema
       </div>
 
       {/* Barre d'onglets en bas sur téléphone, comme une application */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden" aria-label="Navigation principale">
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 [&>*]:min-w-0 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden" aria-label="Navigation principale">
         {ONGLETS_MOBILE.map(({ href, libelle, Icone }) => (
           <Link key={href} href={href} onClick={() => setOuvert(false)}
             className={`flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold ${!ouvert && actif(href) ? "text-marque-600" : "text-slate-500"}`}>
-            <Icone className="h-5 w-5" />{libelle}
+            <Icone className="h-5 w-5" /><span className="max-w-full truncate px-0.5 text-[10px] min-[360px]:text-[11px]">{libelle}</span>
           </Link>
         ))}
         <button onClick={() => setOuvert(!ouvert)} className={`flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold ${ouvert ? "text-marque-600" : "text-slate-500"}`}>
-          <span className="text-lg leading-5" aria-hidden>{ouvert ? "✕" : "☰"}</span>{ouvert ? "Fermer" : "Menu"}
+          <span className="text-lg leading-5" aria-hidden>{ouvert ? "✕" : "☰"}</span><span className="text-[10px] min-[360px]:text-[11px]">{ouvert ? "Fermer" : "Menu"}</span>
         </button>
       </nav>
 

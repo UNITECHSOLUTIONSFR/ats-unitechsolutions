@@ -102,7 +102,11 @@ export async function classementMission(supabase: SupabaseClient, missionId: str
   if (error) throw new Error(error.message);
   // Personnes dont le CV ou la ligne Excel cite une compétence demandée, sans fiche analysée : ajoutées au classement.
   const connus = new Set(((data ?? []) as LigneCandidat[]).map((c) => c.consultant_id));
-  const absents = [...dansLesTextes.keys()].filter((id) => !connus.has(id));
+  // Seules les 300 personnes qui citent le plus de compétences demandées sont ajoutées (le classement en affiche 50).
+  const poids = new Map(mission.competences.map((e) => [e.competence_id, e.importance * (e.obligatoire ? 2 : 1)]));
+  const absents = [...dansLesTextes.entries()].filter(([id]) => !connus.has(id))
+    .map(([id, k]) => [id, [...k].reduce((t, c) => t + (poids.get(c) ?? 1), 0)] as const)
+    .sort((a, b) => b[1] - a[1]).slice(0, 300).map(([id]) => id);
   const supplementaires = absents.length ? await chargerCandidats(supabase, absents) : [];
   const lignes = [...((data ?? []) as LigneCandidat[]), ...supplementaires].map((c) => ({
     consultant_id: c.consultant_id,
@@ -152,11 +156,16 @@ export async function competencesDansLesTextes(supabase: SupabaseClient, compete
   const resultat = new Map<string, Set<string>>();
   if (!ids.length) return resultat;
   const { data: comps } = await supabase.from("competences").select("id, nom_canonique, synonymes").in("id", ids);
-  const avecMotif = (comps ?? []).map((k) => ({ id: k.id as string, motif: motifCompetence(k.nom_canonique, k.synonymes ?? []) })).filter((k) => k.motif);
+  const avecMotif = (comps ?? []).map((k) => ({ id: k.id as string, motif: motifCompetence(k.nom_canonique, k.synonymes ?? []) })).filter((k): k is { id: string; motif: string } => !!k.motif);
   if (!avecMotif.length) return resultat;
-  const { data } = await supabase.rpc("consultants_par_motifs", { p_motifs: avecMotif.map((k) => k.motif) });
-  for (const r of (data ?? []) as { consultant_id: string; trouves: number[] }[]) {
-    resultat.set(r.consultant_id, new Set(r.trouves.map((i) => avecMotif[i - 1].id)));
+  // Une ligne par compétence (liste des personnes), calculée une fois par heure côté base.
+  const { data, error } = await supabase.rpc("consultants_par_competences", { p_ids: avecMotif.map((k) => k.id), p_motifs: avecMotif.map((k) => k.motif) });
+  if (error) { console.error("Matching contextuel :", error.message); return resultat; }
+  for (const r of (data ?? []) as { competence_id: string; consultants: string[] }[]) {
+    for (const c of r.consultants) {
+      if (!resultat.has(c)) resultat.set(c, new Set());
+      resultat.get(c)!.add(r.competence_id);
+    }
   }
   return resultat;
 }

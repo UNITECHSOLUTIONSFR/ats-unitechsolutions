@@ -87,8 +87,8 @@ export default function Redaction({ modeles, modeleInitial }: { modeles: Modele[
             </div>
             <label className="block font-medium text-nuit">Objet<input name="objet" value={objet} onChange={(e) => setObjet(e.target.value)} className="champ mt-1 w-full" /></label>
             <label className="block font-medium text-nuit">Message<textarea name="corps" value={corps} onChange={(e) => setCorps(e.target.value)} rows={11} className="champ mt-1 w-full" /></label>
-            <div className="flex gap-2">
-              <input value={nomModele} onChange={(e) => setNomModele(e.target.value)} placeholder="Nom du modèle" className="champ flex-1" />
+            <div className="flex flex-wrap gap-2">
+              <input value={nomModele} onChange={(e) => setNomModele(e.target.value)} placeholder="Nom du modèle" className="champ min-w-0 flex-1" />
               <button type="submit" formAction={enregistrerModele} name="nom_modele" value={nomModele} disabled={!nomModele.trim()} className="bouton-secondaire">Enregistrer comme modèle</button>
             </div>
             <p className="text-xs text-slate-500">{type === "libre" ? "Email libre : les réponses sont rattachées à la fiche, sans mise à jour automatique." : "Disponibilité : chaque réponse est lue et met à jour la disponibilité automatiquement."}</p>
@@ -96,7 +96,7 @@ export default function Redaction({ modeles, modeleInitial }: { modeles: Modele[
           <div className="rounded-2xl bg-white/70 p-5 text-sm ring-1 ring-white/80">
             <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Aperçu{exemple ? ` (pour ${exemple.nom})` : ""}</div>
             <div className="mt-2 font-semibold text-nuit">{objet}</div>
-            <pre className="mt-2 whitespace-pre-wrap font-sans text-slate-700">{rendu}</pre>
+            <pre className="mt-2 whitespace-pre-wrap break-words font-sans text-slate-700 [overflow-wrap:anywhere]">{rendu}</pre>
           </div>
         </div>
       </div>
