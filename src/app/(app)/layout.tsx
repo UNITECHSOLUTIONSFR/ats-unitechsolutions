@@ -18,6 +18,10 @@ export default async function LayoutApplication({ children }: { children: React.
   }
   // Double authentification : un compte qui l'a activée doit saisir son code avant d'accéder à l'outil.
   if (await codeAttendu()) redirect("/verification");
+  // Mot de passe provisoire (donné par un administrateur) : il doit être remplacé avant d'accéder à l'outil.
+  const client = await clientSupabaseServeur();
+  const { data: jeton } = (await client?.auth.getClaims()) ?? { data: null };
+  if ((jeton?.claims?.app_metadata as { mdp_provisoire?: boolean } | undefined)?.mdp_provisoire) redirect("/mot-de-passe");
   const utilisateur = await utilisateurConnecte();
   if (!utilisateur) {
     return (

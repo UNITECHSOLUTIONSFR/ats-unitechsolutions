@@ -6,25 +6,22 @@ import { createBrowserClient } from "@supabase/ssr";
 
 export default function PageConnexion() {
   const [email, setEmail] = useState("");
-  const [etat, setEtat] = useState<"saisie" | "envoi" | "envoye" | "erreur">("saisie");
+  const [motDePasse, setMotDePasse] = useState("");
+  const [etat, setEtat] = useState<"saisie" | "envoi" | "refuse" | "erreur">("saisie");
 
-  async function envoyer(e: React.FormEvent) {
+  async function seConnecter(e: React.FormEvent) {
     e.preventDefault();
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const cle = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!url || !cle) {
-      setEtat("erreur");
-      return;
-    }
+    if (!url || !cle) { setEtat("erreur"); return; }
     setEtat("envoi");
-    const supabase = createBrowserClient(url, cle);
-    // shouldCreateUser: false -> aucun compte n'est créé pour une adresse non invitée.
-    await supabase.auth.signInWithOtp({
-      email: email.trim().toLowerCase(),
-      options: { shouldCreateUser: false, emailRedirectTo: `${window.location.origin}/auth/callback` },
-    });
-    // Message identique que l'adresse soit invitée ou non (on ne révèle pas qui a accès).
-    setEtat("envoye");
+    const { error } = await createBrowserClient(url, cle).auth.signInWithPassword({ email: email.trim().toLowerCase(), password: motDePasse });
+    // Même message que l'adresse existe ou non (on ne révèle pas qui a accès).
+    if (error) { setEtat("refuse"); return; }
+    // Passage par /auth/ : le compteur d'inactivité de la session repart de zéro.
+    // Rechargement complet voulu : la nouvelle session (cookies) est lue par le serveur.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.assign("/auth/entree");
   }
 
   return (
@@ -55,29 +52,23 @@ export default function PageConnexion() {
           </p>
 
           <div className="mt-8 max-w-md">
-            {etat !== "envoye" && <Suspense fallback={null}><MessageSession /></Suspense>}
-            {etat === "envoye" ? (
-              <div className="carte p-5 text-sm text-slate-700">
-                <p className="font-semibold text-nuit">Vérifiez votre boîte mail</p>
-                <p className="mt-1">Si cette adresse est autorisée, un lien de connexion vient de lui être envoyé. Ouvrez-le depuis cet appareil.</p>
-                <button type="button" onClick={() => setEtat("saisie")} className="lien mt-3 text-sm">Utiliser une autre adresse</button>
-              </div>
-            ) : (
-              <form onSubmit={envoyer} className="carte flex flex-col gap-3 p-2 sm:flex-row sm:rounded-full">
-                <label htmlFor="email" className="sr-only">Adresse email professionnelle</label>
-                <input
-                  id="email" type="email" required autoComplete="email" value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="prenom.nom@unitechsolutions.fr"
-                  className="min-w-0 flex-1 rounded-full bg-transparent px-4 py-3 text-sm text-nuit outline-none placeholder:text-slate-400"
-                />
-                <button type="submit" disabled={etat === "envoi"} className="bouton-primaire justify-center px-6 py-3">
-                  {etat === "envoi" ? "Envoi…" : "Recevoir mon lien"}
-                </button>
-              </form>
-            )}
-            {etat === "erreur" && <p className="mt-3 text-sm text-red-700">L&apos;application n&apos;est pas encore reliée à sa base de données.</p>}
-            {etat !== "envoye" && <p className="mt-3 px-2 text-sm text-slate-500">Pas de mot de passe : un lien de connexion sécurisé vous est envoyé par email.</p>}
+            <Suspense fallback={null}><MessageSession /></Suspense>
+            <form onSubmit={seConnecter} className="carte space-y-3 p-5">
+              <label className="block text-sm font-medium text-nuit">Email professionnel
+                <input type="email" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)}
+                  placeholder="prenom.nom@unitechsolutions.fr" className="champ mt-1 w-full py-3" />
+              </label>
+              <label className="block text-sm font-medium text-nuit">Mot de passe
+                <input type="password" required autoComplete="current-password" value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)}
+                  className="champ mt-1 w-full py-3" />
+              </label>
+              {etat === "refuse" && <p className="text-sm text-red-700">Email ou mot de passe incorrect.</p>}
+              {etat === "erreur" && <p className="text-sm text-red-700">L&apos;application n&apos;est pas encore reliée à sa base de données.</p>}
+              <button type="submit" disabled={etat === "envoi"} className="bouton-primaire w-full justify-center py-3 text-base">
+                {etat === "envoi" ? "Connexion…" : "Se connecter"}
+              </button>
+            </form>
+            <p className="mt-3 px-2 text-sm text-slate-500">Mot de passe oublié ou premier accès : demandez à un administrateur un mot de passe provisoire.</p>
           </div>
 
           <div className="mt-12 flex flex-wrap gap-x-10 gap-y-4 border-t border-slate-200/70 pt-6">
@@ -138,13 +129,13 @@ function Barre({ libelle, valeur }: { libelle: string; valeur: number }) {
   );
 }
 
-/** Explique pourquoi un nouveau lien est demandé (session de plus de 7 jours, ou 3 jours sans activité). */
+/** Explique pourquoi une nouvelle connexion est demandée (session de plus de 7 jours, ou 3 jours sans activité). */
 function MessageSession() {
   const session = useSearchParams().get("session");
   if (!session) return null;
   return (
     <p className="mb-3 rounded-2xl bg-marque-50 px-4 py-2.5 text-sm text-marque-700 ring-1 ring-marque-100">
-      {session === "duree" ? "Par sécurité, la connexion est renouvelée chaque semaine : demandez un nouveau lien." : "Vous n'avez pas utilisé l'outil depuis plus de 3 jours : demandez un nouveau lien."}
+      {session === "duree" ? "Par sécurité, la connexion est renouvelée chaque semaine : reconnectez-vous." : "Vous n'avez pas utilisé l'outil depuis plus de 3 jours : reconnectez-vous."}
     </p>
   );
 }

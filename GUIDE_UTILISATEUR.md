@@ -1,6 +1,6 @@
 # ATS Unitech Solutions — guide d'une page
 
-**Adresse :** https://ats-unitechsolutions.vercel.app — saisissez votre email professionnel : un lien de connexion vous est envoyé (pas de mot de passe). Les administrateurs ayant activé la double authentification saisissent ensuite le code à 6 chiffres de leur application.
+**Adresse :** https://ats-unitechsolutions.vercel.app — email professionnel et mot de passe. Au premier accès, un administrateur vous donne un mot de passe provisoire ; vous en choisissez un nouveau (10 caractères, lettres et chiffres). Mot de passe oublié : un administrateur en génère un nouveau (Paramètres › Utilisateurs › « Nouveau mot de passe »). Changer le sien : lien « mot de passe » sous votre nom, dans le menu. Les administrateurs ayant activé la double authentification saisissent ensuite le code à 6 chiffres de leur application.
 
 ## Sur téléphone
 L'outil s'adapte à l'écran (iPhone, Android, tablette) : barre d'onglets en bas (Accueil, Recherche, Missions, Consultants, Menu), « + Mission » en haut, appel en un geste depuis chaque profil.

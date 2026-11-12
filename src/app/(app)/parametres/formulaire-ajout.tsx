@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { ajouterUtilisateur, type EtatUtilisateur } from "@/lib/utilisateurs/actions";
+import { AffichageMotDePasse } from "./mot-de-passe-provisoire";
 
 export default function FormulaireAjout() {
   const [etat, action, enCours] = useActionState<EtatUtilisateur, FormData>(ajouterUtilisateur, {});
@@ -26,6 +27,7 @@ export default function FormulaireAjout() {
         {enCours ? "Ajout…" : "Donner l'accès"}
       </button>
       {etat.message && <p className="w-full text-green-700">{etat.message}</p>}
+      {etat.motDePasse && <AffichageMotDePasse motDePasse={etat.motDePasse} />}
       {etat.erreur && <p className="w-full text-red-700">{etat.erreur}</p>}
     </form>
   );

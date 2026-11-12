@@ -1,5 +1,6 @@
 import { exigerAdmin } from "@/lib/acces-admin";
 import { modifierUtilisateur } from "@/lib/utilisateurs/actions";
+import { BoutonNouveauMotDePasse } from "../mot-de-passe-provisoire";
 import FormulaireAjout from "../formulaire-ajout";
 
 export default async function Utilisateurs() {
@@ -49,7 +50,8 @@ export default async function Utilisateurs() {
                     )}
                   </td>
                   <td className="p-3">{u.actif ? "Actif" : "Retiré"}</td>
-                  <td className="p-3 text-right">
+                  <td className="space-y-2 p-3 text-right">
+                    {u.actif && <BoutonNouveauMotDePasse id={u.id} email={u.email} />}
                     {!moi && (
                       <form action={modifierUtilisateur}>
                         <input type="hidden" name="id" value={u.id} />

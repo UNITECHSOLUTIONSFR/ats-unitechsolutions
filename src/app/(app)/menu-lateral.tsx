@@ -77,7 +77,7 @@ export default function MenuLateral({ nom, email, estAdmin }: { nom: string; ema
             </span>
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-semibold">{nom}</div>
-              <div className="truncate text-xs text-white/60">{estAdmin ? "Administrateur" : "Recruteur"}</div>
+              <div className="truncate text-xs text-white/60">{estAdmin ? "Administrateur" : "Recruteur"} · <Link href="/mot-de-passe" onClick={() => setOuvert(false)} className="underline-offset-2 hover:text-white hover:underline">mot de passe</Link></div>
             </div>
             <form action="/auth/deconnexion" method="post">
               <button title={`Se déconnecter (${email})`} className="rounded-full p-1.5 text-white/60 hover:bg-white/15 hover:text-white">
