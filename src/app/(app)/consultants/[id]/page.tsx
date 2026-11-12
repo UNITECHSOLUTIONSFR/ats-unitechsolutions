@@ -20,7 +20,8 @@ const STATUTS_PROPOSITION: Record<string, string> = {
   propose: "Proposé", appele: "Appelé", envoye_client: "Envoyé au client", retenu: "Retenu", refuse: "Refusé",
 };
 
-export default async function FicheConsultant({ params }: { params: Promise<{ id: string }> }) {
+export default async function FicheConsultant({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ cv?: string }> }) {
+  const { cv: avertissementCV } = await searchParams;
   const { id } = await params;
   const { utilisateur, supabase } = await exigerUtilisateur();
   const [{ data: c }, { data: profil }, { data: competences }, { data: documents }, { data: propositions }] = await Promise.all([
@@ -43,6 +44,7 @@ export default async function FicheConsultant({ params }: { params: Promise<{ id
 
   return (
     <div className="space-y-6">
+      {avertissementCV && <p className="rounded-2xl bg-amber-50 px-4 py-2.5 text-sm text-amber-800 ring-1 ring-amber-200">{avertissementCV.slice(0, 200)}</p>}
       {/* En-tête : identité et actions rapides */}
       <div className="relative overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-marque-500 via-marque-400 to-[#7d9be0] p-4 text-white sm:rounded-[2rem] sm:p-6 shadow-[0_30px_60px_-30px_rgba(31,69,163,0.6)]">
         <div className="pointer-events-none absolute -right-16 -top-20 h-60 w-60 rounded-full bg-white/15 blur-3xl" />

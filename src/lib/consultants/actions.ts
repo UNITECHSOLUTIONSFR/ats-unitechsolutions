@@ -6,6 +6,7 @@ import { calculerTrigramme } from "@/lib/metier/trigramme";
 import { exigerUtilisateur } from "@/lib/acces";
 import { normaliserTelephone } from "@/lib/metier/telephone";
 import { normaliserEmail } from "@/lib/metier/dedoublonnage";
+import { ajouterCVJoint } from "./cv-joint";
 
 const STATUTS = ["candidat", "consultant", "en_mission", "inactif"];
 
@@ -76,16 +77,27 @@ export async function creerConsultant(_e: EtatCreation, formData: FormData): Pro
     const { data } = await supabase.from("consultants").select("id").eq("telephone_e164", tel.e164).limit(1).maybeSingle();
     if (data) return { erreur: "Une fiche existe déjà avec ce téléphone." };
   }
+  // Trigramme : celui saisi (lettres, 4 au plus), sinon calculé ; date de mise à jour : celle saisie, sinon aujourd'hui si une disponibilité est donnée.
+  const trigrammeSaisi = (texte("trigramme") ?? "").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4);
+  const dateMaj = /^\d{4}-\d{2}-\d{2}$/.test(texte("date_maj") ?? "") ? new Date(`${texte("date_maj")}T12:00:00Z`).toISOString() : null;
+  const statut = ["candidat", "consultant", "inactif"].includes(texte("statut") ?? "") ? texte("statut") : "candidat";
+  const linkedin = texte("linkedin");
   const { data: cree, error } = await supabase.from("consultants").insert({
-    prenom: prenom ?? "—", nom, trigramme: calculerTrigramme(prenom ?? "", nom), email, telephone_e164: tel.e164,
+    prenom: prenom ?? "—", nom, trigramme: trigrammeSaisi || calculerTrigramme(prenom ?? "", nom), email, telephone_e164: tel.e164,
     telephone_brut: tel.statut === "invalide" ? tel.brut : null, intitule_poste: texte("intitule_poste"),
-    disponibilite: texte("disponibilite"), disponibilite_maj_le: texte("disponibilite") ? new Date().toISOString() : null,
-    localisation: texte("localisation"), notes: texte("notes"), source: "manuel", statut: "candidat",
+    experience: texte("experience"), tjm_salaire: texte("tjm_salaire"),
+    disponibilite: texte("disponibilite"), disponibilite_maj_le: dateMaj ?? (texte("disponibilite") ? new Date().toISOString() : null),
+    localisation: texte("localisation"), linkedin: linkedin && /^https?:\/\//i.test(linkedin) ? linkedin : linkedin ? `https://${linkedin}` : null,
+    notes: texte("notes"), source: "manuel", statut,
   }).select("id").single();
   if (error || !cree) return { erreur: error?.message ?? "Fiche non créée." };
   await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "creation", consultant_id: cree.id, details: {} });
+  // CV joint (facultatif) : rangé dans SharePoint et analysé, la fiche sort ensuite dans la recherche et le matching.
+  const cv = formData.get("cv");
+  let avertissement: string | null = null;
+  if (cv instanceof File && cv.size > 0) avertissement = await ajouterCVJoint(cree.id, cv, { prenom: prenom ?? "—", nom });
   revalidatePath("/consultants");
-  redirect(`/consultants/${cree.id}`);
+  redirect(`/consultants/${cree.id}${avertissement ? `?cv=${encodeURIComponent(avertissement)}` : ""}`);
 }
 
 /** Fusionne deux fiches d'une même personne (administrateurs). La fiche « gardée » reçoit les valeurs choisies et tout le reste. */
