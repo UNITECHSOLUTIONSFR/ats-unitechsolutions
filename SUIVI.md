@@ -172,3 +172,8 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Fait : statuts (tous candidats, filtre retiré des Emails et de la Recherche, 72 « en mission » corrigées) ; référentiel de compétences regroupé (5 601 → 5 117, familles .NET, versions ignorées) ; matching contextuel (compétence trouvée dans le CV ou la ligne Excel = 60 % des points, technologie de l'intitulé, 4 obligatoires au plus) ; 1 408 fichiers SharePoint lus, 219 CV reliés, 161 fiches créées, 189 PDF anonymisés rattachés ; analyse IA de 241 CV lancée (≈ 0,17 $) ; écrans Missions, Exigences, Recherche, Emails (modèles), Cas à vérifier refaits.
 - Testé : 180 tests (dont 24 règles d'accès), classements .NET (24 → 44 profils ≥ 50), Full Stack (11 → 39), recherche « Développeur .NET », captures des écrans.
 - Suite : point du matin ; actions de l'utilisatrice (clé du planificateur de secours, dates des secrets, A_FAIRE_14H.md).
+
+### 12/11/2026 (nuit, suite) — Mobile
+- Fait : barre d'onglets en bas, menu plein écran, encoche et barre système respectées, installation sur l'écran d'accueil (manifeste, icônes), écrans adaptés (consultants en fiches avec appel, mission avec score visible et compétences repliées, recherche avec filtres repliés), iPhone sans zoom à la saisie ; exigences « Obligatoires / Souhaitées » expliquées ; matching contextuel mémorisé (≈ 2 s par mission).
+- Testé : 29 écrans sur 6 appareils (iPhone SE, 15, 15 Pro Max, Pixel 7, Galaxy S8, iPad Mini), plus aucun débordement ; 180 tests.
+- À décider : LinkedIn (lien sur la fiche + import du PDF exporté depuis LinkedIn, ≈ 0,005 $ par profil).
