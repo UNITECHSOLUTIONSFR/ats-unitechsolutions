@@ -182,3 +182,4 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Fait : bouton WhatsApp partout où l'on peut appeler (wa.me, message pré-rempli, aucune connexion) ; « Le besoin en bref » (indispensables + environnement technique) à la création et sur la mission ; « ✨ Avis IA » sur demande par consultant (Haiku, ≈ 0,1 centime, gardé en base) ; revue de sécurité (28 tables sous RLS, droits des fonctions resserrés, uuid corrigé : 0 faille connue) ; route d'essai CV Unitech supprimée ; LinkedIn abandonné (RGPD, conditions de LinkedIn).
 - Testé : 182 tests (dont 26 règles d'accès), export Excel, captures ordinateur et téléphone.
 - Suite : uniquement les actions de l'utilisatrice (A_FAIRE_14H.md), puis invitation des collaborateurs.
+- 12/11 3 h 15 : résultats de l'analyse IA des 241 CV récupérés ; 1 075 fiches ont désormais des compétences analysées (contre 914) ; index des textes rafraîchi.
