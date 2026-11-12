@@ -75,7 +75,7 @@ export default function Redaction({ modeles, modeleInitial }: { modeles: Modele[
 
       <div className="carte space-y-4 p-6">
         <Etape n={3} titre="Le message" texte="Modifiable librement. {prenom} est remplacé par le prénom de chaque consultant." />
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 [&>*]:min-w-0">
           <div className="space-y-3 text-sm">
             <div className="flex flex-wrap gap-2">
 

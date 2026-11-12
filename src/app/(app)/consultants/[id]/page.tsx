@@ -43,14 +43,14 @@ export default async function FicheConsultant({ params }: { params: Promise<{ id
   return (
     <div className="space-y-6">
       {/* En-tête : identité et actions rapides */}
-      <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-marque-500 via-marque-400 to-[#7d9be0] p-6 text-white shadow-[0_30px_60px_-30px_rgba(31,69,163,0.6)]">
+      <div className="relative overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-marque-500 via-marque-400 to-[#7d9be0] p-4 text-white sm:rounded-[2rem] sm:p-6 shadow-[0_30px_60px_-30px_rgba(31,69,163,0.6)]">
         <div className="pointer-events-none absolute -right-16 -top-20 h-60 w-60 rounded-full bg-white/15 blur-3xl" />
-        <div className="relative flex flex-wrap items-center gap-5">
-          <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/20 text-xl font-bold ring-1 ring-white/30 backdrop-blur">
+        <div className="relative flex flex-wrap items-center gap-3 sm:gap-5">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl sm:h-16 sm:w-16 bg-white/20 text-xl font-bold ring-1 ring-white/30 backdrop-blur">
             {`${c.prenom?.[0] ?? ""}${c.nom?.[0] ?? ""}`.replace("—", "").toUpperCase() || "?"}
           </span>
           <div className="min-w-0 flex-1">
-            <h1 className="text-3xl font-bold tracking-[-0.03em]">{c.prenom} {c.nom} <span className="font-mono text-base font-medium text-white/60">{c.trigramme}</span></h1>
+            <h1 className="break-words text-2xl font-bold tracking-[-0.03em] sm:text-3xl">{c.prenom} {c.nom} <span className="font-mono text-base font-medium text-white/60">{c.trigramme}</span></h1>
             <p className="text-white/80">{c.intitule_poste ?? "Poste non renseigné"}{c.localisation ? ` · ${c.localisation}` : ""}</p>
             <div className="mt-2 flex flex-wrap gap-2 text-xs">
               <span className="rounded-full bg-white/20 px-2.5 py-0.5 font-medium ring-1 ring-white/25">{c.statut}</span>
@@ -59,16 +59,16 @@ export default async function FicheConsultant({ params }: { params: Promise<{ id
               </span>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {c.telephone_e164 && <a href={`tel:${c.telephone_e164}`} className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-nuit shadow-md hover:shadow-lg">☎ {formaterTelephone(c.telephone_e164)}</a>}
-            {c.email && <a href={`mailto:${c.email}`} className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold ring-1 ring-white/30 hover:bg-white/25">✉ Email</a>}
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
+            {c.telephone_e164 && <a href={`tel:${c.telephone_e164}`} className="flex min-h-11 items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-nuit shadow-md hover:shadow-lg">☎ <span className="ml-1 sm:hidden">Appeler</span><span className="ml-1 hidden sm:inline">{formaterTelephone(c.telephone_e164)}</span></a>}
+            {c.email && <a href={`mailto:${c.email}`} className="flex min-h-11 items-center justify-center rounded-full bg-white/15 px-4 py-2 text-sm font-semibold ring-1 ring-white/30 hover:bg-white/25">✉ Email</a>}
           </div>
         </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <section className="space-y-4 lg:col-span-2">
-          <div className="carte p-6">
+          <div className="carte p-4 sm:p-6">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Profil</h2>
             {profil ? (
               <div className="mt-2 space-y-2 text-sm">

@@ -41,6 +41,17 @@ body {
 
 ::selection { background: rgba(31, 69, 163, 0.18); }
 
+/* Téléphones (iPhone, Android) : pas de défilement horizontal de la page, texte à taille normale,
+   champs en 16 px (sinon Safari zoome à chaque saisie), fond non fixe (saccades sur iOS). */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { overflow-x: clip; }
+@media (max-width: 1023px) {
+  body { background-attachment: scroll; }
+}
+@media (max-width: 639px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea { font-size: 16px; }
+}
+
 @layer components {
   .titre-page { @apply text-[1.75rem] font-bold tracking-[-0.03em] text-nuit; }
   .sous-titre { @apply text-sm text-slate-500; }
@@ -59,7 +70,7 @@ body {
   .lien { @apply font-medium text-marque-600 hover:text-marque-500 hover:underline; }
 
   /* Statuts : toujours la même couleur pour le même sens (vert, orange, rouge, gris). */
-  .pastille { @apply inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 bg-slate-100/80 text-slate-600 ring-slate-200; }
+  .pastille { @apply inline-flex max-w-full items-center overflow-hidden whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 bg-slate-100/80 text-slate-600 ring-slate-200; }
   .pastille-vert { @apply bg-emerald-50/90 text-emerald-700 ring-emerald-200; }
   .pastille-orange { @apply bg-amber-50/90 text-amber-700 ring-amber-200; }
   .pastille-rouge { @apply bg-red-50/90 text-red-700 ring-red-200; }

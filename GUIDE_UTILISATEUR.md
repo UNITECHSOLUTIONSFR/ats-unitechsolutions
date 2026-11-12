@@ -2,6 +2,10 @@
 
 **Adresse :** https://ats-unitechsolutions.vercel.app — saisissez votre email professionnel : un lien de connexion vous est envoyé (pas de mot de passe). Les administrateurs ayant activé la double authentification saisissent ensuite le code à 6 chiffres de leur application.
 
+## Sur téléphone
+L'outil s'adapte à l'écran (iPhone, Android, tablette) : barre d'onglets en bas (Accueil, Recherche, Missions, Consultants, Menu), « + Mission » en haut, appel en un geste depuis chaque profil.
+**L'installer comme une application** (icône sur l'écran d'accueil, plein écran) : iPhone → Safari › bouton Partager › « Sur l'écran d'accueil » ; Android → Chrome › ⋮ › « Installer l'application » (ou « Ajouter à l'écran d'accueil »).
+
 ## Tableau de bord
 - **Mes missions** ouvertes, avec les 3 meilleurs profils de chacune et le nombre de **profils à 80+ à appeler**.
 - **Nouveaux profils · 7 derniers jours** (emails, SharePoint, saisie) : un clic ouvre la fiche.

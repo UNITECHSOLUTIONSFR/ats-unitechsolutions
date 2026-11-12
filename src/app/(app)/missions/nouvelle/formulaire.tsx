@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import CarteExigences from "../carte-exigences";
 import { analyserBesoin, creerMission, type BrouillonMission, type EtatAnalyseMission, type EtatFormulaireMission } from "@/lib/missions/actions";
 
 const SENIORITES = [["", "Non précisée"], ["junior", "Junior (< 3 ans)"], ["confirme", "Confirmé (3 à 6 ans)"], ["senior", "Senior (7 à 12 ans)"], ["expert", "Expert (> 12 ans)"]] as const;
@@ -67,25 +68,18 @@ function Etape2({ brouillon }: { brouillon: BrouillonMission }) {
       <div className="carte space-y-4 p-6">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h3 className="font-semibold text-nuit">Compétences demandées</h3>
-          <span className="text-xs text-slate-500">{competences.length} compétence(s) · {obligatoires} obligatoire(s) · cliquez pour basculer</span>
+          <span className="text-xs text-slate-500">{competences.length} compétence(s) · {obligatoires} obligatoire(s) · 4 au plus conseillées</span>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {competences.map((c, i) => (
-            <span key={c.nom} className={`inline-flex items-center gap-1 rounded-full py-1 pl-3 pr-1 text-sm ring-1 ${c.obligatoire ? "bg-nuit text-white ring-nuit" : "bg-white/80 text-nuit ring-slate-200"}`}>
-              <button type="button" onClick={() => maj(i, { obligatoire: !c.obligatoire })} title={c.obligatoire ? "Obligatoire (cliquer pour rendre souhaitée)" : "Souhaitée (cliquer pour rendre obligatoire)"}>
-                {c.nom}{c.annees_min ? ` · ${c.annees_min} an(s)` : ""}
-              </button>
-              <button type="button" onClick={() => setCompetences((cs) => cs.filter((_, j) => j !== i))} aria-label={`Retirer ${c.nom}`}
-                className={`flex h-5 w-5 items-center justify-center rounded-full text-xs ${c.obligatoire ? "hover:bg-white/20" : "text-slate-400 hover:bg-slate-100"}`}>✕</button>
-            </span>
-          ))}
-        </div>
+        <CarteExigences
+          items={competences.map((c, i) => ({ cle: String(i), nom: c.nom, obligatoire: c.obligatoire, importance: c.importance, detail: c.annees_min ? `${c.annees_min} an(s) minimum` : undefined }))}
+          onBasculer={(cle, o) => maj(Number(cle), { obligatoire: o })}
+          onRetirer={(cle) => setCompetences((cs) => cs.filter((_, j) => j !== Number(cle)))}
+          onImportance={(cle, n) => maj(Number(cle), { importance: n })} />
         <div className="flex gap-2">
           <input value={nouvelle} onChange={(e) => setNouvelle(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); ajouter(); } }}
             placeholder="Ajouter une compétence (ex. Kafka)" className="champ flex-1" />
           <button type="button" onClick={ajouter} className="bouton-secondaire">Ajouter</button>
         </div>
-        <p className="text-xs text-slate-500"><span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-nuit align-middle" />Obligatoire : un consultant sans cette compétence est écarté. <span className="ml-2 mr-1 inline-block h-2.5 w-2.5 rounded-full bg-white ring-1 ring-slate-300 align-middle" />Souhaitée : elle compte dans le score.</p>
       </div>
 
       <details className="carte p-6 text-sm">

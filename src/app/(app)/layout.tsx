@@ -35,7 +35,7 @@ export default async function LayoutApplication({ children }: { children: React.
   return (
     <div className="flex min-h-screen flex-col lg:flex-row">
       <MenuLateral nom={utilisateur.nomAffiche ?? utilisateur.email.split("@")[0]} email={utilisateur.email} estAdmin={utilisateur.role === "admin"} />
-      <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:py-7 lg:pl-4 lg:pr-8">
+      <main className="min-w-0 flex-1 px-3 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pt-6 lg:py-7 lg:pb-7 lg:pl-4 lg:pr-8">
         {sans2FA && (
           <Link href="/parametres/securite" className="mb-4 flex items-center justify-between gap-3 rounded-2xl bg-amber-50/90 px-4 py-2.5 text-sm text-amber-800 ring-1 ring-amber-200 hover:bg-amber-50">
             <span>🔐 Protégez votre compte administrateur : activez la double authentification.</span><span className="font-semibold">Activer →</span>

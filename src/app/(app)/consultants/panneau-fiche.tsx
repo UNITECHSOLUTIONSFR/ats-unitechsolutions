@@ -57,10 +57,10 @@ export default function PanneauFiche({ id, onFermer }: { id: string; onFermer: (
   return (
     <>
       <div className="fixed inset-0 z-40 bg-nuit/10 backdrop-blur-[2px]" onClick={onFermer} />
-      <aside className="verre fixed inset-y-2 right-2 z-50 flex w-[calc(100%-1rem)] max-w-md flex-col overflow-hidden rounded-[1.75rem] bg-white/80">
+      <aside className="verre fixed bottom-[max(0.5rem,env(safe-area-inset-bottom))] right-2 top-[max(0.5rem,env(safe-area-inset-top))] z-50 flex w-[calc(100%-1rem)] max-w-md flex-col overflow-hidden rounded-[1.75rem] bg-white/95 sm:bg-white/80">
         <div className="relative bg-gradient-to-br from-nuit via-marque-600 to-marque-500 p-5 text-white">
           <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/15 blur-2xl" />
-          <button onClick={onFermer} className="absolute right-3 top-3 rounded-full px-2.5 py-1 text-white/70 hover:bg-white/15 hover:text-white" aria-label="Fermer">✕</button>
+          <button onClick={onFermer} className="absolute right-2 top-2 flex h-10 w-10 items-center justify-center rounded-full text-lg text-white/80 hover:bg-white/15 hover:text-white" aria-label="Fermer">✕</button>
           {fiche ? (
             <div className="relative flex items-center gap-4">
               <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-lg font-bold ring-1 ring-white/30 backdrop-blur">{initiales || "?"}</span>
@@ -171,7 +171,7 @@ export default function PanneauFiche({ id, onFermer }: { id: string; onFermer: (
 }
 
 function Action({ href, libelle, icone, externe }: { href?: string; libelle: string; icone: string; externe?: boolean }) {
-  const classe = "flex flex-col items-center gap-1 rounded-2xl px-1 py-2.5 text-[11px] font-semibold ring-1 transition";
+  const classe = "flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2.5 text-[11px] font-semibold ring-1 transition";
   if (!href) return <span className={`${classe} cursor-not-allowed bg-white/40 text-slate-300 ring-white/60`}><span className="text-base leading-none">{icone}</span>{libelle}</span>;
   return (
     <a href={href} {...(externe ? { target: "_blank", rel: "noreferrer" } : {})}

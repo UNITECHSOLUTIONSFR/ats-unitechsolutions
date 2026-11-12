@@ -234,7 +234,35 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
         <p className={`rounded-lg px-4 py-2 text-sm ${message.ok ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"}`}>{message.texte}</p>
       )}
 
-      <div className="carte max-h-[calc(100vh-15rem)] overflow-auto rounded-2xl">
+      {/* Téléphone : une fiche compacte par personne (appeler en un geste, ouvrir la fiche) ; le tableau complet reste sur ordinateur. */}
+      <ul className="space-y-2 sm:hidden">
+        {affichees.map((l) => {
+          const v = (c?: ChampFiche) => { const e = c && entetes.find((x) => champs[x] === c); return e ? (l.valeurs[e] ?? "").trim() : ""; };
+          const nom = [v("prenom"), v("nom")].filter(Boolean).join(" ") || v("nom_complet") || "—";
+          const tel = v("telephone").replace(/[^\d+]/g, "");
+          const extrait = parLeCV.has(l.id) && l.consultant_id ? dansCV.extraits.get(l.consultant_id) : undefined;
+          return (
+            <li key={l.id} className="carte p-3.5" onClick={(ev) => { if (l.consultant_id && !(ev.target as HTMLElement).closest("a, button")) setFicheOuverte(l.consultant_id); }}>
+              <div className="flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-semibold text-nuit">{nom}</div>
+                  <div className="truncate text-sm text-slate-500">{v("intitule_poste") || "Poste non renseigné"}</div>
+                  <div className="mt-1.5 flex min-w-0 flex-wrap gap-1.5 text-xs">
+                    {v("disponibilite") && <span className={`${classePastille(v("disponibilite"))} !block max-w-full truncate`}>{v("disponibilite")}</span>}
+                    {v("localisation") && <span className="pastille !block max-w-full truncate">📍 {v("localisation")}</span>}
+                    {parLeCV.has(l.id) && <span className="rounded-md bg-violet-50 px-1.5 py-0.5 font-bold text-violet-700">mot dans le CV</span>}
+                  </div>
+                </div>
+                {tel && <a href={`tel:${tel}`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-lg text-emerald-700 ring-1 ring-emerald-200" aria-label={`Appeler ${nom}`}>☎</a>}
+              </div>
+              {extrait && <p className="mt-2 text-xs text-slate-500"><TexteSurligne texte={extrait.extrait} /></p>}
+            </li>
+          );
+        })}
+        {!affichees.length && <li className="carte p-6 text-center text-sm text-slate-500">Aucune ligne ne correspond aux filtres.</li>}
+      </ul>
+
+      <div className="carte hidden max-h-[calc(100vh-15rem)] overflow-auto rounded-2xl sm:block">
         <table className="w-max min-w-full border-separate border-spacing-0 text-[13px]">
           <thead>
             <tr>

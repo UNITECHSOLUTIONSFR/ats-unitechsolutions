@@ -43,16 +43,16 @@ export default async function Accueil() {
   return (
     <div className="space-y-6">
       {/* En-tête */}
-      <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-marque-500 via-marque-400 to-[#7d9be0] p-8 text-white shadow-[0_30px_60px_-30px_rgba(31,69,163,0.6)]">
+      <div className="relative overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-marque-500 via-marque-400 to-[#7d9be0] p-5 text-white sm:rounded-[2rem] sm:p-8 shadow-[0_30px_60px_-30px_rgba(31,69,163,0.6)]">
         <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-white/15 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-24 left-1/3 h-64 w-64 rounded-full bg-sky-300/20 blur-3xl" />
         <div className="relative flex flex-wrap items-end justify-between gap-6">
           <div>
             <p className="text-sm font-medium text-white/70">Bonjour{prenom ? ` ${prenom}` : ""}</p>
-            <h1 className="mt-1 text-3xl font-bold tracking-[-0.03em] sm:text-4xl">Trouvez le bon consultant<br className="hidden sm:block" /> en une minute.</h1>
-            <p className="mt-2 max-w-xl text-white/75">Collez le besoin du client : l&apos;outil classe les profils et explique chaque score.</p>
+            <h1 className="mt-1 text-2xl font-bold tracking-[-0.03em] sm:text-4xl">Trouvez le bon consultant<br className="hidden sm:block" /> en une minute.</h1>
+            <p className="mt-2 hidden max-w-xl text-white/75 sm:block">Collez le besoin du client : l&apos;outil classe les profils et explique chaque score.</p>
           </div>
-          <Link href="/missions/nouvelle" className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 font-semibold text-nuit shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl">
+          <Link href="/missions/nouvelle" className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-3 font-semibold sm:w-auto text-nuit shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl">
             <IconePlus className="h-5 w-5" />Nouvelle mission
           </Link>
         </div>

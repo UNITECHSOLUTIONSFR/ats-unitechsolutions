@@ -21,7 +21,7 @@ export default function FormulaireReglages({ plafond, ponderations, seuil }: { p
         <legend className="font-medium">Poids de chaque critère dans le score</legend>
         {(Object.keys(LIBELLES) as (keyof Ponderations)[]).map((k) => (
           <label key={k} className="flex items-center gap-3">
-            <span className="w-48">{LIBELLES[k]}</span>
+            <span className="min-w-0 flex-1 sm:w-48 sm:flex-none">{LIBELLES[k]}</span>
             <input name={k} type="number" min="0" max="100" defaultValue={ponderations[k]} className="champ w-24" />
           </label>
         ))}

@@ -57,8 +57,7 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <Link href="/missions" className="text-sm font-medium text-slate-500 hover:text-nuit">← Missions</Link>
-          <h1 className="titre-page mt-1">{mission.intitule}</h1>
+          <h1 className="titre-page">{mission.intitule}</h1>
           <div className="mt-2 flex flex-wrap gap-2 text-sm">
             {mission.client && <span className="rounded-full bg-white px-3 py-1 font-medium text-nuit ring-1 ring-slate-200">🏢 {mission.client}</span>}
             {mission.localisation && <span className="rounded-full bg-white px-3 py-1 text-slate-700 ring-1 ring-slate-200">📍 {mission.localisation}</span>}
@@ -98,7 +97,7 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
         </div>
 
         {classement.map((c, i) => (
-          <CarteCandidat key={c.consultant_id} rang={i + 1} c={c} missionId={id} statut={suivi.get(c.consultant_id)} ouvert={i < 10} cv={cvParConsultant.get(c.consultant_id)} />
+          <CarteCandidat key={c.consultant_id} rang={i + 1} c={c} missionId={id} statut={suivi.get(c.consultant_id)} ouvert={i < 3} cv={cvParConsultant.get(c.consultant_id)} />
         ))}
         {!classement.length && (
           <div className="carte p-8 text-center text-sm text-slate-500">
@@ -127,16 +126,20 @@ function CarteCandidat({ rang, c, missionId, statut, ouvert, cv }: {
 }) {
   const n = niveau(c.resultat.score);
   const initiales = `${c.prenom?.[0] ?? ""}${c.nom?.[0] ?? ""}`.replace("—", "").toUpperCase() || "?";
-  const action = "flex h-9 items-center gap-1.5 rounded-full bg-white/70 px-3 text-xs font-semibold text-nuit ring-1 ring-white/80 transition hover:bg-white hover:shadow-md";
+  const action = "flex h-10 items-center gap-1.5 rounded-full sm:h-9 bg-white/70 px-3 text-xs font-semibold text-nuit ring-1 ring-white/80 transition hover:bg-white hover:shadow-md";
   return (
-    <article className={`carte p-5 ${c.resultat.elimine ? "opacity-60" : ""}`}>
+    <article className={`carte p-4 sm:p-5 ${c.resultat.elimine ? "opacity-60" : ""}`}>
       <div className="flex flex-wrap items-center gap-4">
         <div className="relative">
           <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-marque-400 to-marque-700 text-lg font-bold text-white shadow-md">{initiales}</span>
           <span className="absolute -left-2 -top-2 flex h-6 min-w-6 items-center justify-center rounded-full bg-white px-1 text-[11px] font-bold text-nuit shadow ring-1 ring-slate-200">{rang}</span>
         </div>
         <div className="min-w-0 flex-1">
-          <Link href={`/consultants/${c.consultant_id}`} className="text-base font-semibold text-nuit hover:text-marque-600">{c.prenom} {c.nom}</Link>
+          <div className="flex items-start justify-between gap-2">
+            <Link href={`/consultants/${c.consultant_id}`} className="text-base font-semibold text-nuit hover:text-marque-600">{c.prenom} {c.nom}</Link>
+            {/* Téléphone : le score tout de suite visible */}
+            <span className={`shrink-0 text-xl font-extrabold tabular-nums sm:hidden ${n.texte}`}>{Math.round(c.resultat.score)}</span>
+          </div>
           <div className="truncate text-sm text-slate-500">{c.intitule_poste ?? "Poste non renseigné"} · <span className="font-mono">{c.trigramme}</span></div>
           <div className="mt-0.5 text-xs text-slate-500">Disponibilité : {c.disponible_le ? new Date(c.disponible_le).toLocaleDateString("fr-FR") : c.disponibilite ?? "non renseignée"}</div>
         </div>

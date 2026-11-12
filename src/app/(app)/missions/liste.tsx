@@ -29,10 +29,10 @@ export default function ListeMissions({ missions, titre, responsables, estAdmin,
     <section className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-bold text-nuit">{titre} <span className="font-semibold text-slate-400">({visibles.length})</span></h2>
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="relative">
+        <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto">
+          <label className="relative min-w-0 flex-1 sm:flex-none">
             <IconeRecherche className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input value={texte} onChange={(e) => setTexte(e.target.value)} placeholder="Intitulé, client, lieu, responsable" className="champ w-72 max-w-full pl-9" />
+            <input value={texte} onChange={(e) => setTexte(e.target.value)} placeholder="Intitulé, client, lieu, responsable" className="champ w-full pl-9 sm:w-72" />
           </label>
           <div className="flex rounded-full bg-slate-100/90 p-1 text-sm font-semibold">
             <Link href={lienVue.miennes} className={`rounded-full px-3.5 py-1 transition ${miennes ? "bg-white text-nuit shadow-sm" : "text-slate-500 hover:text-nuit"}`}>Mes missions</Link>

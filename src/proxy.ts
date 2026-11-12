@@ -5,7 +5,7 @@ import { COOKIE_ACTIVITE, sessionExpiree } from "@/lib/securite/session";
 
 /** Pages accessibles sans être connecté. */
 // /api/cron/ : tâches planifiées, protégées par CRON_SECRET (pas de session utilisateur).
-const PAGES_PUBLIQUES = ["/connexion", "/desinscription/", "/auth/", "/api/cron/"];
+const PAGES_PUBLIQUES = ["/connexion", "/desinscription/", "/auth/", "/api/cron/", "/manifest.webmanifest"];
 
 /**
  * Exécuté avant chaque page : rafraîchit la session Supabase et renvoie vers

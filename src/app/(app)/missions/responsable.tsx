@@ -35,7 +35,7 @@ export default function ChoixResponsable({ missionId, responsableId, responsable
         <option value="">À assigner</option>
         {responsables.map((r) => <option key={r.id} value={r.id}>{r.nom}</option>)}
       </select>
-      <span className="w-20 text-xs" aria-live="polite">
+      <span className="text-xs empty:hidden" aria-live="polite">
         {enCours ? <span className="text-slate-400">Enregistrement…</span>
           : etat === "ok" ? <span className="font-medium text-emerald-600">Enregistré ✓</span>
           : etat === "erreur" ? <span className="text-red-700">Échec</span> : null}

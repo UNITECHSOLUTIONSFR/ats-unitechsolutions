@@ -32,6 +32,7 @@ export default function Recherche({ recents }: { recents: ResultatRecherche[] })
   const [tri, setTri] = useState<keyof typeof TRIS>("recent");
   const [nbAffiches, setNbAffiches] = useState(PAR_PAGE);
   const [ficheOuverte, setFicheOuverte] = useState<string | null>(null);
+  const [filtresOuverts, setFiltresOuverts] = useState(false); // téléphone : filtres repliés
   const fil = useRef<HTMLDivElement>(null);
 
   useEffect(() => { fil.current?.scrollTo({ top: fil.current.scrollHeight, behavior: "smooth" }); }, [messages, enCours]);
@@ -98,7 +99,7 @@ export default function Recherche({ recents }: { recents: ResultatRecherche[] })
           <span className="text-slate-400" aria-hidden>🔎</span>
           <textarea value={saisie} onChange={(e) => setSaisie(e.target.value)} rows={1} maxLength={2000}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); envoyer(saisie); } }}
-            placeholder={messages.length ? "Affinez : « sans Kubernetes », « 8 ans minimum », « mobile sur Lyon »…" : "Décrivez le profil : « un DevOps, 5-6 ans, Jenkins et Kubernetes, mobile sur Paris »"}
+            placeholder={messages.length ? "Affinez la recherche…" : "Décrivez le profil recherché…"}
             className="max-h-32 min-h-[2.5rem] flex-1 resize-none bg-transparent px-1 py-2 text-[15px] text-nuit outline-none placeholder:text-slate-400" />
           <button disabled={enCours || !saisie.trim()} className="bouton-primaire shrink-0">{enCours ? "…" : "Rechercher"}</button>
         </form>
@@ -117,9 +118,12 @@ export default function Recherche({ recents }: { recents: ResultatRecherche[] })
       {criteres && <BarreCriteres criteres={criteres} onChange={modifier} desactive={enCours} texteMission={messages.filter((m) => m.de === "moi").map((m) => m.texte).join("\n")} />}
 
       {(
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[17rem_minmax(0,1fr)] [&>*]:min-w-0">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-5 [&>*]:min-w-0">
           {/* Filtres */}
-          <aside className="carte h-fit space-y-5 p-5 text-sm lg:sticky lg:top-4">
+          <button type="button" onClick={() => setFiltresOuverts(!filtresOuverts)} className="bouton-secondaire w-full justify-center py-2.5 lg:hidden">
+            {filtresOuverts ? "Masquer les filtres" : `Filtres${nbFiltres ? ` (${nbFiltres})` : ""}`}
+          </button>
+          <aside className={`carte h-fit space-y-5 p-5 text-sm lg:sticky lg:top-4 lg:block ${filtresOuverts ? "block" : "hidden"}`}>
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold text-nuit">Filtres</h2>
               {nbFiltres > 0 && <button onClick={() => setFiltres(FILTRES_INITIAUX)} className="lien text-sm">Réinitialiser</button>}

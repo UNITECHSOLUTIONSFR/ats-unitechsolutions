@@ -9,7 +9,7 @@ export default function FormulaireAjout() {
     <form action={action} className="mt-3 flex flex-wrap items-end gap-3 text-sm">
       <label className="flex flex-col">
         <span className="text-zinc-600">Email professionnel</span>
-        <input name="email" type="email" required className="mt-1 w-72 champ" />
+        <input name="email" type="email" required className="mt-1 w-full max-w-72 champ" />
       </label>
       <label className="flex flex-col">
         <span className="text-zinc-600">Nom affiché</span>

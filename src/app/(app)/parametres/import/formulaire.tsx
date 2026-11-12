@@ -30,7 +30,7 @@ export default function FormulaireImport() {
           type="file"
           accept=".xlsx"
           onChange={(e) => { fichier.current = e.target.files?.[0] ?? null; setNom(fichier.current?.name ?? null); }}
-          className="text-sm"
+          className="w-full min-w-0 text-sm sm:w-auto"
         />
         <button type="button" disabled={!nom || enCours} onClick={() => envoyer(false)}
           className="bouton-primaire">

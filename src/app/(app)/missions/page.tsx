@@ -43,9 +43,9 @@ export default async function Missions({ searchParams }: { searchParams: Promise
       </div>
 
       {/* Onglets par statut */}
-      <nav className="flex gap-6 border-b border-slate-200/80">
+      <nav className="-mx-3 flex gap-5 overflow-x-auto border-b border-slate-200/80 px-3 sm:mx-0 sm:gap-6 sm:px-0">
         {ONGLETS.map(([s, libelle], i) => (
-          <Link key={s} href={lien(s, vue)} className={`-mb-px flex items-center gap-2 border-b-2 px-1 pb-3 text-[15px] font-semibold transition ${s === statut ? "border-marque-600 text-nuit" : "border-transparent text-slate-500 hover:text-nuit"}`}>
+          <Link key={s} href={lien(s, vue)} className={`-mb-px flex shrink-0 items-center gap-2 border-b-2 px-1 pb-3 text-[15px] font-semibold transition ${s === statut ? "border-marque-600 text-nuit" : "border-transparent text-slate-500 hover:text-nuit"}`}>
             {libelle}
             <span className={`rounded-md px-1.5 py-0.5 text-xs font-bold ${s === statut ? "bg-marque-50 text-marque-700" : "bg-slate-100 text-slate-500"}`}>{nombres[i]}</span>
           </Link>

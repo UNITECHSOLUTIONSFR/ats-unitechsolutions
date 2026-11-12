@@ -29,7 +29,7 @@ export default async function BilanAdmin() {
         </span>
       </div>
 
-      <div className="mt-4 grid gap-6 lg:grid-cols-3">
+      <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-3 [&>*]:min-w-0">
         {/* Tâches automatiques */}
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Tâches automatiques</h3>
@@ -37,7 +37,7 @@ export default async function BilanAdmin() {
             {b.taches.map((t) => (
               <li key={t.nom} className="flex items-center justify-between gap-2">
                 <span className="min-w-0">
-                  <span className="block truncate text-slate-700">{t.libelle}</span>
+                  <span className="block text-slate-700">{t.libelle}</span>
                   <span className="text-xs text-slate-400">{t.derniereReussite ? `Réussie ${quand(t.derniereReussite)}` : "Jamais réussie"}</span>
                 </span>
                 <span className={`${ETATS[t.etat].classe} shrink-0`}>{ETATS[t.etat].icone} {ETATS[t.etat].texte}</span>
@@ -99,7 +99,7 @@ export function PastilleEcheance({ e }: { e: Echeance }) {
 function Chiffre({ valeur, libelle }: { valeur: number; libelle: string }) {
   return (
     <div className="rounded-xl bg-white/60 px-2 py-2 ring-1 ring-white/80">
-      <div className="text-lg font-bold tabular-nums text-nuit">{valeur.toFixed(2)} $</div>
+      <div className="text-base font-bold tabular-nums text-nuit sm:text-lg">{valeur.toFixed(2)} $</div>
       <div className="text-[11px] text-slate-500">{libelle}</div>
     </div>
   );
