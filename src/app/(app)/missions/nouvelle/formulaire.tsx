@@ -67,8 +67,8 @@ function Etape2({ brouillon }: { brouillon: BrouillonMission }) {
 
       <div className="carte space-y-4 p-6">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h3 className="font-semibold text-nuit">Compétences demandées</h3>
-          <span className="text-xs text-slate-500">{competences.length} compétence(s) · {obligatoires} obligatoire(s) · 4 au plus conseillées</span>
+          <h3 className="font-semibold text-nuit">Le besoin en bref</h3>
+          <span className="text-xs text-slate-500">{obligatoires} indispensable(s) · {competences.length - obligatoires} dans l&apos;environnement</span>
         </div>
         <CarteExigences
           items={competences.map((c, i) => ({ cle: String(i), nom: c.nom, obligatoire: c.obligatoire, importance: c.importance, detail: c.annees_min ? `${c.annees_min} an(s) minimum` : undefined }))}

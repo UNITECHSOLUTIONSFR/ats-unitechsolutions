@@ -11,6 +11,7 @@ import { modifierCellules } from "@/lib/tableau/actions";
 import { classePastille } from "@/lib/statuts";
 import PanneauFiche, { prechargerFiche } from "./panneau-fiche";
 import { TexteSurligne, type ExtraitCV } from "./texte-surligne";
+import { BoutonWhatsApp } from "../whatsapp";
 import { IconeCopier, IconeCrayon, IconeExport, IconeFiche, IconeFiltre, IconeImport, IconePlus, IconeRecherche } from "../icones";
 
 const PAR_PAGE = 100;
@@ -253,7 +254,12 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
                     {parLeCV.has(l.id) && <span className="rounded-md bg-violet-50 px-1.5 py-0.5 font-bold text-violet-700">mot dans le CV</span>}
                   </div>
                 </div>
-                {tel && <a href={`tel:${tel}`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-lg text-emerald-700 ring-1 ring-emerald-200" aria-label={`Appeler ${nom}`}>☎</a>}
+                {tel && (
+                  <div className="flex shrink-0 gap-2">
+                    <BoutonWhatsApp telephone={tel} prenom={v("prenom")} libelle="" className="flex h-11 w-11 items-center justify-center rounded-full bg-[#25D366] text-white shadow-sm [&>svg]:h-5 [&>svg]:w-5" />
+                    <a href={`tel:${tel}`} className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-50 text-lg text-emerald-700 ring-1 ring-emerald-200" aria-label={`Appeler ${nom}`}>☎</a>
+                  </div>
+                )}
               </div>
               {extrait && <p className="mt-2 text-xs text-slate-500"><TexteSurligne texte={extrait.extrait} /></p>}
             </li>

@@ -177,3 +177,8 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Fait : barre d'onglets en bas, menu plein écran, encoche et barre système respectées, installation sur l'écran d'accueil (manifeste, icônes), écrans adaptés (consultants en fiches avec appel, mission avec score visible et compétences repliées, recherche avec filtres repliés), iPhone sans zoom à la saisie ; exigences « Obligatoires / Souhaitées » expliquées ; matching contextuel mémorisé (≈ 2 s par mission).
 - Testé : 29 écrans sur 6 appareils (iPhone SE, 15, 15 Pro Max, Pixel 7, Galaxy S8, iPad Mini), plus aucun débordement ; 180 tests.
 - À décider : LinkedIn (lien sur la fiche + import du PDF exporté depuis LinkedIn, ≈ 0,005 $ par profil).
+
+### 12/11/2026 (nuit, fin) — WhatsApp, besoin en bref, avis IA, sécurité
+- Fait : bouton WhatsApp partout où l'on peut appeler (wa.me, message pré-rempli, aucune connexion) ; « Le besoin en bref » (indispensables + environnement technique) à la création et sur la mission ; « ✨ Avis IA » sur demande par consultant (Haiku, ≈ 0,1 centime, gardé en base) ; revue de sécurité (28 tables sous RLS, droits des fonctions resserrés, uuid corrigé : 0 faille connue) ; route d'essai CV Unitech supprimée ; LinkedIn abandonné (RGPD, conditions de LinkedIn).
+- Testé : 182 tests (dont 26 règles d'accès), export Excel, captures ordinateur et téléphone.
+- Suite : uniquement les actions de l'utilisatrice (A_FAIRE_14H.md), puis invitation des collaborateurs.

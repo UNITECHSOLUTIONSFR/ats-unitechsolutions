@@ -153,6 +153,12 @@ describe("règles d'accès", () => {
     await commeUtilisateur(RECRUTEUR, "select * from rechercher_dans_cv_extraits('java')");
   });
 
+  it("avis IA : lus par l'équipe, jamais par un visiteur", async () => {
+    await expect(commeUtilisateur(null, "select * from avis_ia")).rejects.toThrow(/permission denied/);
+    expect(await commeUtilisateur(INACTIF, "select * from avis_ia")).toEqual([]);
+    await commeUtilisateur(RECRUTEUR, "select * from avis_ia");
+  });
+
   it("le journal d'accès est réservé aux administrateurs", async () => {
     await commeUtilisateur(RECRUTEUR, `insert into journal_acces (utilisateur_id, action) values ($1,'consultation')`, [RECRUTEUR]);
     await expect(commeUtilisateur(RECRUTEUR, `insert into journal_acces (utilisateur_id, action) values ($1,'export')`, [ADMIN])).rejects.toThrow();

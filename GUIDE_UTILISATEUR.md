@@ -18,9 +18,9 @@ Menu **Recherche** : décrivez le profil comme à un collègue (« un DevOps, 5-
 
 ## Trouver des consultants pour une mission
 1. **+ Nouvelle mission** → importez la fiche du client (PDF ou Word) **ou** collez son texte → « Lire la fiche et pré-remplir ».
-2. Vérifiez les champs (client, poste, lieu, démarrage, expérience) et les compétences : un clic rend une compétence **obligatoire** (foncée) ou **souhaitée** (claire) ; ✕ la retire ; vous pouvez en ajouter.
+2. Vérifiez les champs (client, poste, lieu, démarrage, expérience) et **le besoin en bref** : les **indispensables** (4 au plus ; sans elles, le profil est écarté) et l'**environnement technique** (un plus pour le score). Toucher une compétence la fait passer de l'un à l'autre ; ✕ la retire.
 3. « Créer la mission » : les consultants s'affichent **classés par score sur 100**, avec l'évaluation critère par critère (✓ / ◐ / ✕).
-4. Pour chaque consultant : appeler, écrire, CV Word, PDF anonymisé, et **suivi** : Proposé → Appelé → Envoyé au client → Retenu / Refusé.
+4. Pour chaque consultant : appeler, **WhatsApp**, écrire, CV Word, PDF anonymisé, **✨ Avis IA** (lecture de la fiche de poste et du CV : verdict, points forts, points à vérifier, questions d'entretien ; ≈ 0,1 centime, gardé ensuite) et **suivi** : Proposé → Appelé → Envoyé au client → Retenu / Refusé.
 5. **Préparer l'envoi au client** : un texte prêt à copier avec les profils anonymes (trigramme), leur disponibilité et le lien du PDF anonymisé. Les administrateurs peuvent **exporter le classement en Excel**.
 
 Le score est une aide : c'est vous qui décidez. La personne qui crée une mission en est responsable ; un administrateur peut la réassigner.
@@ -28,7 +28,7 @@ Le score est une aide : c'est vous qui décidez. La personne qui crée une missi
 ## Consultants
 - La recherche porte sur **toutes les colonnes**, les **compétences** et **le texte complet des CV** (« java paris », « kafka », « SNCF »).
 - **Filtres rapides** : Disponibles maintenant · Dispo à vérifier (> 3 mois) · Ajoutés cette semaine · CV analysé. Onglets par **domaine**.
-- **Clic sur une ligne** : la fiche s'ouvre à droite. **Word** = CV dans SharePoint, **CV reçu** = pièce jointe d'une candidature email (copiée dans SharePoint), **PDF** = CV anonymisé. Un badge « mot dans le CV » signale un résultat trouvé seulement dans le texte du CV (décochez « Chercher aussi dans les CV » pour l'exclure).
+- **Clic sur une ligne** : la fiche s'ouvre à droite. **WhatsApp** = ouvre la conversation sur votre WhatsApp (application ou WhatsApp Web, rien à configurer), **Word** = CV dans SharePoint, **CV reçu** = pièce jointe d'une candidature email (copiée dans SharePoint), **PDF** = CV anonymisé. Un badge « mot dans le CV » signale un résultat trouvé seulement dans le texte du CV (décochez « Chercher aussi dans les CV » pour l'exclure).
 - **Double-clic sur une cellule** pour la modifier ; cochez plusieurs lignes pour modifier une colonne d'un coup ou copier les emails.
 - **+** (en haut à droite) : nouveau consultant, nouvelle mission, export et import Excel (administrateurs).
 - La fiche complète montre l'**historique** (modifications, emails, missions, CV) sur une frise.

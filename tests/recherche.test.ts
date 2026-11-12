@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { SchemaCriteresRecherche } from "@/lib/ai/schemas";
+import { SchemaAvisMission, SchemaCriteresRecherche } from "@/lib/ai/schemas";
 import { compatibiliteLieu, motifsPoste, motsSignificatifs } from "@/lib/recherche/moteur";
 import { filtrer } from "@/app/(app)/recherche/recherche";
 import type { ResultatRecherche } from "@/lib/recherche/moteur";
@@ -9,6 +9,7 @@ import type { ResultatRecherche } from "@/lib/recherche/moteur";
 describe("recherche en conversation", () => {
   it("le format de réponse demandé à l'IA est valide", () => {
     expect(() => zodOutputFormat(SchemaCriteresRecherche)).not.toThrow();
+    expect(() => zodOutputFormat(SchemaAvisMission)).not.toThrow();
     const ok = SchemaCriteresRecherche.safeParse({ poste: "DevOps", competences: [{ nom: "Jenkins", obligatoire: true }], annees_min: 5, annees_max: 6, seniorite: null, lieu: "Paris", mots_cles: [], reponse: "OK" });
     expect(ok.success).toBe(true);
   });

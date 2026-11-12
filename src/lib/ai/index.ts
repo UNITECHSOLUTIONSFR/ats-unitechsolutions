@@ -8,7 +8,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
 import { LONGUEUR_MAX_TEXTE, MAX_TOKENS, MODELES, estimerCoutUSD } from "./config";
-import { CONSIGNES_ADEQUATION, CONSIGNES_CV_UNITECH, CONSIGNES_MISSION, CONSIGNES_PROFIL_CV, CONSIGNES_RECHERCHE, CONSIGNES_REPONSE_DISPO } from "./consignes";
+import { CONSIGNES_ADEQUATION, CONSIGNES_AVIS_MISSION, CONSIGNES_CV_UNITECH, CONSIGNES_MISSION, CONSIGNES_PROFIL_CV, CONSIGNES_RECHERCHE, CONSIGNES_REPONSE_DISPO } from "./consignes";
 import {
   PROMPT_VERSION,
   SchemaExigencesMission,
@@ -17,6 +17,7 @@ import {
   SchemaCVUnitech,
   SchemaAdequation,
   SchemaCriteresRecherche,
+  SchemaAvisMission,
   borner,
   bornerMission,
   ficheCVValide,
@@ -26,13 +27,14 @@ import {
   type CVStructure,
   type Adequation,
   type CriteresRecherche,
+  type AvisMission,
 } from "./schemas";
 
 export { PROMPT_VERSION };
-export type { ExigencesMission, ProfilCV, ReponseDisponibilite, CVStructure, Adequation, CriteresRecherche };
+export type { ExigencesMission, ProfilCV, ReponseDisponibilite, CVStructure, Adequation, CriteresRecherche, AvisMission };
 
 export interface UsageIA {
-  usage: "fiche_cv" | "mission" | "tri_email" | "analyse_approfondie" | "reponse_disponibilite" | "lecture_scan" | "cv_unitech" | "adequation" | "recherche";
+  usage: "fiche_cv" | "mission" | "tri_email" | "analyse_approfondie" | "reponse_disponibilite" | "lecture_scan" | "cv_unitech" | "adequation" | "recherche" | "avis_mission";
   modele: string;
   mode: "standard" | "batch";
   tokens_entree: number;
@@ -263,5 +265,17 @@ export async function lireRecherche(message: string, criteresActuels: Omit<Crite
   return {
     donnees: { ...d, competences: d.competences.slice(0, 12), mots_cles: d.mots_cles.slice(0, 5) },
     modele: MODELES.recherche, promptVersion: PROMPT_VERSION, usages: [r.usage],
+  };
+}
+
+/** Avis contextuel (sur demande) : la fiche de poste et le CV, lus ensemble. Court et sans rien inventer. */
+export async function donnerAvisMission(ficheDePoste: string, cv: string): Promise<ResultatIA<AvisMission>> {
+  const texte = `FICHE DE POSTE :\n${ficheDePoste.slice(0, 8000)}\n\nCV DU CONSULTANT :\n${cv.slice(0, 14000)}`;
+  const r = await appeler(MODELES.avisMission, CONSIGNES_AVIS_MISSION, SchemaAvisMission, texte, MAX_TOKENS.avisMission, "avis_mission");
+  if (!r.donnees) throw Object.assign(new ErreurIA("Avis impossible à rédiger."), { usages: [r.usage] });
+  const d = r.donnees;
+  return {
+    donnees: { ...d, points_forts: d.points_forts.slice(0, 3), manques: d.manques.slice(0, 3), questions: d.questions.slice(0, 2) },
+    modele: MODELES.avisMission, promptVersion: PROMPT_VERSION, usages: [r.usage],
   };
 }

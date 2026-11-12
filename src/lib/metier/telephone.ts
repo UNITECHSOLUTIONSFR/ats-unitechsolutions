@@ -51,3 +51,15 @@ export function formaterTelephone(e164: string | null | undefined): string {
   if (!m) return e164;
   return `0${m[1]}`.replace(/(\d{2})(?=\d)/g, "$1 ");
 }
+
+/**
+ * Lien WhatsApp vers un numéro (application sur téléphone, WhatsApp Web sur ordinateur), message de départ pré-rempli.
+ * Aucune connexion à configurer : c'est le WhatsApp de la personne qui clique qui s'ouvre.
+ */
+export function lienWhatsApp(telephone: string | null | undefined, prenom?: string | null): string | null {
+  if (!telephone) return null;
+  const e164 = telephone.startsWith("+") ? telephone.replace(/[^\d+]/g, "") : normaliserTelephone(telephone).e164;
+  if (!e164 || !/^\+\d{8,15}$/.test(e164)) return null;
+  const bonjour = prenom && prenom !== "—" ? `Bonjour ${prenom}, ` : "Bonjour, ";
+  return `https://wa.me/${e164.slice(1)}?text=${encodeURIComponent(`${bonjour}je suis du recrutement d'Unitech Solutions.`)}`;
+}

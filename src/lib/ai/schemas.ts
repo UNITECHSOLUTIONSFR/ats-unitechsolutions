@@ -119,3 +119,13 @@ export const SchemaCriteresRecherche = z.object({
   reponse: z.string(),
 });
 export type CriteresRecherche = z.infer<typeof SchemaCriteresRecherche>;
+
+/** Avis de l'IA : adéquation d'un consultant à une mission, lu dans la fiche de poste et le CV. */
+export const SchemaAvisMission = z.object({
+  verdict: z.enum(["fort", "moyen", "faible"]),
+  resume: z.string(),
+  points_forts: z.array(z.string()),
+  manques: z.array(z.string()),
+  questions: z.array(z.string()),
+});
+export type AvisMission = z.infer<typeof SchemaAvisMission>;

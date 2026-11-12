@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BoutonWhatsApp } from "../../whatsapp";
 import { notFound } from "next/navigation";
 import { exigerUtilisateur, journaliser } from "@/lib/acces";
 import { formaterTelephone } from "@/lib/metier/telephone";
@@ -59,8 +60,9 @@ export default async function FicheConsultant({ params }: { params: Promise<{ id
               </span>
             </div>
           </div>
-          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
+          <div className="grid w-full grid-cols-3 gap-2 sm:flex sm:w-auto sm:flex-wrap">
             {c.telephone_e164 && <a href={`tel:${c.telephone_e164}`} className="flex min-h-11 items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-nuit shadow-md hover:shadow-lg">☎ <span className="ml-1 sm:hidden">Appeler</span><span className="ml-1 hidden sm:inline">{formaterTelephone(c.telephone_e164)}</span></a>}
+            <BoutonWhatsApp telephone={c.telephone_e164} prenom={c.prenom} className="flex min-h-11 items-center justify-center gap-1.5 rounded-full bg-[#25D366] px-4 py-2 text-sm font-semibold text-white shadow-md hover:brightness-95" />
             {c.email && <a href={`mailto:${c.email}`} className="flex min-h-11 items-center justify-center rounded-full bg-white/15 px-4 py-2 text-sm font-semibold ring-1 ring-white/30 hover:bg-white/25">✉ Email</a>}
           </div>
         </div>

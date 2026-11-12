@@ -6,6 +6,8 @@ import type { FicheResume } from "@/lib/consultants/fiche";
 import { suivreProposition } from "@/lib/missions/actions";
 import { ajouterNote } from "@/lib/consultants/actions";
 import { classePastille } from "@/lib/statuts";
+import { lienWhatsApp } from "@/lib/metier/telephone";
+import { IconeWhatsApp } from "../whatsapp";
 
 const ALERTES: Record<string, string> = {
   doublon_possible: "Doublon possible", telephone_invalide: "Téléphone à vérifier", nom_manquant: "Nom manquant",
@@ -76,8 +78,9 @@ export default function PanneauFiche({ id, onFermer }: { id: string; onFermer: (
         {fiche && (
           <div className="flex-1 space-y-4 overflow-y-auto p-4 text-sm">
             {/* Actions rapides */}
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-5 gap-1.5">
               <Action href={fiche.telephone ? `tel:${fiche.telephone.replace(/\s/g, "")}` : undefined} libelle="Appeler" icone="☎" />
+              <Action href={lienWhatsApp(fiche.telephone, fiche.prenom) ?? undefined} libelle="WhatsApp" icone={<IconeWhatsApp className="h-4 w-4 text-[#25D366]" />} externe />
               <Action href={fiche.email ? `mailto:${fiche.email}` : undefined} libelle="Écrire" icone="@" />
               {word || !email
                 ? <Action href={word?.url ?? undefined} libelle="CV Word" icone="W" externe />
@@ -170,7 +173,7 @@ export default function PanneauFiche({ id, onFermer }: { id: string; onFermer: (
   );
 }
 
-function Action({ href, libelle, icone, externe }: { href?: string; libelle: string; icone: string; externe?: boolean }) {
+function Action({ href, libelle, icone, externe }: { href?: string; libelle: string; icone: React.ReactNode; externe?: boolean }) {
   const classe = "flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2.5 text-[11px] font-semibold ring-1 transition";
   if (!href) return <span className={`${classe} cursor-not-allowed bg-white/40 text-slate-300 ring-white/60`}><span className="text-base leading-none">{icone}</span>{libelle}</span>;
   return (

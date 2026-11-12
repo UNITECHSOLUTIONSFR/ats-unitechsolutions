@@ -7,6 +7,7 @@ import type { Criteres, ResultatRecherche } from "@/lib/recherche/moteur";
 import { formaterTelephone } from "@/lib/metier/telephone";
 import PanneauFiche, { prechargerFiche } from "../consultants/panneau-fiche";
 import { TexteSurligne } from "../consultants/texte-surligne";
+import { BoutonWhatsApp } from "../whatsapp";
 
 const EXEMPLES = [
   "Je cherche un DevOps, 5-6 ans d'expérience, qui maîtrise Jenkins et Kubernetes, mobile sur Paris",
@@ -294,6 +295,7 @@ function Carte({ r, lieu, avecScore, onOuvrir }: { r: ResultatRecherche; lieu: s
         {r.word_url && <a href={r.word_url} target="_blank" rel="noreferrer" className="bouton-secondaire text-xs">CV Word</a>}
         {r.pdf_url && <a href={r.pdf_url} target="_blank" rel="noreferrer" className="bouton-secondaire text-xs">PDF anonymisé</a>}
         {tel && <a href={`tel:${r.telephone}`} className="bouton-secondaire text-xs">☎ {tel}</a>}
+        <BoutonWhatsApp telephone={r.telephone} prenom={r.prenom} />
         {r.email && <a href={`mailto:${r.email}`} className="bouton-secondaire text-xs">@ Écrire</a>}
       </div>
     </article>

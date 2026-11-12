@@ -14,6 +14,7 @@ export const MODELES = {
   cvUnitech: "claude-haiku-5-5", // réécriture d'un CV dans le modèle Unitech
   adequation: "claude-haiku-5-5", // section « Adéquation à la mission »
   recherche: "claude-haiku-5-5", // section « Recherche » : phrase du recruteur → critères
+  avisMission: "claude-haiku-5-5", // « Avis IA » sur un consultant pour une mission (sur demande)
 } as const;
 
 export const MAX_TOKENS = {
@@ -26,6 +27,7 @@ export const MAX_TOKENS = {
   cvUnitech: 8000,
   adequation: 1200,
   recherche: 700,
+  avisMission: 700,
 } as const;
 
 /** Texte envoyé à l'IA tronqué à cette longueur (règle 4 du brief). */

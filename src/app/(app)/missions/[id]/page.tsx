@@ -8,6 +8,9 @@ import ChoixResponsable from "../responsable";
 import Shortlist, { type ProfilShortlist } from "./shortlist";
 import BoutonCVMission from "./cv-mission";
 import Exigences from "./exigences";
+import { BoutonWhatsApp } from "../../whatsapp";
+import AvisIA from "./avis-ia";
+import type { AvisMission } from "@/lib/ai";
 
 // Génération des CV Unitech (IA + SharePoint) depuis cet écran : jusqu'à 2 minutes.
 export const maxDuration = 120;
@@ -28,12 +31,14 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
     .maybeSingle();
   if (!mission) notFound();
 
-  const [classement, { data: propositions }, responsables, { data: cvMission }] = await Promise.all([
+  const [classement, { data: propositions }, responsables, { data: cvMission }, { data: avisExistants }] = await Promise.all([
     classementMission(supabase, id),
     supabase.from("propositions").select("consultant_id, statut").eq("mission_id", id),
     responsablesPossibles(supabase),
     supabase.from("cv_unitech_generes").select("consultant_id, word_url, pdf_url, created_at").eq("mission_id", id).order("created_at", { ascending: false }),
+    supabase.from("avis_ia").select("consultant_id, contenu").eq("mission_id", id),
   ]);
+  const avisParConsultant = new Map((avisExistants ?? []).map((a) => [a.consultant_id as string, a.contenu as AvisMission]));
   // Dernier CV Unitech généré pour cette mission, par consultant : rouvert sans nouvelle génération.
   const cvParConsultant = new Map<string, { word: string; pdf: string }>();
   for (const g of cvMission ?? []) if (!cvParConsultant.has(g.consultant_id)) cvParConsultant.set(g.consultant_id, { word: g.word_url, pdf: g.pdf_url });
@@ -97,7 +102,7 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
         </div>
 
         {classement.map((c, i) => (
-          <CarteCandidat key={c.consultant_id} rang={i + 1} c={c} missionId={id} statut={suivi.get(c.consultant_id)} ouvert={i < 3} cv={cvParConsultant.get(c.consultant_id)} />
+          <CarteCandidat key={c.consultant_id} rang={i + 1} c={c} missionId={id} statut={suivi.get(c.consultant_id)} ouvert={i < 3} cv={cvParConsultant.get(c.consultant_id)} avis={avisParConsultant.get(c.consultant_id)} />
         ))}
         {!classement.length && (
           <div className="carte p-8 text-center text-sm text-slate-500">
@@ -121,8 +126,8 @@ function niveau(score: number) {
 }
 
 /** Un consultant classé : identité, actions, puis l'explication du score critère par critère. */
-function CarteCandidat({ rang, c, missionId, statut, ouvert, cv }: {
-  rang: number; c: LigneClassement; missionId: string; statut?: string; ouvert: boolean; cv?: { word: string; pdf: string };
+function CarteCandidat({ rang, c, missionId, statut, ouvert, cv, avis }: {
+  rang: number; c: LigneClassement; missionId: string; statut?: string; ouvert: boolean; cv?: { word: string; pdf: string }; avis?: AvisMission;
 }) {
   const n = niveau(c.resultat.score);
   const initiales = `${c.prenom?.[0] ?? ""}${c.nom?.[0] ?? ""}`.replace("—", "").toUpperCase() || "?";
@@ -145,6 +150,8 @@ function CarteCandidat({ rang, c, missionId, statut, ouvert, cv }: {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {c.telephone_e164 && <a href={`tel:${c.telephone_e164}`} className={action} title={formaterTelephone(c.telephone_e164)}>☎ {formaterTelephone(c.telephone_e164)}</a>}
+          <AvisIA missionId={missionId} consultantId={c.consultant_id} initial={avis} />
+          <BoutonWhatsApp telephone={c.telephone_e164} prenom={c.prenom} className="flex h-10 items-center gap-1.5 rounded-full bg-[#25D366] px-3 text-xs font-semibold text-white shadow-sm hover:brightness-95 sm:h-9" />
           {c.email && <a href={`mailto:${c.email}`} className={action}>✉ Email</a>}
           {c.word_url && <a href={c.word_url} target="_blank" rel="noreferrer" className={action}>CV Word</a>}
           {c.pdf_anonyme_url

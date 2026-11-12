@@ -11,7 +11,6 @@ export interface Exigence { competence_id: string; nom: string; obligatoire: boo
 export default function Exigences({ missionId, exigences, texteBesoin }: { missionId: string; exigences: Exigence[]; texteBesoin: string | null }) {
   const [liste, setListe] = useState(exigences);
   const [ajout, setAjout] = useState("");
-  const [deplie, setDeplie] = useState(false); // téléphone : replié par défaut, les consultants d'abord
   const [enCours, demarrer] = useTransition();
   const routeur = useRouter();
   const modifier = (id: string, action: "obligatoire" | "importance" | "retirer", valeur?: string) => {
@@ -29,18 +28,9 @@ export default function Exigences({ missionId, exigences, texteBesoin }: { missi
   return (
     <section className="carte p-4 sm:p-6">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-lg font-bold tracking-tight text-nuit">Compétences demandées</h2>
+        <h2 className="text-lg font-bold tracking-tight text-nuit">Le besoin en bref</h2>
         <p className="text-sm text-slate-500">{enCours ? "Recalcul du classement…" : "Chaque changement recalcule le classement."}</p>
       </div>
-      {/* Téléphone : résumé sur une ligne, détail sur demande */}
-      <div className="lg:hidden">
-        <p className="text-sm text-slate-600">
-          <b className="text-rose-700">{liste.filter((e) => e.obligatoire).length} obligatoire(s)</b> : {liste.filter((e) => e.obligatoire).map((e) => e.nom).join(", ") || "aucune"}
-          {" · "}<b className="text-marque-700">{liste.filter((e) => !e.obligatoire).length} souhaitée(s)</b>
-        </p>
-        <button type="button" onClick={() => setDeplie(!deplie)} className="bouton-secondaire mt-2">{deplie ? "Replier" : "Modifier les compétences"}</button>
-      </div>
-      <div className={`${deplie ? "mt-4 block" : "hidden"} lg:mt-0 lg:block`}>
       <CarteExigences
         items={liste.map((e) => ({
           cle: e.competence_id, nom: e.nom, obligatoire: e.obligatoire, importance: e.importance, alerte: e.profils === 0,
@@ -51,7 +41,7 @@ export default function Exigences({ missionId, exigences, texteBesoin }: { missi
         onImportance={(id, n) => modifier(id, "importance", String(n))} />
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <form onSubmit={(e) => { e.preventDefault(); ajouter(); }} className="flex w-full gap-2 sm:w-auto">
-          <input value={ajout} onChange={(e) => setAjout(e.target.value)} placeholder="Ajouter une compétence" className="champ min-w-0 flex-1 sm:w-56" />
+          <input value={ajout} onChange={(e) => setAjout(e.target.value)} placeholder="+ Ajouter une compétence" className="champ min-w-0 flex-1 sm:w-56" />
           <button disabled={!ajout.trim() || enCours} className="bouton-secondaire">Ajouter</button>
         </form>
         {texteBesoin && (
@@ -60,7 +50,6 @@ export default function Exigences({ missionId, exigences, texteBesoin }: { missi
             <pre className="mt-2 max-h-80 overflow-y-auto whitespace-pre-wrap rounded-xl bg-white/70 p-3 font-sans text-slate-700 ring-1 ring-slate-100">{texteBesoin}</pre>
           </details>
         )}
-      </div>
       </div>
     </section>
   );

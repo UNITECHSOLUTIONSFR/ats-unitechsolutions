@@ -16,3 +16,13 @@ describe("rapprochement des CV SharePoint", () => {
     expect(nomsCompatibles("Ghilain LECOUTURIER", "Gautier LEFEVRE")).toBe(false);
   });
 });
+
+import { lienWhatsApp } from "@/lib/metier/telephone";
+describe("WhatsApp", () => {
+  it("lien vers le numéro international, message pré-rempli", () => {
+    expect(lienWhatsApp("+33612345678", "Marie")).toBe("https://wa.me/33612345678?text=" + encodeURIComponent("Bonjour Marie, je suis du recrutement d'Unitech Solutions."));
+    expect(lienWhatsApp("06 12 34 56 78")).toMatch(/^https:\/\/wa\.me\/33612345678\?/);
+    expect(lienWhatsApp("abc")).toBeNull();
+    expect(lienWhatsApp(null)).toBeNull();
+  });
+});
