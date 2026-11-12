@@ -35,7 +35,7 @@ export default async function FicheConsultant({ params, searchParams }: { params
   const [evenements, { data: missionsOuvertes }, { data: cvGeneres }] = await Promise.all([
     frise(supabase, id, c.created_at, c.source),
     supabase.from("missions").select("id, intitule, client").eq("statut", "ouverte").order("created_at", { ascending: false }),
-    supabase.from("cv_unitech_generes").select("id, created_at, word_nom, word_url, pdf_nom, pdf_url, missions(intitule, client)").eq("consultant_id", id).order("created_at", { ascending: false }).limit(10),
+    supabase.from("cv_unitech_generes").select("id, created_at, word_nom, word_url, pdf_nom, pdf_url, pdf_genere_le, dossier, missions(intitule, client)").eq("consultant_id", id).order("created_at", { ascending: false }).limit(10),
     journaliser(supabase, utilisateur.id, "consultation", id),
   ]);
 
@@ -195,7 +195,7 @@ export default async function FicheConsultant({ params, searchParams }: { params
         </form>
           <BlocCVUnitech consultantId={c.id} missions={missionsOuvertes ?? []} generes={(cvGeneres ?? []).map((g) => {
             const m = g.missions as unknown as { intitule: string; client: string | null } | null;
-            return { id: g.id, date: g.created_at, mission: m ? `${m.intitule}${m.client ? ` · ${m.client}` : ""}` : null, word: { nom: g.word_nom, url: g.word_url }, pdf: { nom: g.pdf_nom, url: g.pdf_url } };
+            return { id: g.id, date: g.created_at, mission: m ? `${m.intitule}${m.client ? ` · ${m.client}` : ""}` : null, dossier: g.dossier, word: { nom: g.word_nom, url: g.word_url }, pdf: g.pdf_url ? { nom: g.pdf_nom ?? "", url: g.pdf_url } : null, pdfLe: g.pdf_genere_le };
           })} />
           {utilisateur.role === "admin" && <BlocRGPD id={c.id} trigramme={c.trigramme} />}
         </div>

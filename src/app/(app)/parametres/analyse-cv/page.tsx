@@ -38,14 +38,14 @@ export default async function AnalyseCV() {
       <form action={changerDepotCVUnitech} className="carte flex flex-wrap items-center justify-between gap-4 p-5 text-sm">
         <input type="hidden" name="actif" value={depotMetier ? "0" : "1"} />
         <div className="min-w-0 flex-1">
-          <div className="font-semibold text-nuit">CV Unitech (Word + PDF anonymisé)</div>
+          <div className="font-semibold text-nuit">CV Unitech automatiques pour les candidatures email</div>
           <p className="text-slate-500">
             {depotMetier
-              ? "Les CV générés sont déposés dans le dossier métier de SharePoint, et les CV reçus par email sont traités chaque nuit."
-              : "Mode essai : les CV générés vont dans « Sauvegardes ATS / Essais CV Unitech - version 2 ». Validez le rendu, puis activez le dépôt."}
+              ? "Actif : chaque nuit, les CV reçus par email reçoivent leur Word et leur PDF Unitech, dans le dossier métier de SharePoint."
+              : "Inactif : les CV Unitech se génèrent à la demande (fiche ou mission), toujours dans le dossier métier. Activez pour traiter aussi les candidatures email chaque nuit."}
           </p>
         </div>
-        <button className={depotMetier ? "bouton-secondaire" : "bouton-primaire"}>{depotMetier ? "Revenir au mode essai" : "Activer le dépôt dans les dossiers métier"}</button>
+        <button className={depotMetier ? "bouton-secondaire" : "bouton-primaire"}>{depotMetier ? "Désactiver" : "Activer chaque nuit"}</button>
       </form>
     </div>
   );

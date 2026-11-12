@@ -6,7 +6,7 @@ import { envoiActif } from "@/lib/relance/modele";
 import { envoyerLot } from "@/lib/relance/envoi";
 import { synchroniserCV } from "./cv";
 import { reprendreIllisibles } from "@/lib/analyse-cv/illisibles";
-import { deposerCVEmails } from "@/lib/cv-unitech/service";
+import { actualiserPDFUnitech, deposerCVEmails } from "@/lib/cv-unitech/service";
 import { sauvegarderDansSharePoint } from "./sauvegarde";
 import { synchroniserExcel } from "./excel";
 
@@ -64,7 +64,9 @@ export async function executerTache(nom: NomTache, supabase: SupabaseClient, opt
       const envoi = await envoyerAnalyse(supabase);
       // CV reçus par email : Word et PDF Unitech déposés dans SharePoint (une fois le rendu validé).
       const cvUnitech = await deposerCVEmails(supabase).catch((e) => ({ erreur: (e as Error).message }));
-      rapport = { synchro, illisibles, cvUnitech, resultatsAnalyse: resultats.message ?? resultats.erreur, envoiAnalyse: envoi.message ?? envoi.erreur };
+      // Word Unitech corrigés dans SharePoint depuis leur dernier PDF : PDF mis à jour.
+      const pdfUnitech = await actualiserPDFUnitech(supabase).catch((e) => ({ erreur: (e as Error).message }));
+      rapport = { synchro, illisibles, cvUnitech, pdfUnitech, resultatsAnalyse: resultats.message ?? resultats.erreur, envoiAnalyse: envoi.message ?? envoi.erreur };
     }
     if (nom === "emails") rapport = { ...(await traiterEmails(supabase)) };
     if (nom === "sauvegarde") rapport = { ...(await sauvegarderDansSharePoint(supabase)) };

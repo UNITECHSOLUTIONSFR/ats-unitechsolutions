@@ -35,13 +35,13 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
     classementMission(supabase, id),
     supabase.from("propositions").select("consultant_id, statut").eq("mission_id", id),
     responsablesPossibles(supabase),
-    supabase.from("cv_unitech_generes").select("consultant_id, word_url, pdf_url, created_at").eq("mission_id", id).order("created_at", { ascending: false }),
+    supabase.from("cv_unitech_generes").select("id, consultant_id, word_url, pdf_url, created_at").eq("mission_id", id).order("created_at", { ascending: false }),
     supabase.from("avis_ia").select("consultant_id, contenu").eq("mission_id", id),
   ]);
   const avisParConsultant = new Map((avisExistants ?? []).map((a) => [a.consultant_id as string, a.contenu as AvisMission]));
   // Dernier CV Unitech généré pour cette mission, par consultant : rouvert sans nouvelle génération.
-  const cvParConsultant = new Map<string, { word: string; pdf: string }>();
-  for (const g of cvMission ?? []) if (!cvParConsultant.has(g.consultant_id)) cvParConsultant.set(g.consultant_id, { word: g.word_url, pdf: g.pdf_url });
+  const cvParConsultant = new Map<string, { id: string; word: string; pdf: string | null }>();
+  for (const g of cvMission ?? []) if (!cvParConsultant.has(g.consultant_id)) cvParConsultant.set(g.consultant_id, { id: g.id, word: g.word_url, pdf: g.pdf_url });
   const suivi = new Map((propositions ?? []).map((p) => [p.consultant_id, p.statut as string]));
   const shortlist: ProfilShortlist[] = classement.filter((c) => suivi.has(c.consultant_id) && suivi.get(c.consultant_id) !== "refuse").map((c) => ({
     trigramme: c.trigramme, poste: c.intitule_poste, annees: c.annees_experience, score: Math.round(c.resultat.score),
@@ -127,7 +127,7 @@ function niveau(score: number) {
 
 /** Un consultant classé : identité, actions, puis l'explication du score critère par critère. */
 function CarteCandidat({ rang, c, missionId, statut, ouvert, cv, avis }: {
-  rang: number; c: LigneClassement; missionId: string; statut?: string; ouvert: boolean; cv?: { word: string; pdf: string }; avis?: AvisMission;
+  rang: number; c: LigneClassement; missionId: string; statut?: string; ouvert: boolean; cv?: { id: string; word: string; pdf: string | null }; avis?: AvisMission;
 }) {
   const n = niveau(c.resultat.score);
   const initiales = `${c.prenom?.[0] ?? ""}${c.nom?.[0] ?? ""}`.replace("—", "").toUpperCase() || "?";
@@ -157,12 +157,7 @@ function CarteCandidat({ rang, c, missionId, statut, ouvert, cv, avis }: {
           {c.pdf_anonyme_url
             ? <a href={c.pdf_anonyme_url} target="_blank" rel="noreferrer" className={action}>PDF anonymisé</a>
             : <span className="pastille pastille-orange">PDF anonymisé manquant</span>}
-          {cv ? (
-            <>
-              <a href={cv.word} target="_blank" rel="noreferrer" className={action}>Word Unitech</a>
-              <a href={cv.pdf} target="_blank" rel="noreferrer" className={action}>PDF Unitech</a>
-            </>
-          ) : <BoutonCVMission consultantId={c.consultant_id} missionId={missionId} />}
+          <BoutonCVMission consultantId={c.consultant_id} missionId={missionId} existant={cv} />
           <form action={suivreProposition} className="flex items-center gap-1 rounded-full bg-white/70 p-1 ring-1 ring-white/80">
             <input type="hidden" name="mission_id" value={missionId} />
             <input type="hidden" name="consultant_id" value={c.consultant_id} />
