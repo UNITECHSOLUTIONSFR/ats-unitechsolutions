@@ -3,11 +3,25 @@
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 
 export default function PageConnexion() {
   const [email, setEmail] = useState("");
   const [motDePasse, setMotDePasse] = useState("");
-  const [etat, setEtat] = useState<"saisie" | "envoi" | "refuse" | "erreur">("saisie");
+  const [etat, setEtat] = useState<"saisie" | "envoi" | "refuse" | "erreur" | "oubli" | "oubli_envoye">("saisie");
+  const [ouvert, setOuvert] = useState(false);
+
+  /** Mot de passe oublié : lien par email vers le choix d'un nouveau mot de passe (fonctionne sur n'importe quel appareil). */
+  async function oubli(e: React.FormEvent) {
+    e.preventDefault();
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const cle = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!url || !cle) return;
+    setEtat("envoi");
+    const client = createClient(url, cle, { auth: { flowType: "implicit", persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
+    await client.auth.resetPasswordForEmail(email.trim().toLowerCase(), { redirectTo: `${window.location.origin}/mot-de-passe` });
+    setEtat("oubli_envoye"); // même message que l'adresse existe ou non
+  }
 
   async function seConnecter(e: React.FormEvent) {
     e.preventDefault();
@@ -34,7 +48,10 @@ export default function PageConnexion() {
             <img src="/logo-unitech-symbole.png" alt="" className="h-9 w-9 rounded-xl bg-white object-contain p-1 shadow-sm ring-1 ring-slate-200/70" />
             <span className="text-[17px] font-bold tracking-tight text-nuit">Unitech <span className="font-medium text-marque-500">Recrutement</span></span>
           </div>
-          <span className="hidden text-sm text-slate-500 sm:block">Outil interne · accès sur invitation</span>
+          <div className="flex items-center gap-4">
+            <span className="hidden text-sm text-slate-500 md:block">Outil interne · accès sur invitation</span>
+            <button type="button" onClick={() => { setEtat("saisie"); setOuvert(true); }} className="bouton-primaire px-5 py-2.5">Se connecter</button>
+          </div>
         </div>
       </header>
 
@@ -53,23 +70,54 @@ export default function PageConnexion() {
 
           <div className="mt-8 max-w-md">
             <Suspense fallback={null}><MessageSession /></Suspense>
-            <form onSubmit={seConnecter} className="carte space-y-3 p-5">
-              <label className="block text-sm font-medium text-nuit">Email professionnel
-                <input type="email" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)}
-                  placeholder="prenom.nom@unitechsolutions.fr" className="champ mt-1 w-full py-3" />
-              </label>
-              <label className="block text-sm font-medium text-nuit">Mot de passe
-                <input type="password" required autoComplete="current-password" value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)}
-                  className="champ mt-1 w-full py-3" />
-              </label>
-              {etat === "refuse" && <p className="text-sm text-red-700">Email ou mot de passe incorrect.</p>}
-              {etat === "erreur" && <p className="text-sm text-red-700">L&apos;application n&apos;est pas encore reliée à sa base de données.</p>}
-              <button type="submit" disabled={etat === "envoi"} className="bouton-primaire w-full justify-center py-3 text-base">
-                {etat === "envoi" ? "Connexion…" : "Se connecter"}
-              </button>
-            </form>
-            <p className="mt-3 px-2 text-sm text-slate-500">Mot de passe oublié ou premier accès : demandez à un administrateur un mot de passe provisoire.</p>
+            <button type="button" onClick={() => { setEtat("saisie"); setOuvert(true); }} className="bouton-primaire px-7 py-3.5 text-base">Se connecter →</button>
+            <p className="mt-3 text-sm text-slate-500">Email professionnel et mot de passe. Premier accès : mot de passe provisoire donné par un administrateur.</p>
           </div>
+
+          {ouvert && (
+            <div className="fixed inset-0 z-50 flex items-end justify-center bg-nuit/30 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setOuvert(false)}>
+              <div className="w-full max-w-md rounded-t-[1.75rem] bg-white p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-[1.75rem] sm:p-8" onClick={(e) => e.stopPropagation()}>
+                <div className="mb-5 flex items-start justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold text-nuit">{etat === "oubli" || etat === "oubli_envoye" ? "Mot de passe oublié" : "Connexion"}</h2>
+                    <p className="text-sm text-slate-500">Unitech Recrutement</p>
+                  </div>
+                  <button type="button" onClick={() => setOuvert(false)} className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-nuit" aria-label="Fermer">✕</button>
+                </div>
+                {etat === "oubli_envoye" ? (
+                  <div className="space-y-3 text-sm text-slate-700">
+                    <p>Si cette adresse a un accès, un email vient de partir avec un lien pour choisir un nouveau mot de passe (valable 1 heure, à ouvrir sur n&apos;importe quel appareil). Pensez aux courriers indésirables.</p>
+                    <button type="button" onClick={() => setEtat("saisie")} className="lien">Revenir à la connexion</button>
+                  </div>
+                ) : etat === "oubli" ? (
+                  <form onSubmit={oubli} className="space-y-3">
+                    <label className="block text-sm font-medium text-nuit">Email professionnel
+                      <input type="email" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} className="champ mt-1 w-full !border-slate-300 !bg-slate-50 py-3" autoFocus />
+                    </label>
+                    <button type="submit" className="bouton-primaire w-full justify-center py-3 text-base">Recevoir le lien</button>
+                    <button type="button" onClick={() => setEtat("saisie")} className="lien block text-sm">Revenir à la connexion</button>
+                  </form>
+                ) : (
+                  <form onSubmit={seConnecter} className="space-y-3">
+                    <label className="block text-sm font-medium text-nuit">Email professionnel
+                      <input type="email" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)}
+                        placeholder="prenom.nom@unitechsolutions.fr" className="champ mt-1 w-full !border-slate-300 !bg-slate-50 py-3" autoFocus />
+                    </label>
+                    <label className="block text-sm font-medium text-nuit">Mot de passe
+                      <input type="password" required autoComplete="current-password" value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)}
+                        className="champ mt-1 w-full !border-slate-300 !bg-slate-50 py-3" />
+                    </label>
+                    {etat === "refuse" && <p className="text-sm text-red-700">Email ou mot de passe incorrect.</p>}
+                    {etat === "erreur" && <p className="text-sm text-red-700">L&apos;application n&apos;est pas encore reliée à sa base de données.</p>}
+                    <button type="submit" disabled={etat === "envoi"} className="bouton-primaire w-full justify-center py-3 text-base">
+                      {etat === "envoi" ? "Connexion…" : "Se connecter"}
+                    </button>
+                    <button type="button" onClick={() => setEtat("oubli")} className="lien block text-sm">Mot de passe oublié ?</button>
+                  </form>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="mt-12 flex flex-wrap gap-x-10 gap-y-4 border-t border-slate-200/70 pt-6">
             <Atout titre="Vivier" texte="Excel, CV et emails réunis" />

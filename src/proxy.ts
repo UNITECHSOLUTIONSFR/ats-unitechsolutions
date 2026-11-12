@@ -5,7 +5,8 @@ import { COOKIE_ACTIVITE, sessionExpiree } from "@/lib/securite/session";
 
 /** Pages accessibles sans être connecté. */
 // /api/cron/ : tâches planifiées, protégées par CRON_SECRET (pas de session utilisateur).
-const PAGES_PUBLIQUES = ["/connexion", "/desinscription/", "/auth/", "/api/cron/", "/manifest.webmanifest"];
+// /mot-de-passe : ouverte depuis le lien « mot de passe oublié » (la session arrive avec le lien) ; sans session, rien n'y est modifiable.
+const PAGES_PUBLIQUES = ["/connexion", "/desinscription/", "/auth/", "/api/cron/", "/manifest.webmanifest", "/mot-de-passe"];
 
 /**
  * Exécuté avant chaque page : rafraîchit la session Supabase et renvoie vers

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { motDePasseChoisi } from "@/lib/utilisateurs/actions";
 
@@ -9,6 +9,20 @@ export default function ChoixMotDePasse() {
   const [mdp, setMdp] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [etat, setEtat] = useState<{ enCours?: boolean; erreur?: string }>({});
+  // Lien « mot de passe oublié » reçu par email : la session arrive dans l'adresse (après #) et est enregistrée ici.
+  useEffect(() => {
+    const fragment = new URLSearchParams(window.location.hash.slice(1));
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const cle = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (fragment.get("error")) {
+      queueMicrotask(() => setEtat({ erreur: "Ce lien a expiré ou a déjà été utilisé. Redemandez-en un depuis la page de connexion (« Mot de passe oublié ? »)." }));
+      return;
+    }
+    const access = fragment.get("access_token"), refresh = fragment.get("refresh_token");
+    if (!url || !cle || !access || !refresh) return;
+    createBrowserClient(url, cle).auth.setSession({ access_token: access, refresh_token: refresh })
+      .then(({ error }) => { if (error) setEtat({ erreur: "Ce lien n'est plus valable : redemandez-en un." }); else history.replaceState(null, "", "/mot-de-passe"); });
+  }, []);
   const robuste = mdp.length >= 10 && /[a-zA-Z]/.test(mdp) && /\d/.test(mdp);
 
   async function enregistrer(e: React.FormEvent) {
@@ -21,12 +35,12 @@ export default function ChoixMotDePasse() {
     setEtat({ enCours: true });
     const supabase = createBrowserClient(url, cle);
     const { error } = await supabase.auth.updateUser({ password: mdp });
-    if (error) return setEtat({ erreur: error.message.includes("different") ? "Choisissez un mot de passe différent du provisoire." : "Enregistrement impossible : réessayez." });
+    if (error) return setEtat({ erreur: error.message.includes("different") ? "Choisissez un mot de passe différent de l'ancien." : /session/i.test(error.message) ? "Session absente : reconnectez-vous, ou redemandez un lien « Mot de passe oublié ? »." : "Enregistrement impossible : réessayez." });
     await motDePasseChoisi();
     await supabase.auth.refreshSession(); // la session ne porte plus la mention « provisoire »
     // Rechargement complet voulu : la nouvelle session (cookies) est lue par le serveur.
     // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-    window.location.assign("/");
+    window.location.assign("/auth/entree");
   }
 
   return (
