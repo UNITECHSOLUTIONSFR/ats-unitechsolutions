@@ -20,8 +20,8 @@ const METIERS: [RegExp, string][] = [
   [/data scientist|machine learning|\bml\b|\bia\b|intelligence artificielle/, "Data Scientist"], [/data|bi\b|business intelligence|etl/, "Data engineer BI"],
   [/business analyst|\bba\b|product owner|\bpo\b|amoa|moa/, "Business Analyst"], [/chef de projet|project manager|directeur de projet/, "Chef de projet"],
   [/pmo/, "PMO & Change Manager"], [/test|qa|recette|qualite logicielle/, "QA"], [/scrum master|coach agile|agile coach/, "Coach Agile"],
-  [/rssi|cyber|securite|soc\b|pentest/, "Cybersécurité"], [/reseau|systeme|infrastructure|cloud|admin sys/, "Infrastructure & Cloud"],
-  [/salesforce/, "SALESFORCE"], [/sap/, "SAP"], [/tech lead|lead tech/, "Tech Lead"], [/support|helpdesk|service desk/, "Support"],
+  [/rssi|cyber|securite|soc\b|pentest/, "Cyber secu"], [/reseau|systeme|infrastructure|cloud|admin sys/, "Infra et secu"],
+  [/salesforce/, "SALESFORCE"], [/sap/, "SAP"], [/tech lead|lead tech/, "Tech Lead"], [/support|helpdesk|service desk/, "Analyste Support"],
 ];
 const SENIORITE = /\b(senior|junior|confirme|confirmee|expert|experte|sr|jr|lead)\b/g;
 

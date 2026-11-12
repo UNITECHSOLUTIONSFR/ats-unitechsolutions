@@ -85,7 +85,9 @@ export default function PanneauFiche({ id, onFermer }: { id: string; onFermer: (
               {word || !email
                 ? <Action href={word?.url ?? undefined} libelle="CV Word" icone="W" externe />
                 : <Action href={email.url ?? undefined} libelle="CV reçu" icone="CV" externe />}
-              <Action href={pdf?.url ?? undefined} libelle="PDF anonyme" icone="PDF" externe />
+              {fiche.cvUnitech
+                ? <Action href={fiche.cvUnitech.url} libelle={fiche.cvUnitech.pdf ? "CV Unitech" : "Word Unitech"} icone={fiche.cvUnitech.pdf ? "PDF" : "W"} externe />
+                : <Action href={pdf?.url ?? undefined} libelle="PDF anonyme" icone="PDF" externe />}
             </div>
 
             {fiche.alertes.length > 0 && (
@@ -109,7 +111,7 @@ export default function PanneauFiche({ id, onFermer }: { id: string; onFermer: (
                 {fiche.disponibilite_maj_le ? `Mise à jour le ${new Date(fiche.disponibilite_maj_le).toLocaleDateString("fr-FR")}` : "Jamais mise à jour"}
                 {ancienne && " — à vérifier"}
               </p>
-              {!pdf && <span className="pastille pastille-orange mt-1">PDF anonymisé manquant</span>}
+              {!pdf && !fiche.cvUnitech && <span className="pastille pastille-orange mt-1">PDF anonymisé manquant</span>}
             </Bloc>
 
             <Bloc titre="Profil">

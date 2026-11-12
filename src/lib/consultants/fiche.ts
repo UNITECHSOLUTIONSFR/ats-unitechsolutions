@@ -25,6 +25,8 @@ export interface FicheResume {
   competences: { nom: string; annees: number | null }[];
   /** type « email » : CV reçu par email (le lien ouvre l'email dans Outlook). */
   documents: { type: string; nom: string; url: string | null }[];
+  /** CV Unitech le plus récent : PDF s'il a été produit, sinon Word. */
+  cvUnitech: { url: string; pdf: boolean } | null;
   propositions: { mission_id: string; mission: string; statut: string; score: number | null }[];
   alertes: string[];
   /** Missions ouvertes sur lesquelles il n'est pas encore proposé (bouton « Proposer sur une mission »). */
@@ -36,7 +38,7 @@ export interface FicheResume {
 /** Fiche complète d'un consultant, pour le panneau latéral de l'écran Consultants (servie par /api/fiche/[id]). La consultation est journalisée. */
 export async function chargerFiche(supabase: SupabaseClient, utilisateurId: string | null, id: string): Promise<FicheResume | null> {
   // Toutes les lectures en même temps.
-  const [{ data: c }, { data: profil }, { data: comp }, { data: docs }, { data: props }, { data: alertes }, { data: ouvertes }, { data: notes }] = await Promise.all([
+  const [{ data: c }, { data: profil }, { data: comp }, { data: docs }, { data: props }, { data: alertes }, { data: ouvertes }, { data: notes }, { data: unitech }] = await Promise.all([
     supabase.from("consultants").select("*").eq("id", id).maybeSingle(),
     supabase.from("profils").select("resume, annees_experience, seniorite").eq("consultant_id", id).maybeSingle(),
     supabase.from("consultant_competences").select("annees, competences(nom_canonique)").eq("consultant_id", id).order("annees", { ascending: false, nullsFirst: false }),
@@ -45,6 +47,7 @@ export async function chargerFiche(supabase: SupabaseClient, utilisateurId: stri
     supabase.from("alertes").select("type").eq("consultant_id", id).eq("statut", "ouverte"),
     supabase.from("missions").select("id, intitule, client").eq("statut", "ouverte").order("created_at", { ascending: false }),
     supabase.from("notes_consultant").select("id, texte, created_at, auteur").eq("consultant_id", id).order("created_at", { ascending: false }).limit(30),
+    supabase.from("cv_unitech_generes").select("word_url, pdf_url").eq("consultant_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
   // Noms des auteurs (un recruteur ne lit pas la table des utilisateurs : liste des personnes invitées).
   const { data: personnes } = notes?.length ? await supabase.rpc("responsables_possibles") : { data: [] };
@@ -59,6 +62,7 @@ export async function chargerFiche(supabase: SupabaseClient, utilisateurId: stri
     disponibilite_maj_le: c.disponibilite_maj_le, linkedin: c.linkedin, notes: c.notes,
     resume: profil?.resume ?? null, annees_experience: profil?.annees_experience ?? null, seniorite: profil?.seniorite ?? null,
     competences: (comp ?? []).map((k) => ({ nom: (k.competences as unknown as { nom_canonique: string } | null)?.nom_canonique ?? "?", annees: k.annees })),
+    cvUnitech: unitech ? { url: (unitech.pdf_url ?? unitech.word_url) as string, pdf: !!unitech.pdf_url } : null,
     documents: (docs ?? []).filter((d) => !String(d.sharepoint_drive_id).startsWith("boite:") || d.url_web?.includes("sharepoint.com"))
       .map((d) => ({ type: String(d.sharepoint_drive_id).startsWith("boite:") ? "email" : d.type, nom: d.nom_fichier, url: d.url_web })),
     propositions: (props ?? []).map((p) => ({

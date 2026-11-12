@@ -41,6 +41,7 @@ export default async function FicheConsultant({ params, searchParams }: { params
 
   const { majDispo, dispoAncienne } = etatDisponibilite(c.disponibilite_maj_le);
   const pdf = (documents ?? []).find((d) => d.type === "pdf_anonyme");
+  const cvUnitech = (cvGeneres ?? [])[0] as { pdf_url: string | null; pdf_nom: string | null; word_url: string; word_nom: string } | undefined;
 
   return (
     <div className="space-y-6">
@@ -117,7 +118,15 @@ export default async function FicheConsultant({ params, searchParams }: { params
 
           <div className="carte p-6">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Documents (SharePoint)</h2>
-            {!pdf && <p className="mt-2 text-sm text-amber-700">PDF anonymisé manquant</p>}
+            {/* CV Unitech le plus récent : le PDF s'il existe, sinon le Word ; « manquant » seulement s'il n'y a rien. */}
+            {cvUnitech ? (
+              <p className="mt-2 text-sm">
+                <span className="text-slate-500">CV Unitech : </span>
+                <a href={cvUnitech.pdf_url ?? cvUnitech.word_url} target="_blank" rel="noreferrer" className="lien font-semibold">
+                  {cvUnitech.pdf_url ? `PDF · ${cvUnitech.pdf_nom ?? "CV Unitech"}` : `Word · ${cvUnitech.word_nom}`}
+                </a>
+              </p>
+            ) : !pdf && <p className="mt-2 text-sm text-amber-700">PDF anonymisé manquant</p>}
             <ul className="mt-2 space-y-1 text-sm">
               {(documents ?? []).map((d) => (
                 <li key={d.id}>
