@@ -58,7 +58,11 @@ export async function traiterEmails(supabase: SupabaseClient, options: { depuisJ
 }
 
 /** Où le CV reste stocké (pas d'écriture SharePoint en V1) : la boîte ATS ou le groupe recrutement. */
-export interface OrigineCV { driveId: string }
+export interface OrigineCV {
+  driveId: string;
+  /** Faux : le fichier n'est pas déposé dans SharePoint (reprise d'une boîte personnelle) ; la fiche affiche le texte du CV. */
+  deposer?: boolean;
+}
 
 /**
  * Traite un email (boîte ATS ou message du groupe recrutement) et le note dans emails_entrants.
@@ -187,7 +191,7 @@ export async function traiterCandidature(
   }).select("id").single();
   if (doc) {
     // Le fichier reçu est rangé dans SharePoint : la fiche ouvre le vrai CV (et plus l'email).
-    await deposerCVRecu(supabase, doc.id, contenu, pj.name, { prenom, nom }, m.receivedDateTime).catch(() => undefined);
+    if (origine.deposer !== false) await deposerCVRecu(supabase, doc.id, contenu, pj.name, { prenom, nom }, m.receivedDateTime).catch(() => undefined);
     const correspondance = await resoudreCompetences(supabase, p.competences.map((c) => c.nom));
     await enregistrerProfil(supabase, consultantId as string, doc.id, p, r.modele ?? MODELES.ficheCV, correspondance);
   }
