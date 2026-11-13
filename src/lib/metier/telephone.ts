@@ -18,8 +18,15 @@ export interface ResultatTelephone {
 const NEUF_CHIFFRES_FR = /^[1-9]\d{8}$/;
 
 export function normaliserTelephone(valeur: unknown): ResultatTelephone {
-  const brut = valeur === null || valeur === undefined ? "" : String(valeur).trim();
-  if (brut === "") return { e164: null, brut, statut: "vide" };
+  // Caractères invisibles collés depuis Outlook ou un téléphone (marques de direction, espaces insécables).
+  const brut = valeur === null || valeur === undefined ? "" : String(valeur).replace(/[\u200B-\u200F\u202A-\u202E\u2060\uFEFF]/g, "").replace(/\u00A0/g, " ").trim();
+  // Valeurs de remplissage (« X », « / », « Non disponible », « LinkedIn »…) : pas de numéro, rien à signaler.
+  if (brut === "" || /^[\s/_x.-]*$/i.test(brut) || /^(non disponible|n\/?a|contact linkedin|linkedin|aucun)$/i.test(brut)) return { e164: null, brut, statut: "vide" };
+  // Deux numéros « 06… / 07… » : on garde le premier (la valeur brute reste conservée).
+  if (/\d.*\s\/\s*[+\d]/.test(brut)) {
+    const premier = normaliserTelephone(brut.split("/")[0]);
+    if (premier.e164) return { ...premier, brut, statut: "corrige" };
+  }
 
   // Excel peut renvoyer un nombre : « 612345678 » ou « 612345678.0 »
   let s = brut.replace(/\.0+$/, "");
