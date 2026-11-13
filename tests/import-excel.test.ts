@@ -34,7 +34,7 @@ describe("import Excel", () => {
     expect(rapport.fichesRetenues).toBe(6);
     expect(rapport.rejets).toEqual([{ ligne: 5, raison: "nom manquant (importée avec alerte)", valeurs: { "Prénom": "Sans", "Téléphone": "0611111111" } }]);
     expect(rapport.telephonesCorriges).toEqual([{ ligne: 2, avant: "612345678", apres: "+33612345678" }]);
-    expect(rapport.telephonesInvalides).toEqual([{ ligne: 6, valeur: "+44 20 7946 0958" }]);
+    expect(rapport.telephonesInvalides).toEqual([]); // numéro étranger accepté (décision du 13/11/2026)
     expect(rapport.emailsInvalides).toEqual([{ ligne: 6, valeur: "pas-un-email" }]);
     expect(rapport.doublonsFusionnes).toEqual([{ lignes: [2, 4], cle: "email:jean.dupont@ex.fr" }]);
     expect(rapport.doublonsPossibles).toEqual([{ lignes: [3, 7], nom: "eloise gerard" }]);
@@ -46,7 +46,7 @@ describe("import Excel", () => {
     const eloise = fiches.find((f) => f.email === "eloise@ex.fr")!;
     expect(eloise).toMatchObject({ trigramme: "EGE", disponible_le: "2027-03-01", telephone_e164: "+33698765432" });
     const john = fiches.find((f) => f.nom === "Smith")!;
-    expect(john).toMatchObject({ trigramme: "JSX", telephone_e164: null, telephone_brut: "+44 20 7946 0958", email: null });
+    expect(john).toMatchObject({ trigramme: "JSX", telephone_e164: "+442079460958", telephone_brut: null, email: null });
     expect(fiches.find((f) => f.nom === "Le Goff")!.trigramme).toBe("YLE");
     // Rien n'est perdu : colonne inconnue et lignes fusionnées conservées
     expect(jean.donnees_excel.map((d) => d.ligne)).toEqual([2, 4]);

@@ -4,7 +4,8 @@
  *  2. 10 chiffres commençant par 0 : le 0 devient +33.
  *  3. Déjà en +33 ou 0033 (ou « 33 » suivi de 9 chiffres, le « + » perdu) : on harmonise.
  *     Une lettre « O » tapée à la place du zéro est corrigée (décision du 10/11/2026, à confirmer).
- *  4. Tout autre cas : on garde la valeur brute et on la signale. On ne devine pas.
+ *  4. Numéro étranger avec indicatif (+216…, ou 216… sans « + ») : gardé au format international.
+ *  5. Tout autre cas : on garde la valeur brute et on la signale. On ne devine pas.
  */
 
 export type StatutTelephone = "vide" | "valide" | "corrige" | "invalide";
@@ -44,10 +45,14 @@ export function normaliserTelephone(valeur: unknown): ResultatTelephone {
     return fr(reste, "valide");
   }
   if (s.startsWith("0033")) return fr(s.slice(4), "valide");
+  if (/^00[1-9]\d{7,14}$/.test(s)) return { e164: `+${s.slice(2)}`, brut, statut: "corrige" }; // 00221… = +221…
+  if (/^\+[1-9]\d{7,14}$/.test(s)) return { e164: s, brut, statut: "valide" }; // numéro étranger déjà au format international
   if (!/^\d+$/.test(s)) return { e164: null, brut, statut: "invalide" };
   if (s.length === 10 && s.startsWith("0")) return fr(s.slice(1), "valide");
   if (s.length === 9 && /^[1-79]/.test(s)) return fr(s, "corrige");
   if (s.length === 11 && s.startsWith("33") && /^[1-9]/.test(s.slice(2))) return fr(s.slice(2), "corrige"); // 33612345678 (« + » perdu)
+  // Numéro étranger avec indicatif, « + » perdu (216 23 214 674 → +21623214674 ; décision du 13/11/2026).
+  if (/^[1-9]\d{10,13}$/.test(s) && !s.startsWith("33")) return { e164: `+${s}`, brut, statut: "corrige" };
   return { e164: null, brut, statut: "invalide" };
 }
 

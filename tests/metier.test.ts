@@ -27,7 +27,7 @@ describe("téléphones", () => {
     expect(r.statut).toBe(statut);
   });
 
-  it.each(["812345678", "+44 20 7946 0958", "12345", "06123456789", "abc", "+32 470 12 34 56"])(
+  it.each(["812345678", "12345", "06123456789", "abc"])(
     "%s reste brut et est signalé",
     (entree) => {
       const r = normaliserTelephone(entree);
