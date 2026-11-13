@@ -61,11 +61,11 @@ export async function MissionsPourLui({ consultantId }: { consultantId: string }
       <p className="mt-0.5 text-xs text-slate-500">Missions en cours où il obtient au moins 50/100. Touchez une mission pour voir l&apos;évaluation.</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {liste.map((e) => {
-          const n = niveauScore(e.ligne.resultat.score);
+          const n = niveauScore(e.score);
           return (
             <Link key={e.mission.id} href={`/consultants/${consultantId}?mission=${e.mission.id}`}
               className={`inline-flex max-w-full items-center gap-2 rounded-full py-1 pl-1 pr-3.5 text-sm font-semibold ring-1 transition hover:-translate-y-0.5 ${n.fond} ${n.anneau}`}>
-              <span className="flex h-8 min-w-8 items-center justify-center rounded-full bg-white px-1 text-sm font-extrabold tabular-nums shadow-sm" style={{ color: n.couleur }}>{Math.round(e.ligne.resultat.score)}</span>
+              <span className="flex h-8 min-w-8 items-center justify-center rounded-full bg-white px-1 text-sm font-extrabold tabular-nums shadow-sm" style={{ color: n.couleur }}>{Math.round(e.score)}</span>
               <span className="min-w-0 truncate text-nuit">{e.mission.intitule}{e.mission.client ? <span className="font-normal text-slate-500"> · {e.mission.client}</span> : null}</span>
             </Link>
           );

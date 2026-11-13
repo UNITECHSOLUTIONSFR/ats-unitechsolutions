@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { exigerUtilisateur } from "@/lib/acces";
-import { classementMission, type LigneClassement } from "@/lib/matching/classement";
+import type { LigneClassement } from "@/lib/matching/classement";
+import { classementEnCache } from "@/lib/matching/cache";
 import { formaterTelephone } from "@/lib/metier/telephone";
 import { responsablesPossibles } from "@/lib/missions/responsables";
 import ChoixResponsable from "../responsable";
@@ -32,13 +33,14 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
     .maybeSingle();
   if (!mission) notFound();
 
-  const [classement, { data: propositions }, responsables, { data: cvMission }, { data: avisExistants }] = await Promise.all([
-    classementMission(supabase, id, 5000), // tout le classement pour le nombre de profils pertinents ; 50 cartes affichées
+  const [resume, { data: propositions }, responsables, { data: cvMission }, { data: avisExistants }] = await Promise.all([
+    classementEnCache(id), // gardé en mémoire : recalculé quand la mission change, sinon toutes les 15 minutes
     supabase.from("propositions").select("consultant_id, statut").eq("mission_id", id),
     responsablesPossibles(supabase),
     supabase.from("cv_unitech_generes").select("id, consultant_id, word_url, pdf_url, created_at").eq("mission_id", id).order("created_at", { ascending: false }),
     supabase.from("avis_ia").select("consultant_id, contenu").eq("mission_id", id),
   ]);
+  const classement = resume.top;
   const avisParConsultant = new Map((avisExistants ?? []).map((a) => [a.consultant_id as string, a.contenu as AvisMission]));
   // Dernier CV Unitech généré pour cette mission, par consultant : rouvert sans nouvelle génération.
   const cvParConsultant = new Map<string, { id: string; word: string; pdf: string | null }>();
@@ -92,9 +94,9 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
         <div className="carte flex flex-wrap items-center justify-between gap-4 p-5">
           <div>
             <h2 className="text-lg font-bold tracking-tight text-nuit">
-              {classement.filter((c) => !c.resultat.elimine && c.resultat.score >= 60).length} profil(s) pertinent(s) pour cette mission
+              {resume.pertinents} profil(s) pertinent(s) pour cette mission
             </h2>
-            <p className="sous-titre">Les 50 premiers sur {classement.length.toLocaleString("fr-FR")} consultant(s) classé(s) · le score est une aide à la décision, jamais un refus automatique.</p>
+            <p className="sous-titre">Les 50 premiers sur {resume.total.toLocaleString("fr-FR")} consultant(s) classé(s) · le score est une aide à la décision, jamais un refus automatique.</p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
             <span className="pastille pastille-vert">75 et plus : très bonne adéquation</span>

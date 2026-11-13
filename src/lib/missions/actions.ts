@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { invaliderClassement } from "@/lib/matching/cache";
 import { exigerUtilisateur } from "@/lib/acces";
 import { exigerAdmin } from "@/lib/acces-admin";
 import { extraireExigencesMission, ErreurIA, type UsageIA } from "@/lib/ai";
@@ -127,6 +128,7 @@ export async function modifierExigence(formData: FormData) {
     const importance = Math.min(3, Math.max(1, Number(formData.get("valeur"))));
     await supabase.from("mission_competences").update({ importance }).match({ mission_id: missionId, competence_id: competenceId });
   }
+  invaliderClassement(missionId);
   revalidatePath(`/missions/${missionId}`);
 }
 
@@ -136,6 +138,7 @@ export async function changerStatutMission(formData: FormData) {
   const statut = String(formData.get("statut"));
   if (!STATUTS_MISSION.includes(statut as (typeof STATUTS_MISSION)[number])) return;
   await supabase.from("missions").update({ statut }).eq("id", missionId);
+  invaliderClassement(missionId);
   revalidatePath(`/missions/${missionId}`);
   revalidatePath("/missions");
 }
@@ -202,5 +205,6 @@ export async function ajouterExigence(missionId: string, nom: string) {
   for (const id of correspondance.get(n) ?? []) {
     await supabase.from("mission_competences").upsert({ mission_id: missionId, competence_id: id, obligatoire: false, importance: 2 }, { onConflict: "mission_id,competence_id", ignoreDuplicates: true });
   }
+  invaliderClassement(missionId);
   revalidatePath(`/missions/${missionId}`);
 }

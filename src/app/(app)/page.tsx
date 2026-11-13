@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { exigerUtilisateur } from "@/lib/acces";
-import { classementMission } from "@/lib/matching/classement";
+import { classementEnCache } from "@/lib/matching/cache";
 import { FILTRE_MES_MISSIONS } from "@/lib/missions/responsables";
 import { alerteVisible } from "@/lib/alertes/libelles";
 import BilanAdmin from "./bilan-admin";
@@ -148,7 +148,7 @@ export default async function Accueil() {
 async function MeilleursProfils({ missionId }: { missionId: string }) {
   const { supabase } = await exigerUtilisateur();
   const [classement, { data: suivis }] = await Promise.all([
-    classementMission(supabase, missionId, 50).catch(() => []),
+    classementEnCache(missionId).then((r) => r.top).catch(() => []),
     supabase.from("propositions").select("consultant_id").eq("mission_id", missionId),
   ]);
   const dejaSuivis = new Set((suivis ?? []).map((p) => p.consultant_id));
