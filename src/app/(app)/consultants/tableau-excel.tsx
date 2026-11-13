@@ -44,7 +44,7 @@ interface Props {
   chargementPartiel?: boolean;
 }
 
-export default function TableauExcel({ vues, vueInitiale, colonneDomaine, ongletId, entetes, champs, lignes: initiales, estAdmin, documents, chargementPartiel }: Props) {
+export default function TableauExcel({ vues, vueInitiale, ongletId, entetes, champs, lignes: initiales, estAdmin, documents, chargementPartiel }: Props) {
   const [lignes, setLignes] = useState(initiales);
   // Données rafraîchies (après l'affichage de la version gardée en mémoire) : on les prend sans perdre filtres ni tri.
   const [source, setSource] = useState(initiales);
@@ -207,10 +207,12 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
               o.cle === vueActive ? "bg-nuit text-white shadow-[0_6px_16px_-8px_rgba(11,26,63,0.7)]" : "text-slate-500 hover:bg-white/80 hover:text-nuit"
             }`}>
             {o.nom}
-            {o.cle && <span className={`ml-1.5 rounded-md px-1.5 py-0.5 text-xs font-bold ${o.cle === vueActive ? "bg-white/20" : "bg-slate-100 text-slate-500"}`}>{nbParVue[o.cle] ?? 0}</span>}
+            {o.cle && <span className={`ml-1.5 rounded-md px-1.5 py-0.5 text-xs font-bold ${o.cle === vueActive ? "bg-white/20" : "bg-slate-100 text-slate-500"}`}>{chargementPartiel ? "…" : nbParVue[o.cle] ?? 0}</span>}
           </button>
         ))}
       </div>
+
+      {chargementPartiel && vueActive && <p className="text-sm text-slate-500">Chargement des fiches du jour…</p>}
 
       {/* Filtres rapides */}
       <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1 text-sm sm:flex-wrap sm:overflow-visible">

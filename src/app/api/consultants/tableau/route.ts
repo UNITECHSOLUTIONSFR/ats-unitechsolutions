@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
-import { clientSupabaseServeur, utilisateurConnecte } from "@/lib/supabase/serveur";
-import { chargerTableau } from "@/lib/tableau/chargement";
+import { utilisateurConnecte } from "@/lib/supabase/serveur";
+import { tableauCompresse } from "@/lib/tableau/cache";
 
-// Données de l'écran Consultants, lues à part : l'écran s'affiche tout de suite, les lignes arrivent ensuite
-// (et sont gardées en mémoire dans le navigateur pour les ouvertures suivantes). Règles d'accès de la base appliquées.
+// Données de l'écran Consultants : préparées et compressées côté serveur (voir lib/tableau/cache), envoyées telles quelles.
+// Réservé aux personnes connectées et actives.
 export async function GET() {
-  const [utilisateur, supabase] = await Promise.all([utilisateurConnecte(), clientSupabaseServeur()]);
-  if (!utilisateur || !supabase) return new NextResponse("Non autorisé", { status: 401 });
-  const donnees = await chargerTableau(supabase);
-  return NextResponse.json(donnees, { headers: { "Cache-Control": "private, no-store" } });
+  const utilisateur = await utilisateurConnecte();
+  if (!utilisateur) return new NextResponse("Non autorisé", { status: 401 });
+  const donnees = await tableauCompresse();
+  if (!donnees) return NextResponse.json(null, { headers: { "Cache-Control": "private, no-store" } });
+  return new NextResponse(Buffer.from(donnees, "base64"), {
+    headers: { "Content-Type": "application/json; charset=utf-8", "Content-Encoding": "gzip", "Cache-Control": "private, no-store" },
+  });
 }

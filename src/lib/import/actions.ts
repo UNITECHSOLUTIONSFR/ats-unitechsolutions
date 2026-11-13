@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { invaliderTableau } from "@/lib/tableau/cache";
 import { exigerAdmin } from "@/lib/acces-admin";
 import { corrigerOngletPrincipal, detecterColonnes, fusionnerOnglets, lireOnglets, preparerImport, type OngletLu, type RapportImport } from "./excel";
 import { ecrireFiches, type BilanEcriture } from "./ecriture";
@@ -66,7 +67,9 @@ export async function traiterFichierExcel(_etat: EtatImport, formData: FormData)
       }).eq("id", execution.id);
     }
     revalidatePath("/");
+    invaliderTableau();
     revalidatePath("/consultants");
+    invaliderTableau();
     revalidatePath("/consultants");
     return { etape: "termine", nomFichier: fichier.name, rapport, bilan, bilanTableau, onglets: resumeOnglets };
   } catch (e) {

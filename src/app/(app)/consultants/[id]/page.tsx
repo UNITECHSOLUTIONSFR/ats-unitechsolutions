@@ -81,7 +81,6 @@ export default async function FicheConsultant({ params, searchParams }: { params
 
       <div className="grid gap-6 lg:grid-cols-3 [&>*]:min-w-0">
         <section className="space-y-4 lg:col-span-2">
-          <Suspense fallback={<div className="squelette h-[480px]" />}><ApercuDuCV consultantId={c.id} /></Suspense>
           <div className="carte p-4 sm:p-6">
             <h2 className="titre-section">Profil</h2>
             {profil ? (
@@ -103,6 +102,8 @@ export default async function FicheConsultant({ params, searchParams }: { params
             </div>
           </div>
 
+          {/* Le CV vient après le résumé du profil : on le lit quand le résumé donne envie d'en savoir plus. */}
+          <Suspense fallback={<div className="squelette h-[480px]" />}><ApercuDuCV consultantId={c.id} /></Suspense>
           <div className="carte p-6 text-sm">
             <h2 className="titre-section">Informations du fichier de suivi</h2>
             <ul className="mt-2 space-y-1">

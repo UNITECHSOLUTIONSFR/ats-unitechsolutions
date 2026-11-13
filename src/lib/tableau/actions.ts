@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { invaliderTableau } from "@/lib/tableau/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { exigerUtilisateur } from "@/lib/acces";
 import { champsParEntete } from "@/lib/import/excel";
@@ -70,6 +71,8 @@ export async function modifierCellules(ids: string[], colonne: string, valeur: s
     const erreur = await mettreAJourFiches(supabase, consultants, maj, colonne, utilisateur.id);
     if (erreur) return { ok: false, message: idsTableau.length ? `Tableau modifié, mais fiche non mise à jour : ${erreur}.` : `Fiche non mise à jour : ${erreur}.` };
   }
+
+  invaliderTableau();
 
   revalidatePath("/consultants");
   return { ok: true, message: `${ids.length} ligne(s) modifiée(s).`, lignes: ids.length };

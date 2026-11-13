@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { invaliderTableau } from "@/lib/tableau/cache";
 import { exigerAdmin } from "@/lib/acces-admin";
 import { effacerPersonne, type FichierAEffacer } from "./effacement";
 
@@ -17,6 +18,7 @@ export async function effacerConsultant(_e: EtatEffacement, formData: FormData):
   }
   try {
     const fichiers = await effacerPersonne(supabase, id);
+    invaliderTableau();
     revalidatePath("/consultants");
     return { fichiers, supprimes: 1 };
   } catch (e) {

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { invaliderTableau } from "@/lib/tableau/cache";
 import { redirect } from "next/navigation";
 import { calculerTrigramme } from "@/lib/metier/trigramme";
 import { exigerUtilisateur } from "@/lib/acces";
@@ -54,6 +55,7 @@ export async function modifierConsultant(formData: FormData) {
     utilisateur_id: utilisateur.id, action: "modification", consultant_id: id, details: { champs: Object.keys(modifications) },
   });
   revalidatePath(`/consultants/${id}`);
+  invaliderTableau();
   revalidatePath("/consultants"); // le tableau gardé en mémoire dans le navigateur est rafraîchi
 }
 
@@ -105,6 +107,7 @@ export async function creerConsultant(_e: EtatCreation, formData: FormData): Pro
   await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "creation", consultant_id: cree.id, details: {} });
   // CV joint : rangé dans SharePoint, compétences enregistrées (lecture déjà faite) ; la fiche sort dans la recherche et le matching.
   const avertissement = lecture ? await enregistrerCVJoint(cree.id, lecture, { prenom: prenom ?? "—", nom }) : null;
+  invaliderTableau();
   revalidatePath("/consultants");
   redirect(`/consultants/${cree.id}${avertissement ? `?cv=${encodeURIComponent(avertissement)}` : ""}`);
 }
@@ -124,6 +127,7 @@ export async function fusionnerFiches(formData: FormData) {
   const { error } = await supabase.rpc("fusionner_consultants", { p_garde: garde, p_supprime: supprime, p_valeurs: valeurs });
   if (error) throw new Error(error.message);
   revalidatePath("/alertes");
+  invaliderTableau();
   revalidatePath("/consultants");
   redirect(`/consultants/${garde}`);
 }
