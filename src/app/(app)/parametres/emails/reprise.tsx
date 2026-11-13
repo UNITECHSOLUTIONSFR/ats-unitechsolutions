@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { lancerRepriseDossier, type EtatReprise } from "@/lib/emails/actions";
 
 /**
- * Reprise d'un dossier de boîte mail (une seule fois) : l'écran enchaîne les passages de 12 emails jusqu'à la fin.
+ * Reprise d'un dossier de boîte mail (une seule fois) : l'écran enchaîne les passages de 60 emails (6 en parallèle) jusqu'à la fin.
  * Les CV restent sur la plateforme (pas de dépôt SharePoint). Accès Exchange temporaire requis sur la boîte.
  */
 export default function RepriseDossier({ boiteParDefaut }: { boiteParDefaut: string }) {

@@ -35,7 +35,7 @@ export async function lancerRepriseDossier(_e: EtatReprise, formData: FormData):
   if (!/^[^@\s]+@unitechsolutions\.fr$/.test(boite) || !dossier) return { erreur: "Indiquez une adresse @unitechsolutions.fr et le nom du dossier." };
   try {
     const { repriseDossierBoite } = await import("./reprise");
-    const b = await repriseDossierBoite(clientSupabaseAdmin(), boite, dossier, 12); // 12 emails par passage : sous la limite de 5 minutes
+    const b = await repriseDossierBoite(clientSupabaseAdmin(), boite, dossier, 60); // jusqu'à 60 emails par passage, 6 en parallèle, arrêt à 4 minutes
     revalidatePath("/parametres/emails");
     return {
       message: `${b.lus} email(s) lus : ${b.candidatures} candidature(s) enregistrée(s) (dont ${b.dejaConnues} CV déjà connus), ${b.ignores} ignoré(s). Coût : ${b.coutUSD.toFixed(3)} $.`,

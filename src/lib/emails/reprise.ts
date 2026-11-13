@@ -38,14 +38,23 @@ export async function repriseDossierBoite(supabase: SupabaseClient, boite: strin
     for (const r of data ?? []) vus.add(r.message_id);
   }
   const aFaire = messages.filter((m) => !vus.has(cle(m)));
-  const bilan: BilanEmails = { lus: 0, candidatures: 0, dejaConnues: 0, ignores: 0, erreurs: [], coutUSD: 0, restants: aFaire.length > limite };
+  const bilan: BilanEmails = { lus: 0, candidatures: 0, dejaConnues: 0, ignores: 0, erreurs: [], coutUSD: 0, restants: aFaire.length > 0 };
   const usages: UsageIA[] = [];
   const piecesJointes = (id: string) => async (): Promise<PieceJointe[]> => {
     const r = await graphGet<{ value: (PieceJointe & { "@odata.type": string })[] }>(`users/${boite}/messages/${id}/attachments`);
     return r.value.filter((p) => p["@odata.type"] === "#microsoft.graph.fileAttachment" && /\.(docx|doc|pdf)$/i.test(p.name) && p.size <= 10 * 1024 * 1024);
   };
+  // 6 emails traités en parallèle ; on n'en démarre plus après 4 minutes (limite de 5 minutes par passage).
+  const debut = Date.now();
+  const file = aFaire.slice(0, limite);
+  const ouvrier = async () => {
+    for (let m = file.shift(); m; m = file.shift()) {
+      if (Date.now() - debut > 240_000) return;
+      await traiterMessage(supabase, m, piecesJointes(m.id), { driveId: `boite:reprise:${nomDossier}`, deposer: false }, usages, bilan);
+    }
+  };
   try {
-    for (const m of aFaire.slice(0, limite)) await traiterMessage(supabase, m, piecesJointes(m.id), { driveId: `boite:reprise:${nomDossier}`, deposer: false }, usages, bilan);
+    await Promise.all(Array.from({ length: 6 }, ouvrier));
   } finally {
     await enregistrerUsages(usages, `reprise:${nomDossier}`);
   }
