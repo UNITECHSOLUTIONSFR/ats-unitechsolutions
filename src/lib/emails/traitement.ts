@@ -89,10 +89,12 @@ export async function traiterMessage(
     if (estInterne(expediteur)) statut = "non_candidature";
     else if (!cvs.length) statut = "sans_piece_jointe";
     else {
-      const r = await traiterCandidature(supabase, m, cvs[0], origine, usages);
-      statut = r.statut;
-      consultantId = r.consultantId;
-      if (r.dejaConnu) bilan.dejaConnues++;
+      // Chaque CV joint est traité (un partenaire envoie souvent plusieurs profils dans le même email).
+      for (const cv of cvs) {
+        const r = await traiterCandidature(supabase, m, cv, origine, usages);
+        if (r.statut === "candidature_traitee" || statut !== "candidature_traitee") { statut = r.statut; consultantId ??= r.consultantId; }
+        if (r.dejaConnu) bilan.dejaConnues++;
+      }
     }
   } catch (e) {
     statut = "erreur";
