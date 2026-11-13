@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { exigerUtilisateur } from "@/lib/acces";
 import { traiterAlertes } from "@/lib/alertes/actions";
-import { detailAlerte, LIBELLES_ALERTES } from "@/lib/alertes/libelles";
+import { ALERTES_TECHNIQUES, alerteVisible, detailAlerte, LIBELLES_ALERTES } from "@/lib/alertes/libelles";
 
 export default async function Alertes({ searchParams }: { searchParams: Promise<{ type?: string }> }) {
   const { utilisateur, supabase } = await exigerUtilisateur();
@@ -10,7 +10,10 @@ export default async function Alertes({ searchParams }: { searchParams: Promise<
   let q = supabase.from("alertes").select("id, type, details, created_at, consultant_id, consultants(prenom, nom, trigramme)")
     .eq("statut", "ouverte").order("created_at", { ascending: false }).limit(300);
   if (type) q = q.eq("type", type);
-  const [{ data: alertes }, { data: toutes }] = await Promise.all([q, supabase.from("alertes").select("type").eq("statut", "ouverte")]);
+  // Les recruteurs ne voient pas les alertes techniques.
+  if (!estAdmin) q = q.not("type", "in", `(${ALERTES_TECHNIQUES.join(",")})`);
+  const [{ data: alertes }, { data: tous }] = await Promise.all([q, supabase.from("alertes").select("type").eq("statut", "ouverte")]);
+  const toutes = (tous ?? []).filter((a) => alerteVisible(a.type, estAdmin));
   const parType = new Map<string, number>();
   for (const a of toutes ?? []) parType.set(a.type, (parType.get(a.type) ?? 0) + 1);
 
@@ -50,7 +53,7 @@ export default async function Alertes({ searchParams }: { searchParams: Promise<
                     <span className="text-xs font-medium text-amber-700">{LIBELLES_ALERTES[a.type] ?? a.type}</span>
                     <span className="text-xs text-slate-400">· {new Date(a.created_at).toLocaleDateString("fr-FR")}</span>
                   </div>
-                  <div className="truncate text-slate-500">{detailAlerte(a.details as Record<string, unknown>)}</div>
+                  <div className="truncate text-slate-500">{detailAlerte(a.details as Record<string, unknown>, estAdmin)}</div>
                 </div>
                 <div className="flex shrink-0 gap-2">
                   {fusion && <Link href={`/alertes/fusion?a=${a.consultant_id}&b=${fusion}`} className="bouton-primaire py-1.5 text-xs">Comparer</Link>}

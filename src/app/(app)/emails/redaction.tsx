@@ -93,7 +93,7 @@ export default function Redaction({ modeles, modeleInitial }: { modeles: Modele[
             </div>
             <p className="text-xs text-slate-500">{type === "libre" ? "Email libre : les réponses sont rattachées à la fiche, sans mise à jour automatique." : "Disponibilité : chaque réponse est lue et met à jour la disponibilité automatiquement."}</p>
           </div>
-          <div className="rounded-2xl bg-white/70 p-5 text-sm ring-1 ring-white/80">
+          <div className="rounded-2xl bg-slate-50 p-5 text-sm ring-1 ring-slate-200/70">
             <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Aperçu{exemple ? ` (pour ${exemple.nom})` : ""}</div>
             <div className="mt-2 font-semibold text-nuit">{objet}</div>
             <pre className="mt-2 whitespace-pre-wrap break-words font-sans text-slate-700 [overflow-wrap:anywhere]">{rendu}</pre>
@@ -113,7 +113,7 @@ export default function Redaction({ modeles, modeleInitial }: { modeles: Modele[
 
 function Depart({ actif, titre, texte, etiquette, onClick }: { actif: boolean; titre: string; texte: string; etiquette?: string; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className={`rounded-2xl p-4 text-left text-sm ring-1 transition ${actif ? "bg-marque-50 ring-2 ring-marque-400" : "bg-white/70 ring-slate-200 hover:ring-marque-200"}`}>
+    <button type="button" onClick={onClick} className={`rounded-2xl p-4 text-left text-sm ring-1 transition ${actif ? "bg-marque-50 ring-2 ring-marque-400" : "bg-white ring-slate-200 hover:ring-marque-200"}`}>
       <div className="flex items-start justify-between gap-2"><span className="font-semibold text-nuit">{titre}</span>{etiquette && <span className="pastille shrink-0">{etiquette}</span>}</div>
       <div className="mt-1 line-clamp-2 text-slate-500">{texte}</div>
     </button>

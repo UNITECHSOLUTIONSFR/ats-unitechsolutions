@@ -98,7 +98,7 @@ export function PastilleEcheance({ e }: { e: Echeance }) {
 
 function Chiffre({ valeur, libelle }: { valeur: number; libelle: string }) {
   return (
-    <div className="rounded-xl bg-white/60 px-2 py-2 ring-1 ring-white/80">
+    <div className="rounded-xl bg-slate-50 px-2 py-2 ring-1 ring-slate-200/70">
       <div className="text-base font-bold tabular-nums text-nuit sm:text-lg">{valeur.toFixed(2)} $</div>
       <div className="text-[11px] text-slate-500">{libelle}</div>
     </div>

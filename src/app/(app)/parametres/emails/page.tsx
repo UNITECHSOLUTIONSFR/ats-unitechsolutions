@@ -28,7 +28,7 @@ export default async function CandidaturesEmail() {
       <Bouton />
       <div className="carte overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-white/50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
             <tr><th className="p-3">Reçu le</th><th className="p-3">Expéditeur</th><th className="p-3">Objet</th><th className="p-3">Résultat</th></tr>
           </thead>
           <tbody>

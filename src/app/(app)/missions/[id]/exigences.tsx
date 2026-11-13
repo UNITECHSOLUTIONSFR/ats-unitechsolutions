@@ -47,7 +47,7 @@ export default function Exigences({ missionId, exigences, texteBesoin }: { missi
         {texteBesoin && (
           <details className="text-sm sm:ml-auto">
             <summary className="cursor-pointer font-medium text-marque-600">Voir le texte du besoin</summary>
-            <pre className="mt-2 max-h-80 overflow-y-auto whitespace-pre-wrap rounded-xl bg-white/70 p-3 font-sans text-slate-700 ring-1 ring-slate-100">{texteBesoin}</pre>
+            <pre className="mt-2 max-h-80 overflow-y-auto whitespace-pre-wrap rounded-xl bg-slate-50 p-3 font-sans text-slate-700 ring-1 ring-slate-100">{texteBesoin}</pre>
           </details>
         )}
       </div>

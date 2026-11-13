@@ -57,7 +57,7 @@ export default function Activation() {
           {facteurs && <span className={`pastille ${actifs.length ? "pastille-vert" : "pastille-orange"}`}>{actifs.length ? "Activée" : "Non activée"}</span>}
         </div>
         {actifs.map((f) => (
-          <div key={f.id} className="flex items-center justify-between rounded-xl bg-white/70 px-4 py-2 ring-1 ring-white/80">
+          <div key={f.id} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-2 ring-1 ring-slate-200/70">
             <span className="text-nuit">{f.friendly_name ?? "Application d'authentification"} · ajoutée le {new Date(f.created_at).toLocaleDateString("fr-FR")}</span>
             <button type="button" onClick={() => retirer(f.id)} className="text-xs text-slate-400 hover:text-red-700">Retirer</button>
           </div>

@@ -3,14 +3,13 @@ import Link from "next/link";
 import { exigerUtilisateur } from "@/lib/acces";
 import { classementMission } from "@/lib/matching/classement";
 import { FILTRE_MES_MISSIONS } from "@/lib/missions/responsables";
-import { resumerRapport } from "@/lib/sync/resume";
-import { TACHES } from "@/lib/sync/taches";
+import { alerteVisible } from "@/lib/alertes/libelles";
 import BilanAdmin from "./bilan-admin";
 import { IconeAlerte, IconeMallette, IconePersonnes, IconePlus, IconeTableau } from "./icones";
 
 const LIBELLES_ALERTES: Record<string, string> = {
   doublon_possible: "Doublons possibles", telephone_invalide: "Téléphones à vérifier", nom_manquant: "Noms manquants",
-  cv_illisible: "CV illisibles", association_douteuse: "Associations CV à vérifier", disponibilite_ancienne: "Disponibilités anciennes", autre: "Autres",
+  cv_illisible: "CV à vérifier", association_douteuse: "Associations CV à vérifier", disponibilite_ancienne: "Disponibilités anciennes", autre: "Fiches à compléter",
 };
 
 export default async function Accueil() {
@@ -20,24 +19,23 @@ export default async function Accueil() {
     if (filtre) q = q.eq(filtre[0], filtre[1]);
     return (await q).count ?? 0;
   };
-  const depuis = ilYa(24);
   // Tout est lu en même temps : l'accueil s'affiche en une fois.
-  const [consultants, cvs, alertes, { data: nouveaux }, { data: typesAlertes }, { data: missions }, missionsOuvertes, { data: nuit }] = await Promise.all([
+  const estAdmin = utilisateur.role === "admin";
+  const [consultants, cvs, { data: nouveaux }, { data: typesAlertes }, { data: missions }, missionsOuvertes] = await Promise.all([
     compter("consultants"),
     compter("documents", ["type", "word_nominatif"]),
-    compter("alertes", ["statut", "ouverte"]),
-    supabase.from("consultants").select("id, prenom, nom, intitule_poste, source, created_at").neq("source", "import_excel").gte("created_at", ilYa(24 * 7))
+    supabase.from("consultants").select("id, prenom, nom, intitule_poste, source, created_at").neq("source", "import_excel").gte("created_at", depuisJours(7))
       .order("created_at", { ascending: false }).limit(6),
     supabase.from("alertes").select("type").eq("statut", "ouverte").limit(5000),
     // Mes missions ouvertes (et celles à assigner), les plus récentes d'abord.
     supabase.from("missions").select("id, intitule, client, created_at, responsable_id").eq("statut", "ouverte").or(FILTRE_MES_MISSIONS(utilisateur.id))
       .order("created_at", { ascending: false }).limit(4),
     compter("missions", ["statut", "ouverte"]),
-    supabase.from("executions").select("type, debut, statut, rapport").in("type", Object.values(TACHES).map((t) => t.type)).gte("debut", depuis)
-      .order("debut", { ascending: false }).limit(6),
   ]);
   const parType = new Map<string, number>();
-  for (const a of typesAlertes ?? []) parType.set(a.type, (parType.get(a.type) ?? 0) + 1);
+  // Les recruteurs ne voient que les cas qui les concernent (aucune alerte technique).
+  for (const a of typesAlertes ?? []) if (alerteVisible(a.type, estAdmin)) parType.set(a.type, (parType.get(a.type) ?? 0) + 1);
+  const alertes = [...parType.values()].reduce((t, n) => t + n, 0);
   const prenom = (utilisateur.nomAffiche ?? "").split(" ")[0];
 
   return (
@@ -59,23 +57,23 @@ export default async function Accueil() {
       </div>
 
       {/* Bilan du jour : tâches automatiques, échéances des secrets, consommation IA (administrateurs) */}
-      {utilisateur.role === "admin" && <Suspense fallback={<div className="squelette h-48" />}><BilanAdmin /></Suspense>}
+      {estAdmin && <Suspense fallback={<div className="squelette h-48" />}><BilanAdmin /></Suspense>}
 
       {/* Chiffres clés */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Tuile titre="Consultants" valeur={consultants} lien="/consultants" Icone={IconePersonnes} />
-        <Tuile titre="CV Unitech (SharePoint)" valeur={cvs} lien={utilisateur.role === "admin" ? "/parametres/cv" : "/consultants"} Icone={IconeTableau} />
+        <Tuile titre="CV en base" valeur={cvs} lien={estAdmin ? "/parametres/cv" : "/consultants"} Icone={IconeTableau} />
         <Tuile titre="Missions ouvertes" valeur={missionsOuvertes} lien="/missions?vue=toutes" Icone={IconeMallette} />
         <Tuile titre="Cas à vérifier" valeur={alertes} lien="/alertes" Icone={IconeAlerte} attention={alertes > 0} />
       </div>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3 [&>*]:min-w-0">
+      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-3 [&>*]:min-w-0">
         {/* Missions ouvertes et meilleurs profils */}
         <section className="carte p-6 xl:col-span-2">
           <EnTete titre="Mes missions" lien="/missions?vue=toutes" libelle="Voir aussi celles des autres" />
           <div className="mt-4 space-y-3">
             {(missions ?? []).map((m) => (
-              <div key={m.id} className="rounded-2xl bg-white/60 p-4 ring-1 ring-white/80">
+              <div key={m.id} className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200/70">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <Link href={`/missions/${m.id}`} className="font-semibold text-nuit hover:text-marque-600">{m.intitule}</Link>
                   <span className="flex items-center gap-2 text-xs text-slate-500">{m.client ?? ""}{!m.responsable_id && <span className="pastille pastille-orange">À assigner</span>}</span>
@@ -100,7 +98,7 @@ export default async function Accueil() {
             <ul className="mt-3 space-y-2">
               {(nouveaux ?? []).map((c) => (
                 <li key={c.id}>
-                  <Link href={`/consultants/${c.id}`} className="flex items-center gap-3 rounded-xl p-1.5 transition hover:bg-white/70">
+                  <Link href={`/consultants/${c.id}`} className="flex items-center gap-3 rounded-xl p-1.5 transition hover:bg-slate-50">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-marque-400 to-marque-700 text-xs font-semibold text-white">
                       {`${c.prenom?.[0] ?? ""}${c.nom?.[0] ?? ""}`.replace("—", "").toUpperCase() || "?"}
                     </span>
@@ -142,19 +140,6 @@ export default async function Accueil() {
         </div>
       </div>
 
-      {/* Rapport des traitements */}
-      <section className="carte p-6">
-        <h2 className="font-semibold text-nuit">Traitements des dernières 24 heures</h2>
-        <ul className="mt-2 space-y-1 text-sm">
-          {(nuit ?? []).map((e, k) => (
-            <li key={k} className={e.statut === "echec" ? "text-red-700" : "text-slate-600"}>
-              <span className="tabular-nums text-slate-400">{new Date(e.debut).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>{" "}
-              {resumerRapport(e.type, e.rapport as Record<string, unknown>)}
-            </li>
-          ))}
-          {!nuit?.length && <li className="text-slate-500">Aucun traitement automatique depuis hier.</li>}
-        </ul>
-      </section>
     </div>
   );
 }
@@ -180,7 +165,7 @@ async function MeilleursProfils({ missionId }: { missionId: string }) {
     <div className="mt-3 grid gap-2 sm:grid-cols-3">
       {meilleurs.map((c) => (
         <Link key={c.consultant_id} href={`/consultants/${c.consultant_id}`}
-          className="flex items-center gap-3 rounded-xl bg-white/70 p-2.5 ring-1 ring-white/80 transition hover:bg-white">
+          className="flex items-center gap-3 rounded-xl bg-slate-50 p-2.5 ring-1 ring-slate-200/70 transition hover:bg-white">
           <Score valeur={c.resultat.score} />
           <div className="min-w-0">
             <div className="truncate text-sm font-semibold text-nuit">{c.prenom} {c.nom}</div>
@@ -212,7 +197,7 @@ async function NouveauxPourMesMissions({ moi }: { moi: string }) {
           const m = p.missions as unknown as { intitule: string } | null;
           return (
             <li key={`${p.mission_id}-${p.consultant_id}`}>
-              <Link href={`/missions/${p.mission_id}`} className="flex items-center gap-3 rounded-xl p-1.5 transition hover:bg-white/70">
+              <Link href={`/missions/${p.mission_id}`} className="flex items-center gap-3 rounded-xl p-1.5 transition hover:bg-slate-50">
                 <Score valeur={Number(p.score ?? 0)} />
                 <div className="min-w-0">
                   <div className="truncate font-semibold text-nuit">{c?.prenom} {c?.nom}</div>
@@ -244,7 +229,7 @@ async function RelancesAFaire({ moi }: { moi: string }) {
         const jours = Math.floor((Date.parse(new Date().toISOString()) - Date.parse(p.updated_at)) / 86_400_000);
         return (
           <li key={`${p.mission_id}-${p.consultant_id}`}>
-            <Link href={`/missions/${p.mission_id}`} className="flex items-center justify-between gap-3 rounded-xl p-1.5 transition hover:bg-white/70">
+            <Link href={`/missions/${p.mission_id}`} className="flex items-center justify-between gap-3 rounded-xl p-1.5 transition hover:bg-slate-50">
               <div className="min-w-0">
                 <div className="truncate font-semibold text-nuit">{c?.prenom} {c?.nom}</div>
                 <div className="truncate text-xs text-slate-500">{m?.intitule} · {SUIVIS[p.statut]}</div>
@@ -294,7 +279,3 @@ function Tuile({ titre, valeur, lien, Icone, attention }: {
   );
 }
 
-/** Date d'il y a N heures. */
-function ilYa(heures: number): string {
-  return new Date(Date.now() - heures * 3_600_000).toISOString();
-}

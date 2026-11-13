@@ -24,7 +24,7 @@ export default async function Utilisateurs() {
 
       <section className="overflow-x-auto carte">
         <table className="w-full text-sm">
-          <thead className="bg-white/50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
             <tr><th className="p-3">Personne</th><th className="p-3">Rôle</th><th className="p-3">Accès</th><th className="p-3"></th></tr>
           </thead>
           <tbody>

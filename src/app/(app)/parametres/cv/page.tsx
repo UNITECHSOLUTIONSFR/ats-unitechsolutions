@@ -54,18 +54,18 @@ export default async function PageCV({ searchParams }: { searchParams: Promise<{
         <button className="bouton-primaire">Rechercher</button>
         {filtres.map(([v, l]) => (
           <Link key={v} href={`/parametres/cv?filtre=${v}&q=${encodeURIComponent(q)}`}
-            className={`rounded-full px-3 py-1 text-sm font-medium transition ${filtre === v ? "bg-nuit text-white shadow-md" : "bg-white/60 text-slate-600 ring-1 ring-white/80 hover:bg-white"}`}>{l}</Link>
+            className={`rounded-full px-3 py-1 text-sm font-medium transition ${filtre === v ? "bg-nuit text-white shadow-md" : "bg-slate-50 text-slate-600 ring-1 ring-slate-200/70 hover:bg-white"}`}>{l}</Link>
         ))}
       </form>
       <p className="text-sm text-zinc-500">{lignes.length} CV</p>
       <div className="carte overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-white/50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
             <tr><th className="p-3">Métier</th><th className="p-3">Fiche consultant</th><th className="p-3">CV Word Unitech</th><th className="p-3">PDF anonymisé</th></tr>
           </thead>
           <tbody>
             {lignes.map(({ w, pdf, fiche }) => (
-              <tr key={w.id} className="border-t border-white/70 align-top hover:bg-white/60">
+              <tr key={w.id} className="border-t border-white/70 align-top hover:bg-slate-50">
                 <td className="p-3 text-zinc-600">{w.metier_dossier ?? "—"}</td>
                 <td className="p-3">
                   {fiche ? (

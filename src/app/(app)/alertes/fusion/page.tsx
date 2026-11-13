@@ -40,7 +40,7 @@ export default async function Fusion({ searchParams }: { searchParams: Promise<{
       <input type="hidden" name="supprime" value={autre.id} />
       <div className="carte overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-white/50 text-left text-xs font-semibold text-slate-500">
+          <thead className="bg-slate-50 text-left text-xs font-semibold text-slate-500">
             <tr>
               <th className="p-3">Champ</th>
               <th className="p-3">Fiche gardée · <Link href={`/consultants/${garde.id}`} className="lien">ouvrir</Link> <span className="font-normal">({docsG} document(s), {propsG} mission(s))</span></th>

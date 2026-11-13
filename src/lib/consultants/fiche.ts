@@ -44,7 +44,7 @@ export async function chargerFiche(supabase: SupabaseClient, utilisateurId: stri
     supabase.from("consultant_competences").select("annees, competences(nom_canonique)").eq("consultant_id", id).order("annees", { ascending: false, nullsFirst: false }),
     supabase.from("documents").select("type, nom_fichier, url_web, modifie_sharepoint_le, sharepoint_drive_id").eq("consultant_id", id).eq("supprime_sharepoint", false).order("modifie_sharepoint_le", { ascending: false }),
     supabase.from("propositions").select("mission_id, statut, score, missions(intitule)").eq("consultant_id", id).order("updated_at", { ascending: false }),
-    supabase.from("alertes").select("type").eq("consultant_id", id).eq("statut", "ouverte"),
+    supabase.from("alertes").select("type").eq("consultant_id", id).eq("statut", "ouverte").not("type", "in", "(association_douteuse)"),
     supabase.from("missions").select("id, intitule, client").eq("statut", "ouverte").order("created_at", { ascending: false }),
     supabase.from("notes_consultant").select("id, texte, created_at, auteur").eq("consultant_id", id).order("created_at", { ascending: false }).limit(30),
     supabase.from("cv_unitech_generes").select("word_url, pdf_url").eq("consultant_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle(),

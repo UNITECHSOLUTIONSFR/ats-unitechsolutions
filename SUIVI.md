@@ -183,3 +183,8 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Testé : 182 tests (dont 26 règles d'accès), export Excel, captures ordinateur et téléphone.
 - Suite : uniquement les actions de l'utilisatrice (A_FAIRE_14H.md), puis invitation des collaborateurs.
 - 12/11 3 h 15 : résultats de l'analyse IA des 241 CV récupérés ; 1 075 fiches ont désormais des compétences analysées (contre 914) ; index des textes rafraîchi.
+
+### 13/11/2026 — Passe UX/UI et écran des recruteurs
+- **Fait** : les « Traitements des dernières 24 heures » sont retirés du tableau de bord (le résumé technique reste dans le bilan des administrateurs). Les recruteurs ne voient plus aucune alerte technique : rapprochement Word ↔ PDF masqué, lignes Excel masquées. Nouvelle charte : cartes blanches nettes, boutons bleu Unitech, titres de blocs lisibles. Cartes de profils (mission) refaites : score bien visible, actions alignées, « Pourquoi ce score » sans détail technique. Statut « En mission » retiré de la fiche.
+- **Testé** : typage, 185 tests, captures ordinateur (recruteur et admin), contrôle mobile iPhone SE / Pixel 7 sans débordement.
+- **Suite** : actions de l'utilisatrice (A_FAIRE_14H.md) ce week-end.

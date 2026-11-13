@@ -29,7 +29,7 @@ export default async function Synchronisations() {
       </div>
       <div className="carte overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-white/50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500"><tr><th className="p-3">Début</th><th className="p-3">Traitement</th><th className="p-3">État</th><th className="p-3">Résultat</th></tr></thead>
+          <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500"><tr><th className="p-3">Début</th><th className="p-3">Traitement</th><th className="p-3">État</th><th className="p-3">Résultat</th></tr></thead>
           <tbody>
             {(executions ?? []).map((e, i) => (
               <tr key={i} className="border-t border-white/70 align-top">

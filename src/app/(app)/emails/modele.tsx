@@ -38,7 +38,7 @@ export default function FormulaireModele({ modele }: { modele?: Modele }) {
           <div className="mt-1 grid gap-2 sm:grid-cols-2">
             {([["disponibilite", "Demande de disponibilité", "Chaque réponse met à jour la fiche automatiquement."], ["libre", "Email libre", "Les réponses sont rattachées à la fiche."]] as const).map(([v, l, d]) => (
               <button key={v} type="button" onClick={() => setType(v)}
-                className={`rounded-2xl p-3 text-left ring-1 transition ${type === v ? "bg-marque-50 ring-marque-300" : "bg-white/70 ring-slate-200 hover:ring-marque-200"}`}>
+                className={`rounded-2xl p-3 text-left ring-1 transition ${type === v ? "bg-marque-50 ring-marque-300" : "bg-white ring-slate-200 hover:ring-marque-200"}`}>
                 <div className="font-semibold text-nuit">{l}</div><div className="text-xs text-slate-500">{d}</div>
               </button>
             ))}

@@ -96,8 +96,8 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
             <p className="sous-titre">{classement.length} consultant(s) classé(s) · le score est une aide à la décision, jamais un refus automatique.</p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
-            <span className="pastille pastille-vert">≥ 75 : très bonne adéquation</span>
-            <span className="pastille">50 – 74 : à étudier</span>
+            <span className="pastille pastille-vert">75 et plus : très bonne adéquation</span>
+            <span className="pastille">50 à 74 : à étudier</span>
           </div>
         </div>
 
@@ -125,67 +125,69 @@ function niveau(score: number) {
   return { libelle: "Adéquation faible", classe: "pastille-gris", texte: "text-slate-500" };
 }
 
-/** Un consultant classé : identité, actions, puis l'explication du score critère par critère. */
+/** Un consultant classé : identité et score, actions, puis l'explication du score critère par critère. */
 function CarteCandidat({ rang, c, missionId, statut, ouvert, cv, avis }: {
   rang: number; c: LigneClassement; missionId: string; statut?: string; ouvert: boolean; cv?: { id: string; word: string; pdf: string | null }; avis?: AvisMission;
 }) {
   const n = niveau(c.resultat.score);
+  const score = Math.round(c.resultat.score);
   const initiales = `${c.prenom?.[0] ?? ""}${c.nom?.[0] ?? ""}`.replace("—", "").toUpperCase() || "?";
-  const action = "flex h-10 items-center gap-1.5 rounded-full sm:h-9 bg-white/70 px-3 text-xs font-semibold text-nuit ring-1 ring-white/80 transition hover:bg-white hover:shadow-md";
+  const action = "flex h-10 items-center gap-1.5 rounded-full sm:h-9 bg-white px-3 text-xs font-semibold text-nuit ring-1 ring-slate-200 transition hover:bg-slate-50 hover:ring-slate-300";
+  // Critères affichés : on n'expose pas ce qui n'a pas pu être calculé (détail technique sans intérêt pour le recruteur).
+  const raisons = c.resultat.raisons.filter((r) => !(r.critere === "semantique" && /non calcul/i.test(r.texte)));
   return (
     <article className={`carte p-4 sm:p-5 ${c.resultat.elimine ? "opacity-60" : ""}`}>
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="relative">
-          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-marque-400 to-marque-700 text-lg font-bold text-white shadow-md">{initiales}</span>
+      <div className="flex items-center gap-3 sm:gap-4">
+        <div className="relative shrink-0">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-marque-400 to-marque-700 text-base font-bold text-white sm:h-14 sm:w-14 sm:text-lg">{initiales}</span>
           <span className="absolute -left-2 -top-2 flex h-6 min-w-6 items-center justify-center rounded-full bg-white px-1 text-[11px] font-bold text-nuit shadow ring-1 ring-slate-200">{rang}</span>
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <Link href={`/consultants/${c.consultant_id}`} className="text-base font-semibold text-nuit hover:text-marque-600">{c.prenom} {c.nom}</Link>
-            {/* Téléphone : le score tout de suite visible */}
-            <span className={`shrink-0 text-xl font-extrabold tabular-nums sm:hidden ${n.texte}`}>{Math.round(c.resultat.score)}</span>
-          </div>
-          <div className="truncate text-sm text-slate-500">{c.intitule_poste ?? "Poste non renseigné"} · <span className="font-mono">{c.trigramme}</span></div>
-          <div className="mt-0.5 text-xs text-slate-500">Disponibilité : {c.disponible_le ? new Date(c.disponible_le).toLocaleDateString("fr-FR") : c.disponibilite ?? "non renseignée"}</div>
+          <Link href={`/consultants/${c.consultant_id}`} className="block truncate text-base font-semibold text-nuit hover:text-marque-600">{c.prenom} {c.nom}</Link>
+          <div className="truncate text-sm text-slate-500">{c.intitule_poste ?? "Poste non renseigné"} · <span className="font-mono text-xs">{c.trigramme}</span></div>
+          <div className="mt-0.5 truncate text-xs text-slate-500">Disponibilité : {c.disponible_le ? new Date(c.disponible_le).toLocaleDateString("fr-FR") : c.disponibilite ?? "non renseignée"}</div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {c.telephone_e164 && <a href={`tel:${c.telephone_e164}`} className={action} title={formaterTelephone(c.telephone_e164)}>☎ {formaterTelephone(c.telephone_e164)}</a>}
-          <AvisIA missionId={missionId} consultantId={c.consultant_id} initial={avis} />
-          <BoutonWhatsApp telephone={c.telephone_e164} prenom={c.prenom} className="flex h-10 items-center gap-1.5 rounded-full bg-[#25D366] px-3 text-xs font-semibold text-white shadow-sm hover:brightness-95 sm:h-9" />
-          {c.email && <a href={`mailto:${c.email}`} className={action}>✉ Email</a>}
-          {c.word_url && <a href={c.word_url} target="_blank" rel="noreferrer" className={action}>CV Word</a>}
-          {c.pdf_anonyme_url
-            ? <a href={c.pdf_anonyme_url} target="_blank" rel="noreferrer" className={action}>PDF anonymisé</a>
-            : <span className="pastille pastille-orange">PDF anonymisé manquant</span>}
-          <BoutonCVMission consultantId={c.consultant_id} missionId={missionId} existant={cv} />
-          <form action={suivreProposition} className="flex items-center gap-1 rounded-full bg-white/70 p-1 ring-1 ring-white/80">
-            <input type="hidden" name="mission_id" value={missionId} />
-            <input type="hidden" name="consultant_id" value={c.consultant_id} />
-            <input type="hidden" name="score" value={c.resultat.score} />
-            <input type="hidden" name="detail" value={JSON.stringify(c.resultat)} />
-            <select name="statut" defaultValue={statut ?? "propose"} className="rounded-full bg-transparent px-2 py-1 text-xs font-semibold text-nuit outline-none">
-              {Object.entries(STATUTS_PROPOSITION).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-            <button className="rounded-full bg-nuit px-3 py-1 text-xs font-semibold text-white hover:bg-marque-700">{statut ? "OK" : "Suivre"}</button>
-          </form>
+        <div className={`flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl ring-1 ring-inset ${score >= 75 ? "bg-emerald-50 ring-emerald-200" : score >= 50 ? "bg-marque-50 ring-marque-100" : "bg-slate-50 ring-slate-200"}`} title={n.libelle}>
+          <span className={`text-xl font-extrabold leading-none tabular-nums ${n.texte}`}>{score}</span>
+          <span className="mt-0.5 text-[10px] font-medium text-slate-400">/ 100</span>
         </div>
       </div>
 
-      <details open={ouvert} className="group mt-4 rounded-2xl bg-white/60 p-4 ring-1 ring-marque-100">
+      <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
+        {c.telephone_e164 && <a href={`tel:${c.telephone_e164}`} className={action} title={formaterTelephone(c.telephone_e164)}>☎ {formaterTelephone(c.telephone_e164)}</a>}
+        <BoutonWhatsApp telephone={c.telephone_e164} prenom={c.prenom} className="flex h-10 items-center gap-1.5 rounded-full bg-[#25D366] px-3 text-xs font-semibold text-white shadow-sm hover:brightness-95 sm:h-9" />
+        {c.email && <a href={`mailto:${c.email}`} className={action}>✉ Email</a>}
+        {c.word_url && <a href={c.word_url} target="_blank" rel="noreferrer" className={action}>CV Word</a>}
+        {c.pdf_anonyme_url && <a href={c.pdf_anonyme_url} target="_blank" rel="noreferrer" className={action}>PDF anonymisé</a>}
+        <BoutonCVMission consultantId={c.consultant_id} missionId={missionId} existant={cv} />
+        <form action={suivreProposition} className="flex items-center gap-1 rounded-full bg-white p-1 ring-1 ring-slate-200 ">
+          <input type="hidden" name="mission_id" value={missionId} />
+          <input type="hidden" name="consultant_id" value={c.consultant_id} />
+          <input type="hidden" name="score" value={c.resultat.score} />
+          <input type="hidden" name="detail" value={JSON.stringify(c.resultat)} />
+          <select name="statut" defaultValue={statut ?? "propose"} aria-label="Suivi" className="rounded-full bg-transparent px-2 py-1 text-xs font-semibold text-nuit outline-none">
+            {Object.entries(STATUTS_PROPOSITION).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+          <button className="rounded-full bg-marque-600 px-3 py-1 text-xs font-semibold text-white hover:bg-marque-500">{statut ? "OK" : "Suivre"}</button>
+        </form>
+        <AvisIA missionId={missionId} consultantId={c.consultant_id} initial={avis} />
+      </div>
+
+      <details open={ouvert} className="group mt-3 rounded-2xl bg-slate-50/80 px-4 py-3 ring-1 ring-slate-200/70">
         <summary className="flex cursor-pointer list-none flex-wrap items-center gap-3">
-          <span className="text-sm font-semibold text-nuit">Évaluation</span>
-          <span className={`pastille ${n.classe}`}>{n.libelle} · {Math.round(c.resultat.score)}/100</span>
-          <span className="h-1.5 w-32 overflow-hidden rounded-full bg-slate-200/70"><span className="block h-full rounded-full bg-gradient-to-r from-marque-600 to-marque-400" style={{ width: `${c.resultat.score}%` }} /></span>
-          <span className="ml-auto text-xs text-slate-400 group-open:hidden">Afficher le détail</span>
+          <span className="text-sm font-semibold text-nuit">Pourquoi ce score</span>
+          <span className={`pastille ${n.classe}`}>{n.libelle}</span>
+          <span className="h-1.5 w-28 overflow-hidden rounded-full bg-slate-200/70"><span className="block h-full rounded-full bg-gradient-to-r from-marque-600 to-marque-400" style={{ width: `${c.resultat.score}%` }} /></span>
+          <span className="ml-auto text-xs font-medium text-marque-600 group-open:hidden">Voir le détail</span>
         </summary>
         <ul className="mt-3 space-y-1.5 text-sm">
-          {c.resultat.raisons.map((r) => {
+          {raisons.map((r) => {
             const ratio = r.max ? r.points / r.max : 1;
             const icone = ratio >= 0.7 ? ["✓", "bg-emerald-50 text-emerald-600 ring-emerald-200"] : ratio > 0 ? ["◐", "bg-amber-50 text-amber-600 ring-amber-200"] : ["✕", "bg-red-50 text-red-600 ring-red-200"];
             return (
               <li key={r.critere} className="flex gap-2.5">
                 <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ring-1 ${icone[1]}`}>{icone[0]}</span>
-                <span className="text-slate-600"><b className="font-semibold text-nuit">{CRITERES[r.critere] ?? r.critere}{r.max ? ` (${r.points}/${r.max})` : ""} :</b> {r.texte}</span>
+                <span className="text-slate-600"><b className="font-semibold text-nuit">{CRITERES[r.critere] ?? r.critere}</b>{r.max ? <span className="text-xs text-slate-400"> · {Math.round(r.points)}/{Math.round(r.max)} pts</span> : null} — {r.texte}</span>
               </li>
             );
           })}

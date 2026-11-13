@@ -43,7 +43,7 @@ export default async function Journal({ searchParams }: { searchParams: Promise<
       </div>
       <div className="carte overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-white/50 text-left text-xs font-semibold text-slate-500"><tr><th className="p-3">Date</th><th className="p-3">Action</th><th className="p-3">Par</th><th className="p-3">Fiche</th><th className="p-3">Détail</th></tr></thead>
+          <thead className="bg-slate-50 text-left text-xs font-semibold text-slate-500"><tr><th className="p-3">Date</th><th className="p-3">Action</th><th className="p-3">Par</th><th className="p-3">Fiche</th><th className="p-3">Détail</th></tr></thead>
           <tbody>
             {(lignes ?? []).map((l) => {
               const d = l.details as Record<string, unknown>;

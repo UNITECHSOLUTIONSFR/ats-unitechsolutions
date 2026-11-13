@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { genererCVUnitechAction, genererPDFUnitechAction, type EtatCVUnitech, type EtatPDFUnitech } from "@/lib/cv-unitech/actions";
 
-const classe = "flex h-10 items-center gap-1.5 rounded-full bg-white/70 px-3 text-xs font-semibold text-nuit ring-1 ring-white/80 transition hover:bg-white hover:shadow-md disabled:opacity-60 sm:h-9";
+const classe = "flex h-10 items-center gap-1.5 rounded-full bg-white px-3 text-xs font-semibold text-nuit ring-1 ring-slate-200 transition hover:bg-slate-50 hover:ring-slate-300 disabled:opacity-60 sm:h-9";
 
 /** Sur un profil classé : Word Unitech avec l'adéquation à cette mission, puis PDF produit à partir du Word (corrigé ou non). */
 export default function BoutonCVMission({ consultantId, missionId, existant }: { consultantId: string; missionId: string; existant?: { id: string; word: string; pdf: string | null } }) {

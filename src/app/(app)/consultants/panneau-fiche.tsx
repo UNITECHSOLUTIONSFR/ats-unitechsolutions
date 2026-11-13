@@ -154,7 +154,7 @@ export default function PanneauFiche({ id, onFermer }: { id: string; onFermer: (
                 <button disabled={envoi} className="bouton-primaire shrink-0">Noter</button>
               </form>
               {fiche.notesEquipe.map((n) => (
-                <div key={n.id} className="rounded-xl bg-white/70 px-3 py-2 ring-1 ring-white/80">
+                <div key={n.id} className="rounded-xl bg-slate-50 px-3 py-2 ring-1 ring-slate-200/70">
                   <div className="text-xs text-slate-400">{n.auteur} · {new Date(n.date).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}</div>
                   <div className="whitespace-pre-line text-nuit">{n.texte}</div>
                 </div>
@@ -180,7 +180,7 @@ function Action({ href, libelle, icone, externe }: { href?: string; libelle: str
   if (!href) return <span className={`${classe} cursor-not-allowed bg-white/40 text-slate-300 ring-white/60`}><span className="text-base leading-none">{icone}</span>{libelle}</span>;
   return (
     <a href={href} {...(externe ? { target: "_blank", rel: "noreferrer" } : {})}
-      className={`${classe} bg-white/70 text-nuit ring-white/80 hover:-translate-y-0.5 hover:bg-white hover:shadow-md`}>
+      className={`${classe} bg-white text-nuit ring-slate-200 hover:-translate-y-0.5 hover:bg-white hover:shadow-md`}>
       <span className="text-base font-bold leading-none text-marque-600">{icone}</span>{libelle}
     </a>
   );
@@ -188,7 +188,7 @@ function Action({ href, libelle, icone, externe }: { href?: string; libelle: str
 
 function Bloc({ titre, children }: { titre: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-1.5 rounded-2xl bg-white/60 p-4 ring-1 ring-white/80">
+    <section className="space-y-1.5 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200/70">
       <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">{titre}</h3>
       {children}
     </section>

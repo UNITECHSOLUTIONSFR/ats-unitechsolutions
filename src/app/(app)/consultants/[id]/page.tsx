@@ -57,7 +57,7 @@ export default async function FicheConsultant({ params, searchParams }: { params
             <h1 className="break-words text-2xl font-bold tracking-[-0.03em] sm:text-3xl">{c.prenom} {c.nom} <span className="font-mono text-base font-medium text-white/60">{c.trigramme}</span></h1>
             <p className="text-white/80">{c.intitule_poste ?? "Poste non renseigné"}{c.localisation ? ` · ${c.localisation}` : ""}</p>
             <div className="mt-2 flex flex-wrap gap-2 text-xs">
-              <span className="rounded-full bg-white/20 px-2.5 py-0.5 font-medium ring-1 ring-white/25">{c.statut}</span>
+              <span className="rounded-full bg-white/20 px-2.5 py-0.5 font-medium capitalize ring-1 ring-white/25">{c.statut === "en_mission" ? "candidat" : c.statut}</span>
               <span className={`rounded-full px-2.5 py-0.5 font-medium ring-1 ${dispoAncienne ? "bg-amber-400/30 ring-amber-200/50" : "bg-white/20 ring-white/25"}`}>
                 {c.disponibilite ?? (c.disponible_le ? `Disponible le ${new Date(c.disponible_le).toLocaleDateString("fr-FR")}` : "Disponibilité non renseignée")}
               </span>
@@ -71,10 +71,10 @@ export default async function FicheConsultant({ params, searchParams }: { params
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 [&>*]:min-w-0">
         <section className="space-y-4 lg:col-span-2">
           <div className="carte p-4 sm:p-6">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Profil</h2>
+            <h2 className="titre-section">Profil</h2>
             {profil ? (
               <div className="mt-2 space-y-2 text-sm">
                 <p className="text-slate-700">{profil.resume}</p>
@@ -95,7 +95,7 @@ export default async function FicheConsultant({ params, searchParams }: { params
           </div>
 
           <div className="carte p-6 text-sm">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Informations du fichier de suivi</h2>
+            <h2 className="titre-section">Informations du fichier de suivi</h2>
             <ul className="mt-2 space-y-1">
               {c.email_2 && <li><span className="text-slate-500">Email 2 : </span>{c.email_2}</li>}
               {c.commentaire_email && <li><span className="text-slate-500">Commentaire email : </span>{c.commentaire_email}</li>}
@@ -106,7 +106,7 @@ export default async function FicheConsultant({ params, searchParams }: { params
             </ul>
             {(c.donnees_excel ?? []).map((d: { ligne: number; valeurs: Record<string, string> }) => (
               <details key={d.ligne} className="mt-2">
-                <summary className="cursor-pointer text-slate-500">Ligne {d.ligne} du fichier Excel (toutes les colonnes)</summary>
+                <summary className="cursor-pointer text-slate-500">Toutes les colonnes du fichier de suivi</summary>
                 <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
                   {Object.entries(d.valeurs).map(([k, v]) => (
                     <div key={k} className="contents"><dt className="text-slate-500">{k}</dt><dd className="break-all">{v}</dd></div>
@@ -117,12 +117,12 @@ export default async function FicheConsultant({ params, searchParams }: { params
           </div>
 
           <div className="carte p-6">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Documents (SharePoint)</h2>
+            <h2 className="titre-section">Documents</h2>
             {/* CV Unitech le plus récent : le PDF s'il existe, sinon le Word ; « manquant » seulement s'il n'y a rien. */}
             {cvUnitech ? (
               <p className="mt-2 text-sm">
                 <span className="text-slate-500">CV Unitech : </span>
-                <a href={cvUnitech.pdf_url ?? cvUnitech.word_url} target="_blank" rel="noreferrer" className="lien font-semibold">
+                <a href={cvUnitech.pdf_url ?? cvUnitech.word_url} target="_blank" rel="noreferrer" className="lien break-all font-semibold">
                   {cvUnitech.pdf_url ? `PDF · ${cvUnitech.pdf_nom ?? "CV Unitech"}` : `Word · ${cvUnitech.word_nom}`}
                 </a>
               </p>
@@ -131,14 +131,14 @@ export default async function FicheConsultant({ params, searchParams }: { params
               {(documents ?? []).map((d) => (
                 <li key={d.id}>
                   <span className="text-slate-500">{TYPES_DOC[d.type]} : </span>
-                  {d.url_web?.includes("sharepoint.com") ? <a href={d.url_web} target="_blank" rel="noreferrer" className="lien">{d.nom_fichier}</a> : d.nom_fichier}
+                  {d.url_web?.includes("sharepoint.com") ? <a href={d.url_web} target="_blank" rel="noreferrer" className="lien break-all">{d.nom_fichier}</a> : d.nom_fichier}
                 </li>
               ))}
             </ul>
           </div>
 
           <div className="carte p-6">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Propositions</h2>
+            <h2 className="titre-section">Propositions</h2>
             <ul className="mt-2 space-y-1 text-sm">
               {(propositions ?? []).map((p, i) => {
                 const m = p.missions as unknown as { id: string; intitule: string; client: string | null } | null;
@@ -154,7 +154,7 @@ export default async function FicheConsultant({ params, searchParams }: { params
           </div>
 
           <div className="carte p-6">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Historique</h2>
+            <h2 className="titre-section">Historique</h2>
             <ol className="mt-3 space-y-3 border-l border-slate-200 pl-5">
               {evenements.map((e, k) => (
                 <li key={k} className="relative text-sm">
@@ -163,7 +163,7 @@ export default async function FicheConsultant({ params, searchParams }: { params
                     <span className="font-medium text-nuit">{e.lien ? <Link href={e.lien} className="hover:underline">{e.titre}</Link> : e.titre}</span>
                     <span className="text-xs tabular-nums text-slate-400">{new Date(e.date).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}</span>
                   </div>
-                  {e.detail && <div className="text-slate-500">{e.detail}</div>}
+                  {e.detail && <div className="break-words text-slate-500 [overflow-wrap:anywhere]">{e.detail}</div>}
                 </li>
               ))}
             </ol>
@@ -172,7 +172,7 @@ export default async function FicheConsultant({ params, searchParams }: { params
 
         <div className="space-y-4">
         <form action={modifierConsultant} className="space-y-3 carte p-6 text-sm">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Modifier la fiche</h2>
+          <h2 className="titre-section">Modifier la fiche</h2>
           <input type="hidden" name="id" value={c.id} />
           <Champ nom="telephone" libelle="Téléphone" valeur={formaterTelephone(c.telephone_e164) || c.telephone_brut} />
           <Champ nom="email" libelle="Email" valeur={c.email} />
@@ -193,7 +193,7 @@ export default async function FicheConsultant({ params, searchParams }: { params
             <span className="text-slate-600">Statut</span>
             <select name="statut" defaultValue={c.statut} className="champ mt-1 w-full">
               <option value="candidat">Candidat</option><option value="consultant">Consultant</option>
-              <option value="en_mission">En mission</option><option value="inactif">Inactif</option>
+              <option value="inactif">Inactif</option>
             </select>
           </label>
           <label className="block">

@@ -14,7 +14,7 @@ export default function BlocCVUnitech({ consultantId, missions, generes }: { con
   const [etat, action, enCours] = useActionState<EtatCVUnitech, FormData>(genererCVUnitechAction, {});
   return (
     <div className="carte space-y-3 p-6 text-sm">
-      <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">CV Unitech</h2>
+      <h2 className="titre-section">CV Unitech</h2>
       <p className="text-slate-500"><b>1.</b> Générez le Word, relisez-le et corrigez-le dans SharePoint. <b>2.</b> Produisez le PDF : il reprend le Word corrigé.</p>
       <form action={action} className="space-y-3">
         <input type="hidden" name="consultant_id" value={consultantId} />
@@ -47,7 +47,7 @@ function LigneCV({ g }: { g: CVGenere }) {
   const [etat, action, enCours] = useActionState<EtatPDFUnitech, FormData>(genererPDFUnitechAction, {});
   const pdf = etat.resultat?.pdf ?? g.pdf;
   return (
-    <form action={action} className="rounded-xl bg-white/70 px-3 py-2.5 ring-1 ring-white/80">
+    <form action={action} className="rounded-xl bg-slate-50 px-3 py-2.5 ring-1 ring-slate-200/70">
       <input type="hidden" name="generation_id" value={g.id} />
       <div className="text-xs text-slate-400">{new Date(g.date).toLocaleDateString("fr-FR")} · {g.mission ?? "Sans mission"}{g.dossier ? ` · ${g.dossier.split("/").slice(-1)[0]}` : ""}</div>
       <div className="mt-1 flex flex-wrap items-center gap-2">
