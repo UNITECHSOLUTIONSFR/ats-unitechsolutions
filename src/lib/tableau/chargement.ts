@@ -27,8 +27,8 @@ export async function chargerTableau(supabase: SupabaseClient): Promise<DonneesT
       .not("consultant_id", "is", null).eq("supprime_sharepoint", false).in("type", ["word_nominatif", "pdf_anonyme"])
       .order("modifie_sharepoint_le", { ascending: false }).range(a, b)),
     lireTout<{ consultant_id: string; competences: string }>((a, b) => supabase.from("competences_par_consultant").select("consultant_id, competences").range(a, b)),
-    lireTout<{ id: string; disponibilite: string | null; disponible_le: string | null; disponibilite_maj_le: string | null; created_at: string }>((a, b) =>
-      supabase.from("consultants").select("id, disponibilite, disponible_le, disponibilite_maj_le, created_at").range(a, b)),
+    lireTout<{ id: string; disponibilite: string | null; disponible_le: string | null; disponibilite_maj_le: string | null; created_at: string; source: string }>((a, b) =>
+      supabase.from("consultants").select("id, disponibilite, disponible_le, disponibilite_maj_le, created_at, source").range(a, b)),
   ]);
 
   // Fiches créées hors Excel (emails, CV SharePoint, saisie) pas encore reliées à une ligne : en haut, les plus récentes d'abord.
@@ -41,7 +41,7 @@ export async function chargerTableau(supabase: SupabaseClient): Promise<DonneesT
     if (!l.consultant_id) continue;
     if (parConsultant.has(l.consultant_id)) l.recherche = parConsultant.get(l.consultant_id);
     const r = parId.get(l.consultant_id);
-    if (r) l.meta = { dispo: r.disponibilite, dispoLe: r.disponible_le, dispoMaj: r.disponibilite_maj_le, creeLe: r.created_at, cvAnalyse: parConsultant.has(l.consultant_id) };
+    if (r) l.meta = { dispo: r.disponibilite, dispoLe: r.disponible_le, dispoMaj: r.disponibilite_maj_le, creeLe: r.created_at, source: r.source, cvAnalyse: parConsultant.has(l.consultant_id) };
   }
 
   const documents: Record<string, { word?: string; email?: string; pdf?: string }> = {};

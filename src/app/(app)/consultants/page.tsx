@@ -4,9 +4,9 @@ import { COLONNE_DOMAINE } from "@/lib/import/excel";
 import { chargerApercuTableau } from "@/lib/tableau/chargement";
 import ChargeurTableau from "./chargeur";
 
-export default async function TableauDeSuivi({ searchParams }: { searchParams: Promise<{ domaine?: string }> }) {
+export default async function TableauDeSuivi({ searchParams }: { searchParams: Promise<{ vue?: string }> }) {
   const { utilisateur, supabase } = await exigerUtilisateur();
-  const { domaine } = await searchParams;
+  const { vue } = await searchParams;
   // Seulement les 100 premières lignes ici (affichage immédiat) ; le reste est chargé par l'écran, en arrière-plan.
   const apercu = await chargerApercuTableau(supabase);
 
@@ -29,5 +29,5 @@ export default async function TableauDeSuivi({ searchParams }: { searchParams: P
       </div>
     );
   }
-  return <ChargeurTableau apercu={apercu} vueInitiale={domaine ?? ""} colonneDomaine={COLONNE_DOMAINE} estAdmin={utilisateur.role === "admin"} />;
+  return <ChargeurTableau apercu={apercu} vueInitiale={vue === "email_jour" || vue === "sharepoint_jour" ? vue : ""} colonneDomaine={COLONNE_DOMAINE} estAdmin={utilisateur.role === "admin"} />;
 }

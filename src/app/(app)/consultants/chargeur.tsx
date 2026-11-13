@@ -9,6 +9,9 @@ import TableauExcel from "./tableau-excel";
 let memoire: DonneesTableau | null = null;
 let enCours: Promise<DonneesTableau> | null = null;
 
+/** Vues de l'écran Consultants : toute la base, ou les arrivées du jour (email, SharePoint). Les métiers se filtrent par la colonne « Domaine ». */
+const VUES = [{ cle: "", nom: "Toute la base" }, { cle: "email_jour", nom: "Reçus par email aujourd'hui" }, { cle: "sharepoint_jour", nom: "Ajoutés depuis SharePoint aujourd'hui" }];
+
 export function chargerTableauNavigateur(): Promise<DonneesTableau> {
   enCours ??= fetch("/api/consultants/tableau", { cache: "no-store" })
     .then((r) => (r.ok ? (r.json() as Promise<DonneesTableau>) : Promise.reject(new Error(String(r.status)))))
@@ -45,7 +48,7 @@ export default function ChargeurTableau({ apercu, vueInitiale, colonneDomaine, e
     <>
       {erreur && !complet && <p className="mb-2 text-sm text-red-700">Les autres lignes n&apos;ont pas pu être chargées. Rechargez la page.</p>}
       <TableauExcel
-        vues={[{ cle: "", nom: "Tous" }, ...donnees.domaines.map((d) => ({ cle: d, nom: d }))]}
+        vues={VUES}
         vueInitiale={vueInitiale}
         colonneDomaine={colonneDomaine}
         ongletId={donnees.ongletId}

@@ -75,9 +75,14 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
   const lignesVue = useMemo(() => {
     const maintenant = Date.parse(new Date().toISOString());
     return lignes.filter((l) =>
-      (!vueActive || (l.valeurs[colonneDomaine] ?? "").split(" ; ").includes(vueActive)) &&
+      (!vueActive || filtreRapide(l, vueActive as FiltreRapide, maintenant)) &&
       rapides.every((f) => filtreRapide(l, f, maintenant)));
   }, [lignes, vueActive, colonneDomaine, rapides]);
+  // Nombre de fiches arrivées aujourd'hui, affiché sur chaque vue.
+  const nbParVue = useMemo(() => {
+    const maintenant = Date.parse(new Date().toISOString());
+    return Object.fromEntries(vues.filter((v) => v.cle).map((v) => [v.cle, lignes.filter((l) => filtreRapide(l, v.cle as FiltreRapide, maintenant)).length]));
+  }, [lignes, vues]);
   // La recherche porte aussi sur le texte complet des CV (côté base, index plein texte).
   const [dansCV, setDansCV] = useState<{ q: string; ids: Set<string>; extraits: Map<string, ExtraitCV> }>({ q: "", ids: new Set(), extraits: new Map() });
   useEffect(() => {
@@ -190,18 +195,19 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
         </div>
       </div>
 
-      {/* Vues par domaine, comme les onglets de l'Excel, mais calculées (toujours à jour) */}
+      {/* Vues : toute la base, ou les arrivées du jour par email ou SharePoint */}
       <div className="verre flex w-fit max-w-full gap-1 overflow-x-auto rounded-full p-1">
         {vues.map((o) => (
           <button key={o.cle} type="button"
             onClick={() => {
               setVueActive(o.cle); setPage(0); setSelection(new Set());
-              window.history.replaceState(null, "", o.cle ? `/consultants?domaine=${encodeURIComponent(o.cle)}` : "/consultants");
+              window.history.replaceState(null, "", o.cle ? `/consultants?vue=${o.cle}` : "/consultants");
             }}
             className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-semibold transition ${
               o.cle === vueActive ? "bg-nuit text-white shadow-[0_6px_16px_-8px_rgba(11,26,63,0.7)]" : "text-slate-500 hover:bg-white/80 hover:text-nuit"
             }`}>
             {o.nom}
+            {o.cle && <span className={`ml-1.5 rounded-md px-1.5 py-0.5 text-xs font-bold ${o.cle === vueActive ? "bg-white/20" : "bg-slate-100 text-slate-500"}`}>{nbParVue[o.cle] ?? 0}</span>}
           </button>
         ))}
       </div>
