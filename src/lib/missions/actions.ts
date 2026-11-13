@@ -165,6 +165,7 @@ export async function suivreProposition(formData: FormData) {
     details: { proposition: { mission_id: missionId, statut } },
   });
   revalidatePath(`/missions/${missionId}`);
+  revalidatePath(`/consultants/${consultantId}`);
 }
 
 /** Assigne (ou réassigne) une mission à une personne invitée. Réservé aux administrateurs (également vérifié par la base). */

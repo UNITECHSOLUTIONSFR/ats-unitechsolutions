@@ -10,6 +10,7 @@ import BoutonCVMission from "./cv-mission";
 import Exigences from "./exigences";
 import { BoutonWhatsApp } from "../../whatsapp";
 import AvisIA from "./avis-ia";
+import { ExplicationScore, JaugeScore } from "../evaluation";
 import type { AvisMission } from "@/lib/ai";
 
 // Génération des CV Unitech (IA + SharePoint) depuis cet écran : jusqu'à 2 minutes.
@@ -32,7 +33,7 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
   if (!mission) notFound();
 
   const [classement, { data: propositions }, responsables, { data: cvMission }, { data: avisExistants }] = await Promise.all([
-    classementMission(supabase, id),
+    classementMission(supabase, id, 5000), // tout le classement pour le nombre de profils pertinents ; 50 cartes affichées
     supabase.from("propositions").select("consultant_id, statut").eq("mission_id", id),
     responsablesPossibles(supabase),
     supabase.from("cv_unitech_generes").select("id, consultant_id, word_url, pdf_url, created_at").eq("mission_id", id).order("created_at", { ascending: false }),
@@ -93,7 +94,7 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
             <h2 className="text-lg font-bold tracking-tight text-nuit">
               {classement.filter((c) => !c.resultat.elimine && c.resultat.score >= 60).length} profil(s) pertinent(s) pour cette mission
             </h2>
-            <p className="sous-titre">{classement.length} consultant(s) classé(s) · le score est une aide à la décision, jamais un refus automatique.</p>
+            <p className="sous-titre">Les 50 premiers sur {classement.length.toLocaleString("fr-FR")} consultant(s) classé(s) · le score est une aide à la décision, jamais un refus automatique.</p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
             <span className="pastille pastille-vert">75 et plus : très bonne adéquation</span>
@@ -101,7 +102,7 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
           </div>
         </div>
 
-        {classement.map((c, i) => (
+        {classement.slice(0, 50).map((c, i) => (
           <CarteCandidat key={c.consultant_id} rang={i + 1} c={c} missionId={id} statut={suivi.get(c.consultant_id)} ouvert={i < 3} cv={cvParConsultant.get(c.consultant_id)} avis={avisParConsultant.get(c.consultant_id)} />
         ))}
         {!classement.length && (
@@ -115,26 +116,12 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
   );
 }
 
-const CRITERES: Record<string, string> = {
-  competences: "Compétences", annees: "Expérience", seniorite: "Séniorité", disponibilite: "Disponibilité", semantique: "Proximité du profil", filtre: "Filtre",
-};
-
-function niveau(score: number) {
-  if (score >= 75) return { libelle: "Très bonne adéquation", classe: "pastille-vert", texte: "text-emerald-600" };
-  if (score >= 50) return { libelle: "À étudier", classe: "pastille-orange", texte: "text-marque-600" };
-  return { libelle: "Adéquation faible", classe: "pastille-gris", texte: "text-slate-500" };
-}
-
 /** Un consultant classé : identité et score, actions, puis l'explication du score critère par critère. */
 function CarteCandidat({ rang, c, missionId, statut, ouvert, cv, avis }: {
   rang: number; c: LigneClassement; missionId: string; statut?: string; ouvert: boolean; cv?: { id: string; word: string; pdf: string | null }; avis?: AvisMission;
 }) {
-  const n = niveau(c.resultat.score);
-  const score = Math.round(c.resultat.score);
   const initiales = `${c.prenom?.[0] ?? ""}${c.nom?.[0] ?? ""}`.replace("—", "").toUpperCase() || "?";
   const action = "flex h-10 items-center gap-1.5 rounded-full sm:h-9 bg-white px-3 text-xs font-semibold text-nuit ring-1 ring-slate-200 transition hover:bg-slate-50 hover:ring-slate-300";
-  // Critères affichés : on n'expose pas ce qui n'a pas pu être calculé (détail technique sans intérêt pour le recruteur).
-  const raisons = c.resultat.raisons.filter((r) => !(r.critere === "semantique" && /non calcul/i.test(r.texte)));
   return (
     <article className={`carte p-4 sm:p-5 ${c.resultat.elimine ? "opacity-60" : ""}`}>
       <div className="flex items-center gap-3 sm:gap-4">
@@ -143,15 +130,12 @@ function CarteCandidat({ rang, c, missionId, statut, ouvert, cv, avis }: {
           <span className="absolute -left-2 -top-2 flex h-6 min-w-6 items-center justify-center rounded-full bg-white px-1 text-[11px] font-bold text-nuit shadow ring-1 ring-slate-200">{rang}</span>
         </div>
         <div className="min-w-0 flex-1">
-          <Link href={`/consultants/${c.consultant_id}`} className="block truncate text-base font-semibold text-nuit hover:text-marque-600">{c.prenom} {c.nom}</Link>
+          <Link href={`/consultants/${c.consultant_id}?mission=${missionId}`} className="block truncate text-base font-semibold text-nuit hover:text-marque-600">{c.prenom} {c.nom}</Link>
           <div className="truncate text-sm text-slate-500">{c.intitule_poste ?? "Poste non renseigné"} · <span className="font-mono text-xs">{c.trigramme}</span></div>
           <div className="mt-0.5 truncate text-xs text-slate-500">Disponibilité : {c.disponible_le ? new Date(c.disponible_le).toLocaleDateString("fr-FR") : c.disponibilite ?? "non renseignée"}</div>
         </div>
-        <div className={`flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl ring-1 ring-inset ${score >= 75 ? "bg-emerald-50 ring-emerald-200" : score >= 50 ? "bg-marque-50 ring-marque-100" : "bg-slate-50 ring-slate-200"}`} title={n.libelle}>
-          <span className={`text-xl font-extrabold leading-none tabular-nums ${n.texte}`}>{score}</span>
-          <span className="mt-0.5 text-[10px] font-medium text-slate-400">/ 100</span>
-        </div>
-      </div>
+        <JaugeScore score={c.resultat.score} />
+            </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
         {c.telephone_e164 && <a href={`tel:${c.telephone_e164}`} className={action} title={formaterTelephone(c.telephone_e164)}>☎ {formaterTelephone(c.telephone_e164)}</a>}
@@ -176,24 +160,10 @@ function CarteCandidat({ rang, c, missionId, statut, ouvert, cv, avis }: {
       <details open={ouvert} className="group mt-3 rounded-2xl bg-slate-50/80 px-4 py-3 ring-1 ring-slate-200/70">
         <summary className="flex cursor-pointer list-none flex-wrap items-center gap-3">
           <span className="text-sm font-semibold text-nuit">Pourquoi ce score</span>
-          <span className={`pastille ${n.classe}`}>{n.libelle}</span>
-          <span className="h-1.5 w-28 overflow-hidden rounded-full bg-slate-200/70"><span className="block h-full rounded-full bg-gradient-to-r from-marque-600 to-marque-400" style={{ width: `${c.resultat.score}%` }} /></span>
-          <span className="ml-auto text-xs font-medium text-marque-600 group-open:hidden">Voir le détail</span>
+          <span className="ml-auto text-xs font-medium text-marque-600 group-open:hidden">Voir l&apos;explication</span>
         </summary>
-        <ul className="mt-3 space-y-1.5 text-sm">
-          {raisons.map((r) => {
-            const ratio = r.max ? r.points / r.max : 1;
-            const icone = ratio >= 0.7 ? ["✓", "bg-emerald-50 text-emerald-600 ring-emerald-200"] : ratio > 0 ? ["◐", "bg-amber-50 text-amber-600 ring-amber-200"] : ["✕", "bg-red-50 text-red-600 ring-red-200"];
-            return (
-              <li key={r.critere} className="flex gap-2.5">
-                <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ring-1 ${icone[1]}`}>{icone[0]}</span>
-                <span className="text-slate-600"><b className="font-semibold text-nuit">{CRITERES[r.critere] ?? r.critere}</b>{r.max ? <span className="text-xs text-slate-400"> · {Math.round(r.points)}/{Math.round(r.max)} pts</span> : null} — {r.texte}</span>
-              </li>
-            );
-          })}
-          {c.resultat.elimine && <li className="text-red-700">Écarté : {c.resultat.motifsElimination.join(" ; ")}</li>}
-          {c.resultat.alertes.map((a) => <li key={a} className="text-amber-700">⚠ {a}</li>)}
-        </ul>
+        <div className="mt-3"><ExplicationScore resultat={c.resultat} /></div>
+        <Link href={`/consultants/${c.consultant_id}?mission=${missionId}`} className="mt-3 inline-block text-sm font-semibold text-marque-600 hover:underline">Ouvrir sa fiche avec cette évaluation →</Link>
       </details>
     </article>
   );

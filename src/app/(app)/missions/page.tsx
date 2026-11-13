@@ -3,6 +3,9 @@ import { exigerUtilisateur } from "@/lib/acces";
 import { FILTRE_MES_MISSIONS, responsablesPossibles } from "@/lib/missions/responsables";
 import { IconeMallette } from "../icones";
 import ListeMissions, { type CarteMission } from "./liste";
+import { Suspense } from "react";
+import { nombrePertinents } from "@/lib/matching/pour-consultant";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const ONGLETS = [["ouverte", "Ouvertes"], ["pourvue", "Pourvues"], ["fermee", "Fermées"]] as const;
 
@@ -54,7 +57,19 @@ export default async function Missions({ searchParams }: { searchParams: Promise
 
       <ListeMissions missions={missions} titre={`Missions ${ONGLETS.find(([s]) => s === statut)?.[1].toLowerCase() ?? ""}`}
         responsables={responsables} estAdmin={utilisateur.role === "admin"}
-        lienVue={{ miennes: lien(statut, "miennes"), toutes: lien(statut, "toutes") }} miennes={miennes} />
+        lienVue={{ miennes: lien(statut, "miennes"), toutes: lien(statut, "toutes") }} miennes={miennes}
+        pertinents={statut === "ouverte" ? Object.fromEntries(missions.map((m) => [m.id,
+          <Suspense key={m.id} fallback={<span className="squelette inline-block h-7 w-36 rounded-full" />}><Pertinents supabase={supabase} missionId={m.id} /></Suspense>])) : undefined} />
     </div>
+  );
+}
+
+/** Nombre de profils pertinents d'une mission ouverte (même règle que l'écran de la mission : non écartés, score ≥ 60). */
+async function Pertinents({ supabase, missionId }: { supabase: SupabaseClient; missionId: string }) {
+  const n = await nombrePertinents(supabase, missionId);
+  return (
+    <Link href={`/missions/${missionId}`} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold ring-1 ${n ? "bg-emerald-50 text-emerald-700 ring-emerald-200 hover:bg-emerald-100" : "bg-slate-50 text-slate-500 ring-slate-200"}`}>
+      <span className="text-base font-bold tabular-nums">{n}</span> profil{n > 1 ? "s" : ""} pertinent{n > 1 ? "s" : ""}
+    </Link>
   );
 }

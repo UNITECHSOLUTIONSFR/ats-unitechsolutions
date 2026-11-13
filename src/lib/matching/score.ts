@@ -68,6 +68,14 @@ export interface ResultatScore {
   motifsElimination: string[];
   raisons: Raison[];
   alertes: string[]; // ex. disponibilité non mise à jour depuis 3 mois
+  /** Explication en langage clair, pour le recruteur : ce qui colle, ce qui manque, ce qu'il faut vérifier au téléphone. */
+  explication?: Explication;
+}
+
+export interface Explication {
+  atouts: string[];
+  manques: string[];
+  aVerifier: string[];
 }
 
 const JOUR = 86_400_000;
@@ -181,7 +189,50 @@ export function scorerConsultant(
     raisons.push({ critere: c.cle, points: arrondi(points), max: arrondi((max * 100) / poidsUtiles), texte: c.texte });
   }
 
-  return { score: arrondi(score), elimine: motifsElimination.length > 0, motifsElimination, raisons, alertes };
+  return { score: arrondi(score), elimine: motifsElimination.length > 0, motifsElimination, raisons, alertes, explication: expliquer(mission, consultant, parId, alertes) };
+}
+
+const liste = (noms: string[]) => noms.length <= 1 ? noms.join("") : `${noms.slice(0, -1).join(", ")} et ${noms[noms.length - 1]}`;
+const SENIORITE: Record<Seniorite, string> = { junior: "junior", confirme: "confirmé", senior: "senior", expert: "expert" };
+
+/** Phrases simples : atouts, manques, points à vérifier (même calcul que le score, sans IA). */
+function expliquer(mission: MissionAScorer, c: ConsultantAScorer, parId: Map<string, ConsultantAScorer["competences"][number]>, alertes: string[]): Explication {
+  const atouts: string[] = [], manques: string[] = [], aVerifier: string[] = [];
+  const indisp = mission.competences.filter((e) => e.obligatoire), autres = mission.competences.filter((e) => !e.obligatoire);
+  const a = (e: ExigenceCompetence) => parId.has(e.competence_id);
+  const sur = (e: ExigenceCompetence) => a(e) && !parId.get(e.competence_id)!.partiel;
+  const vuCV = (e: ExigenceCompetence) => a(e) && !!parId.get(e.competence_id)!.partiel;
+  const ans = (e: ExigenceCompetence) => { const n = parId.get(e.competence_id)?.annees; return n ? `${e.nom} (${n} an${n > 1 ? "s" : ""})` : e.nom; };
+  if (indisp.length) {
+    if (indisp.every(a)) atouts.push(`A toutes les compétences indispensables : ${liste(indisp.map(ans))}`);
+    else {
+      if (indisp.some(a)) atouts.push(`Indispensables présentes : ${liste(indisp.filter(a).map(ans))}`);
+      manques.push(`Indispensable absente : ${liste(indisp.filter((e) => !a(e)).map((e) => e.nom))}`);
+    }
+  }
+  if (autres.some(sur)) atouts.push(`Maîtrise aussi : ${liste(autres.filter(sur).map(ans))}`);
+  if (autres.some((e) => !a(e))) manques.push(`Il lui manque : ${liste(autres.filter((e) => !a(e)).map((e) => e.nom))}`);
+  const seulementCV = mission.competences.filter(vuCV);
+  if (seulementCV.length) aVerifier.push(`Cité dans son CV, à confirmer : ${liste(seulementCV.map((e) => e.nom))}`);
+  if (mission.annees_min) {
+    const n = c.annees_experience;
+    if (n === null || n === undefined) aVerifier.push(`Années d'expérience inconnues (${mission.annees_min} ans demandés)`);
+    else if (n >= mission.annees_min) atouts.push(`${n} ans d'expérience pour ${mission.annees_min} demandés`);
+    else manques.push(`${n} ans d'expérience pour ${mission.annees_min} demandés`);
+  }
+  if (mission.seniorite) {
+    if (!c.seniorite) aVerifier.push(`Séniorité inconnue (${SENIORITE[mission.seniorite]} demandé)`);
+    else if (c.seniorite === mission.seniorite) atouts.push(`Profil ${SENIORITE[c.seniorite]}, comme demandé`);
+    else (RANG[c.seniorite] > RANG[mission.seniorite] ? atouts : manques).push(`Profil ${SENIORITE[c.seniorite]} (${SENIORITE[mission.seniorite]} demandé)`);
+  }
+  if (c.disponible_le) {
+    const debut = mission.date_debut ? new Date(mission.date_debut) : new Date();
+    const d = new Date(c.disponible_le);
+    (d <= debut ? atouts : manques).push(`Disponible le ${d.toLocaleDateString("fr-FR")}${d <= debut ? "" : " (après le démarrage)"}`);
+  } else if (estDisponibleImmediatement(c.disponibilite)) atouts.push(`Disponibilité : ${c.disponibilite}`);
+  else aVerifier.push(c.disponibilite ? `Disponibilité à préciser : « ${c.disponibilite} »` : "Disponibilité inconnue : à demander");
+  for (const al of alertes) aVerifier.push(al);
+  return { atouts, manques, aVerifier };
 }
 
 function evaluerDisponibilite(m: MissionAScorer, c: ConsultantAScorer, aujourdHui: Date): { ratio: number; texte: string } {

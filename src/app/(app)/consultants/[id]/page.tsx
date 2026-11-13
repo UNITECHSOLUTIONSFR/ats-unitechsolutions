@@ -6,6 +6,8 @@ import { formaterTelephone } from "@/lib/metier/telephone";
 import { modifierConsultant } from "@/lib/consultants/actions";
 import BlocRGPD from "./rgpd";
 import BlocCVUnitech from "./cv-unitech";
+import { Suspense } from "react";
+import { ApercuDuCV, EvaluationMission, MissionsPourLui } from "./blocs-mission";
 
 // Génération du CV Unitech (IA + SharePoint) : jusqu'à 2 minutes.
 export const maxDuration = 120;
@@ -20,8 +22,8 @@ const STATUTS_PROPOSITION: Record<string, string> = {
   propose: "Proposé", appele: "Appelé", envoye_client: "Envoyé au client", retenu: "Retenu", refuse: "Refusé",
 };
 
-export default async function FicheConsultant({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ cv?: string }> }) {
-  const { cv: avertissementCV } = await searchParams;
+export default async function FicheConsultant({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ cv?: string; mission?: string }> }) {
+  const { cv: avertissementCV, mission: missionId } = await searchParams;
   const { id } = await params;
   const { utilisateur, supabase } = await exigerUtilisateur();
   const [{ data: c }, { data: profil }, { data: competences }, { data: documents }, { data: propositions }] = await Promise.all([
@@ -71,8 +73,15 @@ export default async function FicheConsultant({ params, searchParams }: { params
         </div>
       </div>
 
+      {/* Venant d'une mission : l'évaluation pour cette mission, en premier */}
+      {missionId && /^[0-9a-f-]{36}$/.test(missionId) && (
+        <Suspense fallback={<div className="squelette h-56" />}><EvaluationMission consultantId={c.id} missionId={missionId} /></Suspense>
+      )}
+      <Suspense fallback={<div className="squelette h-24" />}><MissionsPourLui consultantId={c.id} /></Suspense>
+
       <div className="grid gap-6 lg:grid-cols-3 [&>*]:min-w-0">
         <section className="space-y-4 lg:col-span-2">
+          <Suspense fallback={<div className="squelette h-[480px]" />}><ApercuDuCV consultantId={c.id} /></Suspense>
           <div className="carte p-4 sm:p-6">
             <h2 className="titre-section">Profil</h2>
             {profil ? (

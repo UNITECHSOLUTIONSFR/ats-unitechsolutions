@@ -91,7 +91,7 @@ export async function ponderationsReglees(supabase: SupabaseClient): Promise<Pon
 }
 
 /** Classement des consultants pour une mission : filtres, score, raisons. Aucun appel à l'IA. */
-export async function classementMission(supabase: SupabaseClient, missionId: string, limite = 50): Promise<LigneClassement[]> {
+export async function classementMission(supabase: SupabaseClient, missionId: string, limite = 50, inclure?: string): Promise<LigneClassement[]> {
   const mission = await chargerMissionAScorer(supabase, missionId);
   if (!mission) return [];
   const [ponderations, { data, error }, dansLesTextes] = await Promise.all([
@@ -107,6 +107,8 @@ export async function classementMission(supabase: SupabaseClient, missionId: str
   const absents = [...dansLesTextes.entries()].filter(([id]) => !connus.has(id))
     .map(([id, k]) => [id, [...k].reduce((t, c) => t + (poids.get(c) ?? 1), 0)] as const)
     .sort((a, b) => b[1] - a[1]).slice(0, 300).map(([id]) => id);
+  // Personne demandée explicitement (fiche consultant) : évaluée même si elle n'est pas candidate.
+  if (inclure && !connus.has(inclure) && !absents.includes(inclure)) absents.push(inclure);
   const supplementaires = absents.length ? await chargerCandidats(supabase, absents) : [];
   const lignes = [...((data ?? []) as LigneCandidat[]), ...supplementaires].map((c) => ({
     consultant_id: c.consultant_id,
@@ -133,9 +135,14 @@ export async function classementMission(supabase: SupabaseClient, missionId: str
       similarite: c.similarite,
     }, ponderations),
   }));
-  const retenus = classer(lignes).slice(0, limite);
+  const classes = classer(lignes);
+  const retenus = classes.slice(0, limite);
+  if (inclure && !retenus.some((l) => l.consultant_id === inclure)) {
+    const l = classes.find((x) => x.consultant_id === inclure);
+    if (l) retenus.push(l);
+  }
   // Lien Outlook écarté : on cherche alors un CV Word rangé dans SharePoint pour la même personne.
-  const sansWord = retenus.filter((l) => !l.word_url).map((l) => l.consultant_id);
+  const sansWord = retenus.slice(0, 60).filter((l) => !l.word_url).map((l) => l.consultant_id); // cartes affichées seulement
   if (sansWord.length) {
     const { data: docs } = await supabase.from("documents").select("consultant_id, url_web")
       .in("consultant_id", sansWord).eq("type", "word_nominatif").eq("supprime_sharepoint", false)

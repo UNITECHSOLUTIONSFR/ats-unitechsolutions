@@ -77,7 +77,7 @@ export default function TableauExcel({ vues, vueInitiale, colonneDomaine, onglet
     return lignes.filter((l) =>
       (!vueActive || filtreRapide(l, vueActive as FiltreRapide, maintenant)) &&
       rapides.every((f) => filtreRapide(l, f, maintenant)));
-  }, [lignes, vueActive, colonneDomaine, rapides]);
+  }, [lignes, vueActive, rapides]);
   // Nombre de fiches arrivées aujourd'hui, affiché sur chaque vue.
   const nbParVue = useMemo(() => {
     const maintenant = Date.parse(new Date().toISOString());

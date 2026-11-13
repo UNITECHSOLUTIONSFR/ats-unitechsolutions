@@ -15,8 +15,10 @@ const sansAccents = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").to
 const date = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
 
 /** Liste des missions en cartes, avec recherche instantanée et bascule « Mes missions / Toutes ». */
-export default function ListeMissions({ missions, titre, responsables, estAdmin, lienVue, miennes }: {
+export default function ListeMissions({ missions, titre, responsables, estAdmin, lienVue, miennes, pertinents }: {
   missions: CarteMission[]; titre: string; responsables: Responsable[]; estAdmin: boolean; lienVue: { miennes: string; toutes: string }; miennes: boolean;
+  /** Nombre de profils pertinents par mission (calculé côté serveur, affiché dès qu'il est prêt). */
+  pertinents?: Record<string, React.ReactNode>;
 }) {
   const [texte, setTexte] = useState("");
   const nomDe = useMemo(() => new Map(responsables.map((r) => [r.id, r.nom])), [responsables]);
@@ -61,6 +63,7 @@ export default function ListeMissions({ missions, titre, responsables, estAdmin,
               {m.debut && <span className="rounded-md bg-marque-50 px-2 py-0.5 font-semibold text-marque-700">Démarrage le {date(m.debut)}</span>}
             </div>
             <div className="flex flex-wrap items-center gap-5">
+              {pertinents?.[m.id]}
               <Compteur n={m.suivis} libelle="Proposé" />
               <Compteur n={m.appeles} libelle="Appelé" />
               <Compteur n={m.envoyes} libelle="Envoyé au client" />
