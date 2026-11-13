@@ -1,12 +1,12 @@
 # Vos actions restantes
 
-Fait le 13/11 : planificateur de secours, double authentification, échéances des secrets, rendu des CV Unitech, téléphones (62 cas réglés), envoi des emails autorisé.
+Fait le 13/11 : planificateur de secours, double authentification, échéances des secrets, rendu des CV Unitech, téléphones, envoi des emails autorisé, compte de test, rangement SharePoint, reprise du dossier Outlook « Consultant » (accès refermé).
 
-1. **Compte de test recruteur** : Paramètres → Utilisateurs → inviter une adresse de test (rôle recruteur), « Nouveau mot de passe », connexion en navigation privée.
-2. **Téléphones étrangers (29)** : décision. Numéros tunisiens, marocains, etc. saisis sans « + » (ex. 216 23 214 674) : les reconnaître comme internationaux ? Oui / non.
-3. **Jalons** : C (3 missions passées pour juger le matching), D (relecture de la note RGPD, adresse de contact des candidats).
-4. **Premier envoi test** : un envoi à 10 consultants, lancé par vous depuis Emails.
-5. **SharePoint** : vider « Sauvegardes ATS / Obsolètes - à supprimer » ; fermer les Word de Cyril MZYR et Gracia Andriamihamina pour que je les range.
+1. **Jalon C** : créer les 4 missions passées (Missions → Nouvelle mission → PDF) et me dire qui avait été retenu pour chacune.
+2. **Jalon D** : me donner l'adresse de contact RGPD, l'adresse postale + SIREN, le représentant légal, le DPO (ou « non désigné »).
+3. **Alertes** : 12 doublons possibles et 5 CV illisibles issus de la reprise ; 8 téléphones illisibles à corriger à la main.
+4. **Premier envoi test** : 10 consultants, lancé par vous depuis Emails (après la panne Microsoft).
+5. **Vérifier** que l'aperçu du CV s'affiche sur une fiche consultant.
 6. **Facultatif** : les 522 CV de l'ancien groupe recrutement@.
 
 Ensuite : **invitation des collaborateurs** (Paramètres → Utilisateurs → « Nouveau mot de passe » pour chacun).
