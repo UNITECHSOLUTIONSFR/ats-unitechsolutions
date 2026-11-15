@@ -5,8 +5,10 @@ import { IconeMallette } from "../icones";
 import ListeMissions, { type CarteMission } from "./liste";
 import { Suspense } from "react";
 import { nombrePertinents } from "@/lib/matching/pour-consultant";
+import { STATUTS_MISSIONS } from "@/lib/missions/statuts";
+import { BoutonActualiserTrello } from "./trello";
 
-const ONGLETS = [["ouverte", "Ouvertes"], ["pourvue", "Pourvues"], ["fermee", "Fermées"]] as const;
+const ONGLETS = STATUTS_MISSIONS;
 
 /** Missions : onglets par statut (avec leur nombre), recherche, « Mes missions », une carte par mission. */
 export default async function Missions({ searchParams }: { searchParams: Promise<{ statut?: string; vue?: string }> }) {
@@ -19,17 +21,20 @@ export default async function Missions({ searchParams }: { searchParams: Promise
     return q.then((r) => r.count ?? 0);
   };
   let q = supabase.from("missions")
-    .select("id, client, intitule, statut, created_at, date_debut, localisation, responsable_id, propositions(statut)")
+    .select("id, client, intitule, statut, created_at, date_debut, localisation, responsable_id, trello_carte_id, trello_colonne, trello_recruteur, trello_url, tjm, propositions(statut)")
     .eq("statut", statut).order("created_at", { ascending: false }).limit(300);
   if (miennes) q = q.or(FILTRE_MES_MISSIONS(utilisateur.id));
-  const [{ data }, responsables, ...nombres] = await Promise.all([q, responsablesPossibles(supabase), ...ONGLETS.map(([s]) => compter(s))]);
+  const derniereLecture = supabase.from("missions").select("trello_lu_le").not("trello_lu_le", "is", null).order("trello_lu_le", { ascending: false }).limit(1).maybeSingle()
+    .then((r) => (r.data?.trello_lu_le as string | undefined) ?? null);
+  const [{ data }, responsables, lu, ...nombres] = await Promise.all([q, responsablesPossibles(supabase), derniereLecture, ...ONGLETS.map(([s]) => compter(s))]);
 
   const missions: CarteMission[] = (data ?? []).map((m) => {
     const p = (m.propositions ?? []) as { statut: string }[];
     const n = (s: string) => p.filter((x) => x.statut === s).length;
     return {
       id: m.id, intitule: m.intitule, client: m.client, localisation: m.localisation, creeLe: m.created_at, debut: m.date_debut,
-      responsableId: m.responsable_id, suivis: p.length, appeles: n("appele"), envoyes: n("envoye_client"), retenus: n("retenu"),
+      responsableId: m.responsable_id, suivis: p.length,
+      trello: m.trello_carte_id ? { colonne: m.trello_colonne, recruteur: m.trello_recruteur, url: m.trello_url } : null, tjm: m.tjm, appeles: n("appele"), envoyes: n("envoye_client"), retenus: n("retenu"),
     };
   });
   const lien = (s: string, v: string) => `/missions?statut=${s}&vue=${v}`;
@@ -41,7 +46,9 @@ export default async function Missions({ searchParams }: { searchParams: Promise
           <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-marque-600 shadow-sm ring-1 ring-slate-200"><IconeMallette className="h-5 w-5" /></span>
           Missions
         </h1>
-        <Link href="/missions/nouvelle" className="bouton-primaire px-5 py-2.5">+ Nouvelle mission</Link>
+        {/* Les missions viennent de Trello (lu toutes les heures, en lecture seule) : plus de création dans l'outil. */}
+        {utilisateur.role === "admin" ? <BoutonActualiserTrello derniereLecture={lu} />
+          : lu && <span className="text-xs text-slate-500">Missions lues depuis Trello le {new Date(lu).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}</span>}
       </div>
 
       {/* Onglets par statut */}
@@ -57,7 +64,7 @@ export default async function Missions({ searchParams }: { searchParams: Promise
       <ListeMissions missions={missions} titre={`Missions ${ONGLETS.find(([s]) => s === statut)?.[1].toLowerCase() ?? ""}`}
         responsables={responsables} estAdmin={utilisateur.role === "admin"}
         lienVue={{ miennes: lien(statut, "miennes"), toutes: lien(statut, "toutes") }} miennes={miennes}
-        pertinents={statut === "ouverte" ? Object.fromEntries(missions.map((m) => [m.id,
+        pertinents={statut === "ouverte" || statut === "chez_client" ? Object.fromEntries(missions.map((m) => [m.id,
           <Suspense key={m.id} fallback={<span className="squelette inline-block h-7 w-36 rounded-full" />}><Pertinents missionId={m.id} /></Suspense>])) : undefined} />
     </div>
   );

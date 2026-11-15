@@ -4,11 +4,16 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { Responsable } from "@/lib/missions/responsables";
 import ChoixResponsable from "./responsable";
+import { EtiquetteTrello } from "./trello";
 import { IconeRecherche } from "../icones";
 
 export interface CarteMission {
   id: string; intitule: string; client: string | null; localisation: string | null; creeLe: string; debut: string | null;
   responsableId: string | null; suivis: number; appeles: number; envoyes: number; retenus: number;
+  /** Mission lue depuis Trello : colonne, recruteur et lien vers la carte. */
+  trello?: { colonne: string | null; recruteur: string | null; url: string | null } | null;
+  /** TJM de la carte : information interne, jamais utilisée pour classer. */
+  tjm?: string | null;
 }
 
 const sansAccents = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -24,7 +29,7 @@ export default function ListeMissions({ missions, titre, responsables, estAdmin,
   const nomDe = useMemo(() => new Map(responsables.map((r) => [r.id, r.nom])), [responsables]);
   const visibles = useMemo(() => {
     const t = sansAccents(texte.trim());
-    return t ? missions.filter((m) => sansAccents(`${m.intitule} ${m.client ?? ""} ${m.localisation ?? ""} ${nomDe.get(m.responsableId ?? "") ?? ""}`).includes(t)) : missions;
+    return t ? missions.filter((m) => sansAccents(`${m.intitule} ${m.client ?? ""} ${m.localisation ?? ""} ${nomDe.get(m.responsableId ?? "") ?? ""} ${m.trello?.recruteur ?? ""} ${m.trello?.colonne ?? ""}`).includes(t)) : missions;
   }, [missions, texte, nomDe]);
 
   return (
@@ -34,7 +39,7 @@ export default function ListeMissions({ missions, titre, responsables, estAdmin,
         <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto">
           <label className="relative min-w-0 flex-1 sm:flex-none">
             <IconeRecherche className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input value={texte} onChange={(e) => setTexte(e.target.value)} placeholder="Intitulé, client, lieu, responsable" className="champ w-full pl-9 sm:w-72" />
+            <input value={texte} onChange={(e) => setTexte(e.target.value)} placeholder="Intitulé, client, lieu, recruteur" className="champ w-full pl-9 sm:w-72" />
           </label>
           <div className="flex rounded-full bg-slate-100/90 p-1 text-sm font-semibold">
             <Link href={lienVue.miennes} className={`rounded-full px-3.5 py-1 transition ${miennes ? "bg-white text-nuit shadow-sm" : "text-slate-500 hover:text-nuit"}`}>Mes missions</Link>
@@ -52,14 +57,20 @@ export default function ListeMissions({ missions, titre, responsables, estAdmin,
               <Link href={`/missions/${m.id}`} className="block text-[17px] font-bold leading-snug tracking-tight text-nuit hover:text-marque-700">{m.intitule}</Link>
               <div className="text-slate-500">{m.client ?? "Client non précisé"}</div>
             </div>
-            <ChoixResponsable missionId={m.id} responsableId={m.responsableId} responsables={responsables} estAdmin={estAdmin} compact />
+            {m.trello ? <EtiquetteTrello colonne={m.trello.colonne} recruteur={m.trello.recruteur} url={m.trello.url} compacte />
+              : <ChoixResponsable missionId={m.id} responsableId={m.responsableId} responsables={responsables} estAdmin={estAdmin} compact />}
           </div>
 
-          {m.localisation && <div className="mt-3"><span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-700">📍 {m.localisation}</span></div>}
+          {(m.localisation || m.tjm) && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {m.localisation && <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-700">📍 {m.localisation}</span>}
+              {m.tjm && <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-sm text-amber-800 ring-1 ring-amber-200" title="Information interne : jamais utilisée pour classer, jamais envoyée">💶 {m.tjm}</span>}
+            </div>
+          )}
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
             <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
-              <span>Créée le {date(m.creeLe)}</span>
+              <span>{m.trello ? "Reçue le" : "Créée le"} {date(m.creeLe)}</span>
               {m.debut && <span className="rounded-md bg-marque-50 px-2 py-0.5 font-semibold text-marque-700">Démarrage le {date(m.debut)}</span>}
             </div>
             <div className="flex flex-wrap items-center gap-5">

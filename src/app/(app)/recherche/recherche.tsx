@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { envoyerMessageRecherche, relancerRecherche } from "@/lib/recherche/actions";
 import type { Criteres, ResultatRecherche } from "@/lib/recherche/moteur";
@@ -130,7 +129,7 @@ export default function Recherche({ recents }: { recents: ResultatRecherche[] })
       </section>
 
       {/* Critères compris, modifiables d'un clic */}
-      {criteres && <BarreCriteres criteres={criteres} onChange={modifier} desactive={enCours} texteMission={messages.filter((m) => m.de === "moi").map((m) => m.texte).join("\n")} />}
+      {criteres && <BarreCriteres criteres={criteres} onChange={modifier} desactive={enCours} />}
 
       {(
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-5 [&>*]:min-w-0">
@@ -256,7 +255,7 @@ export default function Recherche({ recents }: { recents: ResultatRecherche[] })
 }
 
 /** Critères compris par l'outil : un clic rend une compétence obligatoire ou souhaitée, ✕ la retire. */
-function BarreCriteres({ criteres, onChange, desactive, texteMission }: { criteres: Criteres; onChange: (c: Criteres) => void; desactive: boolean; texteMission: string }) {
+function BarreCriteres({ criteres, onChange, desactive }: { criteres: Criteres; onChange: (c: Criteres) => void; desactive: boolean }) {
   const [ajout, setAjout] = useState("");
   const retirer = (cle: "poste" | "lieu" | "seniorite") => onChange({ ...criteres, [cle]: null });
   const annees = criteres.annees_min !== null || criteres.annees_max !== null
@@ -282,7 +281,6 @@ function BarreCriteres({ criteres, onChange, desactive, texteMission }: { criter
       <form onSubmit={(e) => { e.preventDefault(); const n = ajout.trim(); if (n && !criteres.competences.some((c) => c.nom.toLowerCase() === n.toLowerCase())) onChange({ ...criteres, competences: [...criteres.competences, { nom: n, obligatoire: false }] }); setAjout(""); }}>
         <input value={ajout} onChange={(e) => setAjout(e.target.value)} placeholder="+ compétence" className="w-32 rounded-full bg-white/70 px-3 py-1 text-xs outline-none ring-1 ring-slate-200 focus:ring-marque-300" />
       </form>
-      <Link href={`/missions/nouvelle?texte=${encodeURIComponent(texteMission)}`} className="bouton-secondaire ml-auto text-xs">Créer une mission à partir de cette recherche</Link>
     </section>
   );
 }

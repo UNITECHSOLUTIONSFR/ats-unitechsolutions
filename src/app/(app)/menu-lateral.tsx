@@ -38,7 +38,7 @@ export default function MenuLateral({ nom, email, estAdmin }: { nom: string; ema
       {/* Barre du haut sur téléphone (sous l'encoche) */}
       <div className="sticky top-0 z-40 flex items-center justify-between bg-gradient-to-r from-marque-600 to-nuit px-4 pb-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] text-white lg:hidden">
         <Link href="/" onClick={() => setOuvert(false)}><Logo /></Link>
-        <Link href="/missions/nouvelle" onClick={() => setOuvert(false)} className="rounded-full bg-white px-3.5 py-1.5 text-sm font-bold text-nuit shadow">+ Mission</Link>
+        <Link href="/recherche" onClick={() => setOuvert(false)} className="rounded-full bg-white px-3.5 py-1.5 text-sm font-bold text-nuit shadow">Rechercher</Link>
       </div>
 
       {/* Barre d'onglets en bas sur téléphone, comme une application */}

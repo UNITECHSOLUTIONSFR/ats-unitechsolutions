@@ -18,6 +18,8 @@ import type { AvisMission } from "@/lib/ai";
 export const maxDuration = 120;
 import { suivreProposition } from "@/lib/missions/actions";
 import ChoixStatut from "../statut";
+import { EtiquetteTrello } from "../trello";
+import { LIBELLE_STATUT } from "@/lib/missions/statuts";
 
 const STATUTS_PROPOSITION: Record<string, string> = {
   propose: "Proposé", appele: "Appelé", envoye_client: "Envoyé au client", retenu: "Retenu", refuse: "Refusé",
@@ -28,7 +30,7 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
   const { utilisateur, supabase } = await exigerUtilisateur();
   const { data: mission } = await supabase
     .from("missions")
-    .select("id, client, intitule, texte_besoin, statut, responsable_id, localisation, date_debut, annees_min, seniorite, exigences, mission_competences(competence_id, obligatoire, importance, annees_min, competences(nom_canonique))")
+    .select("id, client, intitule, texte_besoin, statut, responsable_id, trello_carte_id, trello_colonne, trello_recruteur, trello_url, trello_lu_le, tjm, localisation, date_debut, annees_min, seniorite, exigences, mission_competences(competence_id, obligatoire, importance, annees_min, competences(nom_canonique))")
     .eq("id", id)
     .maybeSingle();
   if (!mission) notFound();
@@ -68,6 +70,8 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
           <h1 className="titre-page">{mission.intitule}</h1>
           <div className="mt-2 flex flex-wrap gap-2 text-sm">
             {mission.client && <span className="rounded-full bg-white px-3 py-1 font-medium text-nuit ring-1 ring-slate-200">🏢 {mission.client}</span>}
+            {mission.trello_carte_id && <EtiquetteTrello colonne={mission.trello_colonne} recruteur={mission.trello_recruteur} url={mission.trello_url} />}
+            {mission.tjm && <span className="rounded-full bg-amber-50 px-3 py-1 font-medium text-amber-800 ring-1 ring-amber-200" title="Information interne : jamais utilisée pour classer les candidats, jamais envoyée à un consultant">💶 {mission.tjm} <span className="text-xs font-normal">(interne)</span></span>}
             {mission.localisation && <span className="rounded-full bg-white px-3 py-1 text-slate-700 ring-1 ring-slate-200">📍 {mission.localisation}</span>}
             {mission.date_debut && <span className="rounded-full bg-marque-50 px-3 py-1 font-semibold text-marque-700 ring-1 ring-marque-100">Démarrage le {new Date(mission.date_debut).toLocaleDateString("fr-FR")}</span>}
             {mission.annees_min && <span className="rounded-full bg-white px-3 py-1 text-slate-700 ring-1 ring-slate-200">⏱ {mission.annees_min} ans minimum</span>}
@@ -77,11 +81,20 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
         <div className="flex flex-wrap items-center gap-3">
         <Shortlist mission={mission.intitule} profils={shortlist} />
         {utilisateur.role === "admin" && <a href={`/missions/${id}/export`} className="bouton-secondaire">Exporter en Excel</a>}
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-slate-500">Responsable</span>
-          <ChoixResponsable missionId={id} responsableId={mission.responsable_id} responsables={responsables} estAdmin={utilisateur.role === "admin"} />
-        </div>
-        <ChoixStatut missionId={id} statut={mission.statut} />
+        {mission.trello_carte_id ? (
+          // Mission Trello : statut et recruteur suivent la carte (Trello fait foi, l'outil n'y écrit jamais).
+          <span className="rounded-full bg-slate-50 px-3 py-1.5 text-sm text-slate-600 ring-1 ring-slate-200">
+            Statut : <b className="text-nuit">{LIBELLE_STATUT[mission.statut] ?? mission.statut}</b> · suit Trello
+          </span>
+        ) : (
+          <>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-slate-500">Responsable</span>
+              <ChoixResponsable missionId={id} responsableId={mission.responsable_id} responsables={responsables} estAdmin={utilisateur.role === "admin"} />
+            </div>
+            <ChoixStatut missionId={id} statut={mission.statut} />
+          </>
+        )}
         </div>
       </div>
 

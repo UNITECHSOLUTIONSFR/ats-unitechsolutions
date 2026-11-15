@@ -1,17 +1,7 @@
-import { exigerUtilisateur } from "@/lib/acces";
-import FormulaireMission from "./formulaire";
+import { redirect } from "next/navigation";
 
-export default async function NouvelleMission({ searchParams }: { searchParams: Promise<{ texte?: string }> }) {
-  await exigerUtilisateur();
-  // Depuis la section « Recherche » : le besoin décrit dans la conversation pré-remplit la fiche.
-  const { texte } = await searchParams;
-  return (
-    <div className="max-w-3xl space-y-4">
-      <div>
-        <h1 className="titre-page">Nouvelle mission</h1>
-        <p className="sous-titre mt-1">Importez la fiche du client : l&apos;outil la lit, vous vérifiez, puis il classe les consultants avec un score expliqué.</p>
-      </div>
-      <FormulaireMission texteInitial={texte?.slice(0, 5000)} />
-    </div>
-  );
+// Les missions sont créées et suivies dans Trello, qui fait foi : l'outil les lit toutes les heures (lecture seule).
+// L'ancienne saisie d'une mission dans l'outil n'est plus proposée ; l'adresse renvoie vers la liste des missions.
+export default function NouvelleMission() {
+  redirect("/missions");
 }

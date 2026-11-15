@@ -9,6 +9,8 @@ import { reprendreIllisibles } from "@/lib/analyse-cv/illisibles";
 import { actualiserPDFUnitech, deposerCVEmails } from "@/lib/cv-unitech/service";
 import { sauvegarderDansSharePoint } from "./sauvegarde";
 import { synchroniserExcel } from "./excel";
+import { synchroniserTrello } from "@/lib/trello/synchro";
+import { trelloConfigure } from "@/lib/trello/client";
 
 export const TACHES = {
   excel: { type: "synchro_excel", libelle: "Fichier Excel de suivi" },
@@ -16,6 +18,7 @@ export const TACHES = {
   emails: { type: "synchro_emails", libelle: "Candidatures email" },
   sauvegarde: { type: "sauvegarde_hebdo", libelle: "Sauvegarde Excel dans SharePoint (chaque semaine)" },
   relance: { type: "relance_disponibilite", libelle: "Relance des disponibilités (envoi du lot suivant)" },
+  trello: { type: "synchro_trello", libelle: "Missions Trello (lecture seule)" },
 } as const;
 export type NomTache = keyof typeof TACHES;
 
@@ -23,7 +26,7 @@ export type NomTache = keyof typeof TACHES;
  * Deux planificateurs (GitHub et, en secours, Supabase) appellent les mêmes tâches : une tâche planifiée déjà faite
  * récemment, ou en cours, n'est pas relancée. Délai en minutes. Les lancements depuis l'application ne sont pas concernés.
  */
-const DEJA_FAITE_MINUTES: Partial<Record<NomTache, number>> = { excel: 360, cv: 360, emails: 30, sauvegarde: 3 * 24 * 60 };
+const DEJA_FAITE_MINUTES: Partial<Record<NomTache, number>> = { excel: 360, cv: 360, emails: 30, sauvegarde: 3 * 24 * 60, trello: 30 };
 
 export async function tacheDejaFaite(nom: NomTache, supabase: SupabaseClient, maintenant = Date.now()): Promise<string | null> {
   const delai = DEJA_FAITE_MINUTES[nom];
@@ -69,6 +72,12 @@ export async function executerTache(nom: NomTache, supabase: SupabaseClient, opt
       rapport = { synchro, illisibles, cvUnitech, pdfUnitech, resultatsAnalyse: resultats.message ?? resultats.erreur, envoiAnalyse: envoi.message ?? envoi.erreur };
     }
     if (nom === "emails") rapport = { ...(await traiterEmails(supabase)) };
+    if (nom === "trello") {
+      if (!trelloConfigure()) throw new Error("clé Trello non saisie dans Vercel");
+      // Version d'aperçu : même base que le site en ligne, donc aucune lecture réelle (seulement Paramètres → Trello, en simulation).
+      if (process.env.VERCEL_ENV === "preview") throw new Error("version d'aperçu : lecture réelle de Trello désactivée");
+      rapport = { ...(await synchroniserTrello(supabase)) };
+    }
     if (nom === "sauvegarde") rapport = { ...(await sauvegarderDansSharePoint(supabase)) };
     if (nom === "relance") {
       if (!envoiActif()) throw new Error("envoi des emails non branché (Exchange)");

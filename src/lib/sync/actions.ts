@@ -15,5 +15,6 @@ export async function lancerTache(_e: EtatTache, formData: FormData): Promise<Et
   const r = await executerTache(nom, clientSupabaseAdmin());
   revalidatePath("/parametres/synchronisations");
   revalidatePath("/");
+  if (nom === "trello") revalidatePath("/missions");
   return r.ok ? { message: `${TACHES[nom].libelle} : terminé.` } : { erreur: `${TACHES[nom].libelle} : ${String(r.rapport.erreur)}` };
 }

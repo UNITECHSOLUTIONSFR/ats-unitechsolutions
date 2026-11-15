@@ -6,7 +6,7 @@ import { statsAccueil } from "@/lib/accueil/stats";
 import { FILTRE_MES_MISSIONS } from "@/lib/missions/responsables";
 import { alerteVisible } from "@/lib/alertes/libelles";
 import BilanAdmin from "./bilan-admin";
-import { IconeAlerte, IconeMallette, IconePersonnes, IconePlus, IconeTableau } from "./icones";
+import { IconeAlerte, IconeMallette, IconePersonnes, IconeRecherche, IconeTableau } from "./icones";
 
 const LIBELLES_ALERTES: Record<string, string> = {
   doublon_possible: "Doublons possibles", telephone_invalide: "Téléphones à vérifier", nom_manquant: "Noms manquants",
@@ -41,10 +41,10 @@ export default async function Accueil() {
           <div>
             <p className="text-sm font-medium text-white/70">Bonjour{prenom ? ` ${prenom}` : ""}</p>
             <h1 className="mt-1 text-2xl font-bold tracking-[-0.03em] sm:text-4xl">Trouvez le bon consultant<br className="hidden sm:block" /> en une minute.</h1>
-            <p className="mt-2 hidden max-w-xl text-white/75 sm:block">Collez le besoin du client : l&apos;outil classe les profils et explique chaque score.</p>
+            <p className="mt-2 hidden max-w-xl text-white/75 sm:block">Les missions arrivent de Trello : l&apos;outil classe les profils et explique chaque score.</p>
           </div>
-          <Link href="/missions/nouvelle" className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-3 font-semibold sm:w-auto text-nuit shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl">
-            <IconePlus className="h-5 w-5" />Nouvelle mission
+          <Link href="/recherche" className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-3 font-semibold sm:w-auto text-nuit shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl">
+            <IconeRecherche className="h-5 w-5" />Rechercher un profil
           </Link>
         </div>
       </div>
@@ -78,7 +78,7 @@ export default async function Accueil() {
               </div>
             ))}
             {!missions?.length && (
-              <p className="text-sm text-slate-500">Aucune mission ouverte pour vous. <Link href="/missions/nouvelle" className="lien">Saisir un besoin client</Link></p>
+              <p className="text-sm text-slate-500">Aucune mission ouverte pour vous. Les missions arrivent depuis Trello.</p>
             )}
           </div>
         </section>

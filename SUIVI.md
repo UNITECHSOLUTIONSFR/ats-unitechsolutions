@@ -204,3 +204,9 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Fait : écran Consultants rechargé (envoi sans compression manuelle, relecture directe en secours) ; effacement d'une fiche sans page 404 (retour à la liste) ; croix du panneau réparée ; panneau de fiche ouvert instantanément (aperçu du tableau) ; fiche lue en parallèle de la vérification du compte, journal écrit après la réponse ; règles d'accès de la base évaluées une fois par requête (migration 34, appliquée) : 900 ms → 15 ms sur 30 000 lignes, recherche 106 → 4 ms.
 - Testé : 186 tests dont 25 de règles d'accès, contrôle en base (82 règles réécrites, compte inconnu toujours sans accès), build.
 - Suite : retour de l'utilisatrice sur la vitesse réelle ; 2 fiches vides issues de l'import à effacer par elle.
+
+### 16/11/2026 — Connexion Trello (lecture seule)
+- Fait : lecture du tableau Trello « new tab UTS 2027 » (migration 35 : champs trello_*, tjm, statuts « chez le client » et « en pause ») ; une carte = une mission (identifiant stable, jamais de doublon), statut et recruteur tirés de la colonne, client du titre, compétences de la description + pièce jointe (une lecture IA par texte, TJM retiré), missions existantes reliées par intitulé ; tâche horaire GitHub (`trello`, minute 47) + bouton « Actualiser depuis Trello » (admin) ; TJM interne affiché ; plus de création de mission dans l'outil ; Paramètres → Trello = aperçu en simulation (rien n'est écrit). Lecture réelle désactivée sur les versions d'aperçu (même base que la production).
+- Testé : 204 tests (dont 17 règles Trello), build. Pas de test réel depuis la session (Trello bloqué ici, clé seulement dans Vercel).
+- Suite : l'utilisatrice vérifie Paramètres → Trello sur la version d'aperçu, puis go pour la mise en ligne et la première lecture réelle.
+
