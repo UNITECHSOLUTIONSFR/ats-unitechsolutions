@@ -52,3 +52,44 @@ export function sansTJM(texte: string): string {
 export function cleIntitule(t: string): string {
   return cle(t);
 }
+
+const MOTS_VIDES = new Set(["les", "des", "une", "pour", "avec", "sur", "dans", "the", "and", "h/f", "f/h", "mission", "missions", "poste", "profil"]);
+
+/** Mots significatifs d'un intitulé (sans accents, 3 lettres ou plus, ou « .net », « c# »…). */
+export function motsIntitule(t: string): Set<string> {
+  return new Set(sansAccents(t).toLowerCase().split(/[\s/,()–—:|+-]+/).map((m) => m.replace(/^[^a-z0-9#.]+|[^a-z0-9#+]+$/g, ""))
+    .filter((m) => (m.length >= 3 || /[#.+]/.test(m)) && !MOTS_VIDES.has(m)));
+}
+
+/**
+ * Rapprochement souple des missions déjà créées dans l'outil avec les cartes Trello :
+ * même client (retrouvé dans le titre ou le début de la description) et mots du poste en commun.
+ * Chaque mission et chaque carte n'est reliée qu'une fois (meilleure paire d'abord). Renvoie carte → mission.
+ */
+export function rapprocher(
+  missions: { id: string; intitule: string; client: string | null }[],
+  cartes: { id: string; name: string; desc: string }[],
+): Map<string, string> {
+  const paires: { carte: string; mission: string; score: number }[] = [];
+  for (const c of cartes) {
+    const motsCarte = motsIntitule(c.name);
+    const texte = cle(`${c.name} ${c.desc.slice(0, 400)}`);
+    for (const m of missions) {
+      const motsMission = motsIntitule(m.intitule);
+      if (!motsMission.size || !motsCarte.size) continue;
+      const communs = [...motsMission].filter((x) => motsCarte.has(x)).length;
+      const recouvrement = communs / Math.min(motsMission.size, motsCarte.size);
+      const premierMotClient = m.client ? cle(m.client).split(" ").find((x) => x.length >= 3) : undefined;
+      const memeClient = !!premierMotClient && texte.split(" ").includes(premierMotClient);
+      if ((memeClient && communs >= 2 && recouvrement >= 0.4) || recouvrement >= 0.8) paires.push({ carte: c.id, mission: m.id, score: recouvrement + (memeClient ? 1 : 0) });
+    }
+  }
+  const lien = new Map<string, string>();
+  const missionsPrises = new Set<string>();
+  for (const p of paires.sort((a, b) => b.score - a.score)) {
+    if (lien.has(p.carte) || missionsPrises.has(p.mission)) continue;
+    lien.set(p.carte, p.mission);
+    missionsPrises.add(p.mission);
+  }
+  return lien;
+}

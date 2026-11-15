@@ -8,7 +8,7 @@ import { resoudreCompetences } from "@/lib/matching/competences";
 import { extraireTexte } from "@/lib/sharepoint/extraction";
 import { normaliserNomPersonne } from "@/lib/metier/texte";
 import { telechargerPieceJointe, trelloGet, type CarteTrello, type ListeTrello } from "./client";
-import { cleIntitule, lireColonne, lireTitre, lireTJM, sansTJM, TABLEAU_TRELLO } from "./regles";
+import { cleIntitule, lireColonne, lireTitre, lireTJM, rapprocher, sansTJM, TABLEAU_TRELLO } from "./regles";
 
 /** Ce qui est fait (ou, en simulation, serait fait) pour une carte : sert à l'aperçu avant la première lecture réelle. */
 export interface PlanCarte {
@@ -61,6 +61,11 @@ export async function synchroniserTrello(supabase: SupabaseClient, options: { si
     return (personnes ?? []).find((p) => normaliserNomPersonne("", `${p.nom_affiche ?? ""} ${p.email ?? ""}`).includes(cible))?.id ?? null;
   };
 
+  // Une nouvelle mission n'entre dans l'outil QUE par « Missions en cours » ; une carte déjà connue est suivie dans toutes les colonnes.
+  const nouvellesPossibles = cartes.filter((c) => !c.closed && !parCarte.has(c.id) && lireColonne(nomListe.get(c.idList) ?? "")?.aRepartir);
+  const liens = rapprocher([...sansCarte.values()], nouvellesPossibles);
+  const parId = new Map([...sansCarte.values()].map((m) => [m.id, m]));
+
   const vues = new Set<string>();
   const aAnalyser: { carte: CarteTrello; missionId: string; texte: string; empreinte: string; titre: ReturnType<typeof lireTitre>; dejaRelieeAvecExigences: boolean }[] = [];
 
@@ -68,6 +73,7 @@ export async function synchroniserTrello(supabase: SupabaseClient, options: { si
     const colonne = carte.closed ? { statut: "fermee" as const, recruteur: null, aRepartir: false } : lireColonne(nomListe.get(carte.idList) ?? "");
     const existante = parCarte.get(carte.id);
     if (!colonne) { if (!existante) bilan.ignorees++; continue; } // colonne ignorée (ex. Sourcing Kefi) : rien ne change
+    if (!existante && !colonne.aRepartir) { bilan.ignorees++; continue; } // carte jamais passée par « Missions en cours » : pas importée
     vues.add(carte.id);
     bilan.cartesLues++;
     const titre = lireTitre(carte.name);
@@ -86,7 +92,8 @@ export async function synchroniserTrello(supabase: SupabaseClient, options: { si
       let missionReliee: string | undefined;
       if (!missionId) {
         // Mission déjà créée dans l'outil avec le même intitulé : reliée (suivi des candidats et exigences conservés).
-        const homonyme = sansCarte.get(cleIntitule(titre.intitule)) ?? sansCarte.get(cleIntitule(carte.name));
+        const lieeSouple = liens.get(carte.id);
+        const homonyme = sansCarte.get(cleIntitule(titre.intitule)) ?? sansCarte.get(cleIntitule(carte.name)) ?? (lieeSouple ? parId.get(lieeSouple) : undefined);
         if (homonyme) {
           const { error } = simulation ? { error: null } : await supabase.from("missions").update({ trello_carte_id: carte.id, ...champs }).eq("id", homonyme.id);
           if (error) throw new Error(error.message);

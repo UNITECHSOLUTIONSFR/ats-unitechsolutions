@@ -27,7 +27,8 @@ export default async function PageTrello() {
   } catch (e) {
     return <p className="carte p-6 text-sm text-red-700">Lecture de Trello impossible : {(e as Error).message}</p>;
   }
-  const plan = bilan.plan ?? [];
+  const rang = { relier: 0, creer: 1, mettre_a_jour: 2, inchangee: 3 } as const;
+  const plan = [...(bilan.plan ?? [])].sort((a, b) => rang[a.action] - rang[b.action]);
   const parStatut = Object.entries(plan.reduce<Record<string, number>>((t, p) => ({ ...t, [p.statut]: (t[p.statut] ?? 0) + 1 }), {}));
   const aLire = plan.filter((p) => p.analyseIA).length;
   return (
@@ -35,7 +36,8 @@ export default async function PageTrello() {
       <div className="carte space-y-3 p-5 text-sm">
         <p className="text-slate-600">
           <b>Aperçu, rien n&apos;est enregistré.</b> Voici ce que l&apos;outil ferait de chaque carte du tableau Trello (lecture seule, jamais d&apos;écriture dans Trello).
-          Les colonnes ignorées (dont « Sourcing Kefi ») n&apos;apparaissent pas.
+          Seules les cartes de <b>« Missions en cours »</b> entrent dans l&apos;outil ; une carte déjà importée est ensuite suivie dans toutes les colonnes.
+          Les missions déjà créées dans l&apos;outil sont reliées à leur carte (en bleu ci-dessous) : vérifiez chaque lien.
         </p>
         <div className="flex flex-wrap gap-2">
           <span className="pastille">{plan.length} carte(s) lue(s)</span>

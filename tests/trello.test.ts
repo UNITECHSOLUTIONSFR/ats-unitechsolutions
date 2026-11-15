@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleIntitule, lireColonne, lireTitre, lireTJM, sansTJM } from "@/lib/trello/regles";
+import { cleIntitule, lireColonne, lireTitre, lireTJM, rapprocher, sansTJM } from "@/lib/trello/regles";
 
 describe("Trello : colonnes du tableau des missions", () => {
   it.each([
@@ -39,5 +39,31 @@ describe("Trello : titre, TJM", () => {
   });
   it("rapprochement des missions existantes par intitulé (accents, majuscules, ponctuation)", () => {
     expect(cleIntitule("Développeur  Java/Spring")).toBe(cleIntitule("developpeur java spring"));
+  });
+});
+
+describe("Trello : rapprochement des missions déjà créées dans l'outil", () => {
+  const missions = [
+    { id: "m1", intitule: "Tech Lead Senior Java / Angular", client: "BPCE SA" },
+    { id: "m2", intitule: "Développeur Full Stack Senior", client: "RATP" },
+    { id: "m3", intitule: "Concepteur Power BI / Data Analyst BI junior", client: "e.SNCF Solutions" },
+    { id: "m4", intitule: "Expert Authentification & MFA – Ilex Sign&GO", client: "Banque Postale" },
+  ];
+  it("même client et mots du poste en commun : relié ; sinon : non", () => {
+    const liens = rapprocher(missions, [
+      { id: "c1", name: "BPCE - Tech Lead Java Angular", desc: "" },
+      { id: "c2", name: "RATP Dev - Développeur full stack senior", desc: "" },
+      { id: "c3", name: "Data Analyst Power BI", desc: "Client : e.SNCF Solutions, Lyon" },
+      { id: "c4", name: "Orange - Développeur Java", desc: "" },
+      { id: "c5", name: "Banque Postale - Expert MFA Ilex", desc: "" },
+    ]);
+    expect(Object.fromEntries(liens)).toEqual({ c1: "m1", c2: "m2", c3: "m3", c5: "m4" });
+  });
+  it("une mission n'est reliée qu'à une seule carte (la plus proche)", () => {
+    const liens = rapprocher([missions[0]], [
+      { id: "a", name: "BPCE - Tech Lead Java", desc: "" },
+      { id: "b", name: "BPCE - Tech Lead Senior Java Angular", desc: "" },
+    ]);
+    expect(Object.fromEntries(liens)).toEqual({ b: "m1" });
   });
 });
