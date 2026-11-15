@@ -18,12 +18,11 @@ export default async function TableauDeSuivi({ searchParams }: { searchParams: P
           <p>Le tableau n&apos;est pas encore chargé.</p>
           {utilisateur.role === "admin" ? (
             <p className="mt-2">
-              Importez votre fichier Excel dans{" "}
-              <Link href="/parametres/import" className="font-medium text-marque-700 underline">Paramètres → Import du fichier Excel</Link> :
-              tous les onglets seront repris à l&apos;identique.
+              Le fichier de suivi est relu chaque nuit ; vérifiez sa synchronisation dans{" "}
+              <Link href="/parametres/synchronisations" className="font-medium text-marque-700 underline">Paramètres → Synchronisations</Link>.
             </p>
           ) : (
-            <p className="mt-2">Un administrateur doit d&apos;abord importer le fichier Excel.</p>
+            <p className="mt-2">Le fichier de suivi sera chargé lors de la prochaine synchronisation.</p>
           )}
         </div>
       </div>

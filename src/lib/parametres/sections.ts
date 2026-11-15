@@ -12,7 +12,7 @@ export const COULEURS: Record<Section["groupe"], { fond: string; texte: string; 
 export const SECTIONS: Section[] = [
   { href: "/parametres/utilisateurs", titre: "Utilisateurs et droits", texte: "Inviter l'équipe, choisir les rôles, retirer un accès en un clic.", groupe: "Équipe", icone: "👥" },
   { href: "/parametres/securite", titre: "Double authentification", texte: "Protéger votre compte administrateur avec un code à 6 chiffres.", groupe: "Équipe", icone: "🔐" },
-  { href: "/parametres/import", titre: "Import du fichier Excel", texte: "Recharger le fichier de suivi complet (tous les onglets).", groupe: "Données", icone: "📥" },
+  { href: "/parametres/import", titre: "Import d'un fichier Excel", texte: "Ajouter le contenu d'un fichier à la base, sans rien écraser.", groupe: "Données", icone: "📥" },
   { href: "/parametres/cv", titre: "CV SharePoint", texte: "CV Word et PDF anonymisés, rattachement manuel à une fiche.", groupe: "Données", icone: "📄" },
   { href: "/parametres/analyse-cv", titre: "Analyse des CV", texte: "Lecture des CV par l'IA : compétences, expérience, résumé.", groupe: "Données", icone: "✨" },
   { href: "/parametres/emails", titre: "Candidatures email", texte: "Emails reçus sur recrutement@ et ce que l'outil en a fait.", groupe: "Automatisations", icone: "✉️" },

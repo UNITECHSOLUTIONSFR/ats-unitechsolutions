@@ -4,6 +4,7 @@ import { graphEnvoyer, graphGet, SHAREPOINT, trouverBibliotheque } from "@/lib/s
 import { champsParEntete } from "@/lib/import/excel";
 import { normaliserNomPersonne } from "@/lib/metier/texte";
 import { lignesHorsExcel, type FicheHorsExcel } from "@/lib/tableau/hors-excel";
+import { REGLAGE_COLONNES_AJOUTEES } from "@/lib/import/annexe";
 
 export interface BilanVersExcel {
   ajoutees: number;
@@ -15,6 +16,40 @@ export function lettreColonne(n: number): string {
   let s = "";
   for (let x = n; x > 0; x = Math.floor((x - 1) / 26)) s = String.fromCharCode(65 + ((x - 1) % 26)) + s;
   return s;
+}
+
+/** Onglet principal du fichier de suivi (1er onglet) : adresse Graph, en-têtes et dernière ligne utilisée. */
+async function ongletPrincipal() {
+  const driveId = await trouverBibliotheque();
+  const chemin = SHAREPOINT.fichierSuivi.split("/").map(encodeURIComponent).join("/");
+  const item = await graphGet<{ id: string }>(`drives/${driveId}/root:/${chemin}?$select=id`);
+  const base = `drives/${driveId}/items/${item.id}/workbook`;
+  const feuilles = await graphGet<{ value: { name: string; position: number }[] }>(`${base}/worksheets?$select=name,position`);
+  const f = `${base}/worksheets/${encodeURIComponent(feuilles.value.sort((a, b) => a.position - b.position)[0].name)}`;
+  const { address, values } = await graphGet<{ address: string; values: unknown[][] }>(`${f}/usedRange(valuesOnly=true)?$select=address,values`);
+  return { f, values, entetes: (values[0] ?? []).map((v) => String(v ?? "")), derniere: Number(/(\d+)$/.exec(address)?.[1] ?? values.length) };
+}
+
+/**
+ * Colonnes ajoutées à la base lors d'un import de fichier : créées en fin de 1re ligne du fichier de suivi si elles n'y sont pas
+ * (sinon la relecture de nuit les ferait disparaître du tableau). Seul l'en-tête est écrit ; rien n'est modifié.
+ */
+async function assurerColonnes(supabase: SupabaseClient, f: string, entetes: string[]): Promise<string[]> {
+  const { data } = await supabase.from("reglages").select("valeur").eq("cle", REGLAGE_COLONNES_AJOUTEES).maybeSingle();
+  const voulues = Array.isArray(data?.valeur) ? (data!.valeur as string[]) : [];
+  const manquantes = voulues.filter((c) => !entetes.includes(c));
+  if (!manquantes.length) return entetes;
+  const debut = entetes.length + 1;
+  await graphEnvoyer("PATCH", `${f}/range(address='${lettreColonne(debut)}1:${lettreColonne(debut + manquantes.length - 1)}1')`, { values: [manquantes] });
+  return [...entetes, ...manquantes];
+}
+
+/** Synchronisation de nuit : crée dans le fichier de suivi les colonnes ajoutées par import (s'il y en a). */
+export async function colonnesAjouteesDansExcel(supabase: SupabaseClient): Promise<number> {
+  const { data } = await supabase.from("reglages").select("valeur").eq("cle", REGLAGE_COLONNES_AJOUTEES).maybeSingle();
+  if (!Array.isArray(data?.valeur) || !data.valeur.length) return 0;
+  const o = await ongletPrincipal();
+  return (await assurerColonnes(supabase, o.f, o.entetes)).length - o.entetes.length;
 }
 
 /**
@@ -31,17 +66,11 @@ export async function ajouterFichesAuFichierExcel(supabase: SupabaseClient): Pro
   const aAjouter = (fiches ?? []).filter((f) => !dejaDansExcel.has(f.id)) as (FicheHorsExcel & { id: string })[];
   if (!aAjouter.length) return { ajoutees: 0 };
 
-  const driveId = await trouverBibliotheque();
-  const chemin = SHAREPOINT.fichierSuivi.split("/").map(encodeURIComponent).join("/");
-  const item = await graphGet<{ id: string }>(`drives/${driveId}/root:/${chemin}?$select=id`);
-  const base = `drives/${driveId}/items/${item.id}/workbook`;
-  const feuilles = await graphGet<{ value: { name: string; position: number }[] }>(`${base}/worksheets?$select=name,position`);
-  const feuille = feuilles.value.sort((a, b) => a.position - b.position)[0];
-  const f = `${base}/worksheets/${encodeURIComponent(feuille.name)}`;
-  const utilise = await graphGet<{ address: string; columnCount: number }>(`${f}/usedRange(valuesOnly=true)?$select=address,columnCount`);
-  const derniere = Number(/(\d+)$/.exec(utilise.address)?.[1] ?? 1);
-  const colonnes = utilise.columnCount;
-  const entetes = (await graphGet<{ values: unknown[][] }>(`${f}/range(address='A1:${lettreColonne(colonnes)}1')?$select=values`)).values[0].map((v) => String(v ?? ""));
+  const o = await ongletPrincipal();
+  const f = o.f;
+  const derniere = o.derniere;
+  const entetes = await assurerColonnes(supabase, f, o.entetes);
+  const colonnes = entetes.length;
 
   // Toutes les valeurs sont écrites en texte (le zéro des téléphones est conservé).
   const lignes = lignesHorsExcel(aAjouter, entetes, 0);
@@ -59,26 +88,22 @@ export async function ajouterFichesAuFichierExcel(supabase: SupabaseClient): Pro
 }
 
 /**
- * Relance des disponibilités : recopie dans le fichier Excel les disponibilités mises à jour par les réponses
- * (sinon la relecture de l'Excel, qui fait foi pendant la transition, remettrait l'ancienne valeur).
- * Seule la cellule « Disponibilité » de la ligne de la personne est modifiée (retrouvée par email, sinon prénom + nom unique).
+ * Recopie dans le fichier Excel les valeurs modifiées dans l'ATS (sinon la relecture de l'Excel, qui fait foi pendant la transition,
+ * remettrait l'ancienne valeur) :
+ * - disponibilité mise à jour par une réponse à la relance (la case est remplacée) ;
+ * - cases remplies par un import de fichier (« cellules ») : écrites SEULEMENT si la case de l'Excel est vide.
+ * La ligne de la personne est retrouvée par email, sinon prénom + nom unique.
  */
 export async function recopierDisponibilitesDansExcel(supabase: SupabaseClient): Promise<{ recopiees: number; introuvables: number }> {
   const { data: fiches } = await supabase.from("consultants").select("id, prenom, nom, email, excel_maj_en_attente").not("excel_maj_en_attente", "is", null);
   if (!fiches?.length) return { recopiees: 0, introuvables: 0 };
 
-  const driveId = await trouverBibliotheque();
-  const chemin = SHAREPOINT.fichierSuivi.split("/").map(encodeURIComponent).join("/");
-  const item = await graphGet<{ id: string }>(`drives/${driveId}/root:/${chemin}?$select=id`);
-  const base = `drives/${driveId}/items/${item.id}/workbook`;
-  const feuilles = await graphGet<{ value: { name: string; position: number }[] }>(`${base}/worksheets?$select=name,position`);
-  const f = `${base}/worksheets/${encodeURIComponent(feuilles.value.sort((a, b) => a.position - b.position)[0].name)}`;
-  const { values } = await graphGet<{ values: unknown[][] }>(`${f}/usedRange(valuesOnly=true)?$select=values`);
-  const entetes = (values[0] ?? []).map((v) => String(v ?? ""));
+  const o = await ongletPrincipal();
+  const { f, values } = o;
+  const entetes = await assurerColonnes(supabase, f, o.entetes);
   const champs = champsParEntete(entetes, entetes);
   const col = (c: string) => entetes.findIndex((e) => champs[e] === c);
   const [cDispo, cEmail, cPrenom, cNom] = [col("disponibilite"), col("email"), col("prenom"), col("nom")];
-  if (cDispo < 0) return { recopiees: 0, introuvables: fiches.length };
 
   const cle = (p: unknown, n: unknown) => normaliserNomPersonne(String(p ?? ""), String(n ?? ""));
   const parEmail = new Map<string, number>(), parNom = new Map<string, number[]>();
@@ -91,12 +116,20 @@ export async function recopierDisponibilitesDansExcel(supabase: SupabaseClient):
 
   let recopiees = 0, introuvables = 0;
   for (const fiche of fiches) {
-    const texte = (fiche.excel_maj_en_attente as { disponibilite?: string }).disponibilite;
+    const attente = fiche.excel_maj_en_attente as { disponibilite?: string; cellules?: Record<string, string> };
     const homonymes = parNom.get(cle(fiche.prenom, fiche.nom)) ?? [];
     const ligne = (fiche.email && parEmail.get(fiche.email)) || (homonymes.length === 1 ? homonymes[0] : null);
-    if (!ligne || !texte) { introuvables++; continue; }
-    const adresse = `${lettreColonne(cDispo + 1)}${ligne}`;
-    await graphEnvoyer("PATCH", `${f}/range(address='${adresse}')`, { values: [[texte]], numberFormat: [["@"]] });
+    if (!ligne) { introuvables++; continue; }
+    const ecrire = async (c: number, v: string) =>
+      graphEnvoyer("PATCH", `${f}/range(address='${lettreColonne(c + 1)}${ligne}')`, { values: [[v]], numberFormat: [["@"]] });
+    if (attente.disponibilite && cDispo >= 0) await ecrire(cDispo, attente.disponibilite);
+    for (const [entete, v] of Object.entries(attente.cellules ?? {})) {
+      const c = entetes.indexOf(entete);
+      if (c < 0 || !v) continue;
+      const actuelle = values[ligne - 1]?.[c];
+      if (actuelle !== null && actuelle !== undefined && String(actuelle).trim() !== "") continue; // jamais d'écrasement
+      await ecrire(c, v);
+    }
     await supabase.from("consultants").update({ excel_maj_en_attente: null }).eq("id", fiche.id);
     recopiees++;
   }

@@ -19,6 +19,6 @@ export function detailAlerte(details: Record<string, unknown> | null, estAdmin =
   if (!details) return "";
   const d = details as Record<string, unknown>;
   // La ligne du fichier Excel d'origine n'intéresse que les administrateurs.
-  return [d.motif, d.valeur && `valeur : ${d.valeur}`, d.email && `email : ${d.email}`, d.fichier && `fichier : ${d.fichier}`, estAdmin && d.ligne_excel && `ligne Excel ${d.ligne_excel}`]
+  return [d.motif, d.valeur && `valeur : ${d.valeur}`, d.email && `email : ${d.email}`, d.fichier && `fichier : ${d.fichier}`, estAdmin && d.ligne_excel && `ligne Excel ${d.ligne_excel}`, d.ligne_fichier && `ligne ${d.ligne_fichier}`]
     .filter(Boolean).join(" · ");
 }

@@ -3,29 +3,29 @@
 import { revalidatePath } from "next/cache";
 import { invaliderTableau } from "@/lib/tableau/cache";
 import { exigerAdmin } from "@/lib/acces-admin";
-import { corrigerOngletPrincipal, detecterColonnes, fusionnerOnglets, lireOnglets, preparerImport, type OngletLu, type RapportImport } from "./excel";
-import { ecrireFiches, type BilanEcriture } from "./ecriture";
-import { ecrireTableau, type BilanTableau } from "@/lib/tableau/ecriture";
+import { lireOnglets, preparerImport, type OngletLu } from "./excel";
+import { importerAnnexe, ongletUnique, prevoirAnnexe, rattacherColonnes, type BilanAnnexe, type ColonneAnnexe, type PrevisionAnnexe } from "./annexe";
 
 export interface EtatImport {
   etape: "depart" | "apercu" | "termine" | "erreur";
   nomFichier?: string;
-  colonnes?: { champ: string; colonne: string }[];
-  rapport?: RapportImport;
-  bilan?: BilanEcriture;
-  bilanTableau?: BilanTableau;
-  /** Onglets du fichier, avec leur nombre de lignes et de colonnes. */
-  onglets?: { nom: string; lignes: number; colonnes: number }[];
+  colonnes?: ColonneAnnexe[];
+  prevision?: PrevisionAnnexe;
+  bilan?: BilanAnnexe;
   message?: string;
 }
 
 const TAILLE_MAX = 4 * 1024 * 1024 - 50_000;
 
-/** 1re action : analyse le fichier et affiche le rapport, sans rien écrire. 2e action (confirmer) : importe. */
+/**
+ * Import d'un fichier Excel : son contenu s'ajoute à la base, rien n'est écrasé.
+ * 1re action : analyse et prévision, sans rien écrire. 2e action (confirmer) : ajout.
+ */
 export async function traiterFichierExcel(_etat: EtatImport, formData: FormData): Promise<EtatImport> {
   const { utilisateur, supabase } = await exigerAdmin();
   const fichier = formData.get("fichier");
   const confirmer = formData.get("confirmer") === "oui";
+  const aAjouter = formData.getAll("ajouter").map(String);
   if (!(fichier instanceof File) || fichier.size === 0) return { etape: "erreur", message: "Choisissez un fichier .xlsx." };
   if (!fichier.name.toLowerCase().endsWith(".xlsx")) return { etape: "erreur", message: "Le fichier doit être au format .xlsx." };
   if (fichier.size > TAILLE_MAX) return { etape: "erreur", message: "Fichier trop volumineux (4 Mo maximum)." };
@@ -34,44 +34,42 @@ export async function traiterFichierExcel(_etat: EtatImport, formData: FormData)
   try {
     onglets = await lireOnglets(new Uint8Array(await fichier.arrayBuffer()));
   } catch {
-    return { etape: "erreur", message: "Fichier illisible. Vérifiez qu'il s'agit bien d'une copie .xlsx du fichier de suivi." };
+    return { etape: "erreur", message: "Fichier illisible. Vérifiez qu'il s'agit bien d'un fichier .xlsx." };
   }
   if (!onglets.length) return { etape: "erreur", message: "Le fichier ne contient aucun onglet." };
-  // Nettoyage des cases email de l'onglet principal (Â → @, 2e adresse, LinkedIn, commentaire) avant tout import.
-  // Onglets métier = copies de l'onglet principal : fusionnés dans la colonne « Domaine », un seul onglet est gardé.
-  onglets = [corrigerOngletPrincipal(fusionnerOnglets(onglets).onglet)];
-  // Le 1er onglet alimente les fiches consultants ; tous les onglets sont recopiés à l'identique dans le tableau de suivi.
-  const { entetes, lignes } = onglets[0];
-  const resumeOnglets = onglets.map((o) => ({ nom: o.nom, lignes: o.lignes.length, colonnes: o.entetes.length }));
-  const { fiches, rapport } = preparerImport(entetes, lignes);
-  const { correspondance } = detecterColonnes(entetes);
-  const colonnes = Object.entries(correspondance).map(([champ, i]) => ({ champ, colonne: entetes[i as number] }));
+  const onglet = ongletUnique(onglets);
 
-  if (!confirmer) return { etape: "apercu", nomFichier: fichier.name, colonnes, rapport, onglets: resumeOnglets };
+  const { data: principal } = await supabase.from("tableau_onglets").select("entetes").eq("principal", true).maybeSingle();
+  if (!principal) return { etape: "erreur", message: "La base n'a pas encore de tableau de suivi." };
+  const colonnes = rattacherColonnes(onglet.entetes, principal.entetes);
   if (!colonnes.some((c) => c.champ === "nom" || c.champ === "nom_complet")) {
-    return { etape: "erreur", message: "Aucune colonne « Nom » reconnue : import impossible." };
+    return { etape: "erreur", message: "Aucune colonne « Nom » reconnue dans le fichier : import impossible." };
+  }
+  const { fiches, rapport } = preparerImport(onglet.entetes, onglet.lignes);
+
+  if (!confirmer) {
+    const prevision = await prevoirAnnexe(supabase, fiches, rapport);
+    return { etape: "apercu", nomFichier: fichier.name, colonnes, prevision };
   }
 
   const { data: execution } = await supabase
     .from("executions")
-    .insert({ type: "import_excel", rapport: { fichier: fichier.name, ...rapport }, elements_traites: fiches.length })
+    .insert({ type: "import_excel", rapport: { fichier: fichier.name, mode: "ajout", lignes: rapport.lignesLues }, elements_traites: fiches.length })
     .select("id")
     .single();
   try {
-    const bilan = await ecrireFiches(supabase, fiches, utilisateur.id);
-    const bilanTableau = await ecrireTableau(supabase, onglets, fichier.name);
+    const bilan = await importerAnnexe(supabase, onglet, colonnes, aAjouter, utilisateur.id, fichier.name);
     if (execution) {
       await supabase.from("executions").update({
-        fin: new Date().toISOString(), statut: bilan.erreurs.length || bilanTableau.erreurs.length ? "termine_avec_erreurs" : "termine",
-        erreurs: bilan.erreurs.length + bilanTableau.erreurs.length, rapport: { fichier: fichier.name, ...rapport, bilan, bilanTableau },
+        fin: new Date().toISOString(), statut: bilan.erreurs.length ? "termine_avec_erreurs" : "termine",
+        erreurs: bilan.erreurs.length, rapport: { fichier: fichier.name, mode: "ajout", lignes: rapport.lignesLues, bilan },
       }).eq("id", execution.id);
     }
+    await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "modification", details: { import_fichier: fichier.name, crees: bilan.crees, completees: bilan.completees } });
+    invaliderTableau();
     revalidatePath("/");
-    invaliderTableau();
     revalidatePath("/consultants");
-    invaliderTableau();
-    revalidatePath("/consultants");
-    return { etape: "termine", nomFichier: fichier.name, rapport, bilan, bilanTableau, onglets: resumeOnglets };
+    return { etape: "termine", nomFichier: fichier.name, colonnes, bilan };
   } catch (e) {
     if (execution) await supabase.from("executions").update({ fin: new Date().toISOString(), statut: "echec" }).eq("id", execution.id);
     return { etape: "erreur", message: `Import interrompu : ${(e as Error).message}` };

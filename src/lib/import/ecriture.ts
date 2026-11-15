@@ -4,6 +4,32 @@ import type { FicheImport } from "./excel";
 import { normaliserNomPersonne } from "@/lib/metier/texte";
 import { cleContenu, cleStable, statutDepuisTexte } from "@/lib/tableau/modele";
 
+/** Champs de la fiche consultant tirés d'une ligne de fichier. */
+export function valeursConsultant(f: FicheImport, maintenant: string): Record<string, unknown> {
+  return {
+    prenom: f.prenom || "—",
+    nom: f.nom,
+    trigramme: f.trigramme,
+    email: f.email,
+    telephone_e164: f.telephone_e164,
+    telephone_brut: f.telephone_brut,
+    intitule_poste: f.intitule_poste,
+    disponibilite: f.disponibilite,
+    disponible_le: f.disponible_le,
+    // Date de mise à jour de l'Excel si elle existe (sert à l'alerte « disponibilité de plus de 3 mois »)
+    disponibilite_maj_le: f.disponibilite || f.disponible_le ? (f.date_maj ?? maintenant) : null,
+    localisation: f.localisation,
+    notes: f.notes,
+    statut: statutDepuisTexte(f.statut_texte),
+    experience: f.experience,
+    tjm_salaire: f.tjm_salaire,
+    linkedin: f.linkedin,
+    cv_lien: f.cv_lien,
+    email_2: f.email_2,
+    commentaire_email: f.commentaire_email,
+  };
+}
+
 export interface BilanEcriture {
   crees: number;
   misAJour: number;
@@ -70,28 +96,7 @@ export async function ecrireFiches(
   const alertes: Record<string, unknown>[] = [];
 
   for (const f of fiches) {
-    const valeurs: Record<string, unknown> = {
-      prenom: f.prenom || "—",
-      nom: f.nom,
-      trigramme: f.trigramme,
-      email: f.email,
-      telephone_e164: f.telephone_e164,
-      telephone_brut: f.telephone_brut,
-      intitule_poste: f.intitule_poste,
-      disponibilite: f.disponibilite,
-      disponible_le: f.disponible_le,
-      // Date de mise à jour de l'Excel si elle existe (sert à l'alerte « disponibilité de plus de 3 mois »)
-      disponibilite_maj_le: f.disponibilite || f.disponible_le ? (f.date_maj ?? maintenant) : null,
-      localisation: f.localisation,
-      notes: f.notes,
-      statut: statutDepuisTexte(f.statut_texte),
-      experience: f.experience,
-      tjm_salaire: f.tjm_salaire,
-      linkedin: f.linkedin,
-      cv_lien: f.cv_lien,
-      email_2: f.email_2,
-      commentaire_email: f.commentaire_email,
-    };
+    const valeurs = valeursConsultant(f, maintenant);
     const existant =
       f.donnees_excel.map((d) => parLigne.get(cleStable(d.ligne, d.valeurs))).find(Boolean) ||
       (f.email && parEmail.get(f.email)) ||

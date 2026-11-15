@@ -5,10 +5,10 @@ export default async function ImportExcel() {
   await exigerAdmin();
   return (
     <div className="max-w-4xl space-y-4">
-      <p className="text-zinc-600">
-        Déposez une <b>copie</b> du fichier Excel de suivi (format .xlsx). L&apos;outil affiche d&apos;abord un rapport,
-        sans rien enregistrer ; vous confirmez ensuite l&apos;import. Le fichier n&apos;est pas conservé, et l&apos;original
-        n&apos;est jamais modifié. Un même fichier peut être réimporté sans créer de doublons.
+      <p className="text-slate-600">
+        Déposez un fichier Excel (.xlsx) : son contenu <b>s&apos;ajoute</b> à la base consultants, ligne par ligne, dans les
+        colonnes qui portent le même titre. Rien n&apos;est écrasé ni supprimé. L&apos;outil affiche d&apos;abord ce qui va
+        être ajouté ; rien n&apos;est enregistré avant votre confirmation. Le fichier n&apos;est pas conservé.
       </p>
       <FormulaireImport />
     </div>

@@ -4,7 +4,7 @@ import { corrigerOngletPrincipal, fusionnerOnglets, lireOnglets, preparerImport 
 import { ecrireFiches, type BilanEcriture } from "@/lib/import/ecriture";
 import { ecrireTableau } from "@/lib/tableau/ecriture";
 import { graphGet, SHAREPOINT, trouverBibliotheque } from "@/lib/sharepoint";
-import { ajouterFichesAuFichierExcel, recopierDisponibilitesDansExcel, type BilanVersExcel } from "./vers-excel";
+import { ajouterFichesAuFichierExcel, colonnesAjouteesDansExcel, recopierDisponibilitesDansExcel, type BilanVersExcel } from "./vers-excel";
 
 const ETAT = "excel:suivi";
 
@@ -24,6 +24,8 @@ export interface BilanSynchroExcel {
  * Avant la lecture, les fiches créées dans l'ATS (emails, CV SharePoint, saisie) sont ajoutées à la fin du fichier.
  */
 export async function synchroniserExcel(supabase: SupabaseClient): Promise<BilanSynchroExcel> {
+  // Colonnes ajoutées par un import de fichier : créées dans l'Excel avant tout (sinon la relecture les retirerait du tableau).
+  await colonnesAjouteesDansExcel(supabase);
   const versExcel = await ajouterFichesAuFichierExcel(supabase);
   // Module Email : les disponibilités mises à jour par les réponses sont recopiées dans l'Excel avant sa relecture.
   const disponibilites = await recopierDisponibilitesDansExcel(supabase);

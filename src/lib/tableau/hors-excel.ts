@@ -4,7 +4,7 @@ import type { LigneTableau } from "./modele";
 
 /** Préfixe des lignes calculées (fiches créées hors Excel) : elles n'existent pas dans tableau_lignes. */
 export const PREFIXE_HORS_EXCEL = "fiche:";
-export const DOMAINES_HORS_EXCEL: Record<string, string> = { email: "Ajoutés par email", sharepoint: "Ajoutés depuis SharePoint", manuel: "Ajoutés à la main", api: "Ajoutés par l'API" };
+export const DOMAINES_HORS_EXCEL: Record<string, string> = { email: "Ajoutés par email", sharepoint: "Ajoutés depuis SharePoint", manuel: "Ajoutés à la main", api: "Ajoutés par l'API", import_annexe: "Ajoutés par import de fichier" };
 
 export interface FicheHorsExcel {
   id: string; source: string; prenom: string; nom: string; trigramme: string; email: string | null; email_2: string | null;

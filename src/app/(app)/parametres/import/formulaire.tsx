@@ -3,92 +3,116 @@
 import { startTransition, useActionState, useRef, useState } from "react";
 import { traiterFichierExcel, type EtatImport } from "@/lib/import/actions";
 
-const CHAMPS: Record<string, string> = {
-  prenom: "Prénom", nom: "Nom", nom_complet: "Nom complet", email: "Email", telephone: "Téléphone",
-  trigramme: "Trigramme", disponibilite: "Disponibilité", intitule_poste: "Intitulé de poste",
-  localisation: "Localisation", notes: "Notes", statut: "Statut", date_maj: "Date de mise à jour", email_2: "Email 2", commentaire_email: "Commentaire email", experience: "Expérience", tjm_salaire: "TJM / Salaire", linkedin: "LinkedIn", cv_lien: "CV",
-};
-
 export default function FormulaireImport() {
   const [etat, action, enCours] = useActionState<EtatImport, FormData>(traiterFichierExcel, { etape: "depart" });
   const fichier = useRef<File | null>(null);
   const [nom, setNom] = useState<string | null>(null);
+  const [aAjouter, setAAjouter] = useState<string[]>([]);
 
   function envoyer(confirmer: boolean) {
     if (!fichier.current) return;
     const fd = new FormData();
     fd.set("fichier", fichier.current);
     fd.set("confirmer", confirmer ? "oui" : "non");
+    for (const c of aAjouter) fd.append("ajouter", c);
     startTransition(() => action(fd));
   }
 
-  const r = etat.rapport;
+  const p = etat.prevision;
+  const reconnues = (etat.colonnes ?? []).filter((c) => c.cible);
+  const nouvelles = (etat.colonnes ?? []).filter((c) => c.type === "nouvelle");
+  const basculer = (c: string) => setAAjouter((l) => (l.includes(c) ? l.filter((x) => x !== c) : [...l, c]));
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3 carte p-5">
+      <div className="carte flex flex-wrap items-center gap-3 p-5">
         <input
           type="file"
           accept=".xlsx"
-          onChange={(e) => { fichier.current = e.target.files?.[0] ?? null; setNom(fichier.current?.name ?? null); }}
+          onChange={(e) => { fichier.current = e.target.files?.[0] ?? null; setNom(fichier.current?.name ?? null); setAAjouter([]); }}
           className="w-full min-w-0 text-sm sm:w-auto"
         />
-        <button type="button" disabled={!nom || enCours} onClick={() => envoyer(false)}
-          className="bouton-primaire">
-          {enCours ? "Analyse…" : "1. Analyser le fichier"}
+        <button type="button" disabled={!nom || enCours} onClick={() => envoyer(false)} className="bouton-primaire">
+          {enCours && etat.etape !== "apercu" ? "Analyse…" : "1. Analyser le fichier"}
         </button>
       </div>
 
       {etat.etape === "erreur" && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{etat.message}</p>}
 
-      {r && (
-        <div className="space-y-3 carte p-5 text-sm">
-          <h2 className="font-semibold">Rapport — {etat.nomFichier}</h2>
-          {etat.colonnes && (
-            <p className="text-zinc-600">
-              Colonnes reconnues : {etat.colonnes.map((c) => `${c.colonne} → ${CHAMPS[c.champ] ?? c.champ}`).join(" · ")}
-              {r.colonnesNonReconnues.length > 0 && <> — ignorées : {r.colonnesNonReconnues.join(", ")}</>}
-            </p>
-          )}
-          {etat.onglets && (
-            <p className="text-zinc-600">
-              Onglets recopiés à l&apos;identique dans le tableau de suivi : {etat.onglets.map((o) => `${o.nom} (${o.lignes} lignes, ${o.colonnes} colonnes)`).join(" · ")}.
-              Les fiches consultants sont créées à partir du 1er onglet. <b>Le tableau de suivi actuel est remplacé.</b>
-            </p>
-          )}
-          <ul className="grid gap-1 sm:grid-cols-2">
-            <li>Lignes lues : <b>{r.lignesLues}</b></li>
-            <li>Fiches à créer ou compléter : <b>{r.fichesRetenues}</b></li>
-            <li>Doublons fusionnés dans le fichier : <b>{r.doublonsFusionnes.length}</b></li>
-            <li>Doublons possibles (même nom) : <b>{r.doublonsPossibles.length}</b></li>
-            <li>Téléphones corrigés (zéro ajouté…) : <b>{r.telephonesCorriges.length}</b></li>
-            <li>Téléphones non reconnus (gardés tels quels) : <b>{r.telephonesInvalides.length}</b></li>
-            <li>Emails restant invalides (après correction) : <b>{r.emailsInvalides.length}</b></li>
-            <li>Lignes sans nom (importées, avec alerte) : <b>{r.rejets.length}</b></li>
-            <li>Trigrammes différents de la règle : <b>{r.trigrammesDifferents.length}</b> (on garde celui de l&apos;Excel)</li>
-          </ul>
-          <Detail titre="Lignes sans nom (importées, avec alerte)" lignes={r.rejets.map((x) => `Ligne ${x.ligne} : ${x.raison} — ${Object.entries(x.valeurs).map(([k, v]) => `${k}: ${v}`).join(" · ") || "ligne vide"}`)} />
-          <Detail titre="Téléphones non reconnus" lignes={r.telephonesInvalides.map((x) => `Ligne ${x.ligne} : ${x.valeur}`)} />
-          <Detail titre="Emails invalides" lignes={r.emailsInvalides.map((x) => `Ligne ${x.ligne} : ${x.valeur}`)} />
-          <Detail titre="Doublons possibles" lignes={r.doublonsPossibles.map((x) => `Lignes ${x.lignes.join(", ")} : ${x.nom}`)} />
-          <Detail titre="Trigrammes différents" lignes={r.trigrammesDifferents.map((x) => `Ligne ${x.ligne} : ${x.excel} (règle : ${x.calcule})`)} />
+      {etat.etape === "apercu" && p && (
+        <div className="carte space-y-5 p-5 text-sm">
+          <h2 className="titre-section">Ce qui va être ajouté — {etat.nomFichier}</h2>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Chiffre valeur={p.nouvelles} libelle="nouveaux consultants" />
+            <Chiffre valeur={p.completees} libelle="déjà en base : cases vides complétées" />
+            <Chiffre valeur={p.lignesLues} libelle="lignes lues" />
+          </div>
+          <p className="text-slate-600">
+            Rien n&apos;est écrasé ni supprimé : une case déjà remplie dans la base garde sa valeur.
+            Les nouveaux consultants seront ajoutés au fichier Excel de suivi lors de la synchronisation de nuit.
+          </p>
 
-          {etat.etape === "apercu" && (
-            <button type="button" disabled={enCours} onClick={() => envoyer(true)}
-              className="rounded-lg bg-marque-600 px-4 py-2 font-medium text-white disabled:opacity-50">
-              {enCours ? "Import en cours…" : `2. Importer ${r.fichesRetenues} fiches`}
-            </button>
+          <div>
+            <h3 className="mb-2 font-semibold">Colonnes reprises ({reconnues.length})</h3>
+            <ul className="flex flex-wrap gap-1.5">
+              {reconnues.map((c) => (
+                <li key={c.colonne} className="pastille bg-slate-50 text-slate-700 ring-slate-200">
+                  {c.colonne === c.cible ? c.colonne : <>{c.colonne} → {c.cible}</>}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {nouvelles.length > 0 && (
+            <div>
+              <h3 className="mb-1 font-semibold">Colonnes absentes de la base ({nouvelles.length})</h3>
+              <p className="mb-2 text-slate-600">Ignorées, sauf celles que vous cochez : elles seront ajoutées en fin de tableau (et dans le fichier Excel de suivi).</p>
+              <ul className="grid gap-1.5 sm:grid-cols-2">
+                {nouvelles.map((c) => (
+                  <li key={c.colonne}>
+                    <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50">
+                      <input type="checkbox" checked={aAjouter.includes(c.colonne)} onChange={() => basculer(c.colonne)} className="h-4 w-4 accent-marque-600" />
+                      <span>Ajouter la colonne <b>{c.colonne}</b></span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
+
+          {(p.doublonsPossibles > 0 || p.sansNom > 0 || p.telephonesInvalides.length > 0 || p.emailsInvalides.length > 0) && (
+            <div className="space-y-1 text-slate-600">
+              <h3 className="font-semibold text-slate-800">À vérifier après l&apos;import (alertes créées)</h3>
+              {p.doublonsPossibles > 0 && <p>Doublons possibles (même nom, coordonnées différentes) : <b>{p.doublonsPossibles}</b></p>}
+              {p.sansNom > 0 && <p>Lignes sans nom : <b>{p.sansNom}</b></p>}
+              <Detail titre="Téléphones non reconnus (gardés tels quels)" lignes={p.telephonesInvalides} />
+              <Detail titre="Emails invalides (ignorés)" lignes={p.emailsInvalides} />
+            </div>
+          )}
+
+          <button type="button" disabled={enCours} onClick={() => envoyer(true)} className="bouton-primaire">
+            {enCours ? "Ajout en cours…" : `2. Ajouter à la base${aAjouter.length ? ` (+ ${aAjouter.length} colonne${aAjouter.length > 1 ? "s" : ""})` : ""}`}
+          </button>
         </div>
       )}
 
       {etat.etape === "termine" && etat.bilan && (
-        <p className="rounded-lg bg-green-50 p-3 text-sm text-green-800">
-          Import terminé : {etat.bilan.crees} fiches créées, {etat.bilan.misAJour} complétées, {etat.bilan.alertes} cas à vérifier.
-          {etat.bilanTableau && ` Tableau de suivi : ${etat.bilanTableau.onglets} onglet(s), ${etat.bilanTableau.lignes} lignes (${etat.bilanTableau.lignesReliees} reliées à une fiche).`}
+        <p className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
+          Import terminé : {etat.bilan.crees} consultant(s) ajouté(s), {etat.bilan.completees} fiche(s) complétée(s)
+          {etat.bilan.colonnesAjoutees.length > 0 && `, colonne(s) ajoutée(s) : ${etat.bilan.colonnesAjoutees.join(", ")}`}
+          {etat.bilan.alertes > 0 && `, ${etat.bilan.alertes} cas à vérifier dans Alertes`}.
           {etat.bilan.erreurs.length > 0 && ` ${etat.bilan.erreurs.length} erreur(s) : ${etat.bilan.erreurs.slice(0, 3).join(" ; ")}`}
-          {(etat.bilanTableau?.erreurs.length ?? 0) > 0 && ` Tableau : ${etat.bilanTableau!.erreurs.slice(0, 3).join(" ; ")}`}
         </p>
       )}
+    </div>
+  );
+}
+
+function Chiffre({ valeur, libelle }: { valeur: number; libelle: string }) {
+  return (
+    <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200">
+      <div className="text-2xl font-extrabold tabular-nums text-marque-700">{valeur}</div>
+      <div className="text-xs text-slate-600">{libelle}</div>
     </div>
   );
 }
@@ -97,8 +121,8 @@ function Detail({ titre, lignes }: { titre: string; lignes: string[] }) {
   if (!lignes.length) return null;
   return (
     <details>
-      <summary className="cursor-pointer text-zinc-600">{titre} ({lignes.length})</summary>
-      <ul className="mt-1 max-h-48 overflow-y-auto text-xs text-zinc-600">
+      <summary className="cursor-pointer">{titre} ({lignes.length})</summary>
+      <ul className="mt-1 max-h-48 overflow-y-auto text-xs">
         {lignes.map((l) => <li key={l}>{l}</li>)}
       </ul>
     </details>

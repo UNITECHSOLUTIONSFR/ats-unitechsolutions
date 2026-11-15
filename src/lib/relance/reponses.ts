@@ -45,8 +45,8 @@ export async function traiterReponse(supabase: SupabaseClient, m: MessageBoite, 
   const maj = miseAJourDepuisReponse(r.donnees, maintenant);
 
   if (maj.fiche) {
-    const { data: avant } = await supabase.from("consultants").select("disponibilite, disponible_le, ne_plus_contacter").eq("id", envoi.consultant_id).maybeSingle();
-    const enAttenteExcel = maj.texte ? { disponibilite: maj.texte } : null;
+    const { data: avant } = await supabase.from("consultants").select("disponibilite, disponible_le, ne_plus_contacter, excel_maj_en_attente").eq("id", envoi.consultant_id).maybeSingle();
+    const enAttenteExcel = maj.texte ? { ...((avant?.excel_maj_en_attente as Record<string, unknown> | null) ?? {}), disponibilite: maj.texte } : null;
     await supabase.from("consultants").update({ ...maj.fiche, ...(enAttenteExcel ? { excel_maj_en_attente: enAttenteExcel } : {}) }).eq("id", envoi.consultant_id);
     const modifications = Object.fromEntries(Object.keys(maj.fiche).filter((k) => k in (avant ?? {}))
       .map((k) => [k, { avant: (avant as Record<string, unknown>)?.[k] ?? null, apres: maj.fiche![k] }]));

@@ -106,7 +106,7 @@ export default async function Accueil() {
                       <div className="truncate text-sm font-semibold text-nuit">{c.prenom} {c.nom}</div>
                       <div className="truncate text-xs text-slate-500">{c.intitule_poste ?? "—"}</div>
                     </div>
-                    <span className="pastille">{c.source === "email" ? "email" : c.source === "sharepoint" ? "SharePoint" : "manuel"}</span>
+                    <span className="pastille">{c.source === "email" ? "email" : c.source === "sharepoint" ? "SharePoint" : c.source === "import_annexe" ? "import" : "manuel"}</span>
                   </Link>
                 </li>
               ))}
