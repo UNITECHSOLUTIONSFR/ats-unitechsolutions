@@ -199,3 +199,8 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Testé : 186 tests (dont import annexe avec base simulée), rattachement vérifié sur les 18 colonnes réelles, lint, build.
 - Suite : mise en production après le go de l'utilisatrice, puis import de ses fichiers annexes.
 
+
+### 15-16/11/2026 — Corrections et vitesse
+- Fait : écran Consultants rechargé (envoi sans compression manuelle, relecture directe en secours) ; effacement d'une fiche sans page 404 (retour à la liste) ; croix du panneau réparée ; panneau de fiche ouvert instantanément (aperçu du tableau) ; fiche lue en parallèle de la vérification du compte, journal écrit après la réponse ; règles d'accès de la base évaluées une fois par requête (migration 34, appliquée) : 900 ms → 15 ms sur 30 000 lignes, recherche 106 → 4 ms.
+- Testé : 186 tests dont 25 de règles d'accès, contrôle en base (82 règles réécrites, compte inconnu toujours sans accès), build.
+- Suite : retour de l'utilisatrice sur la vitesse réelle ; 2 fiches vides issues de l'import à effacer par elle.
