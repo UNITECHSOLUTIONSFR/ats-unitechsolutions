@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { exigerUtilisateur } from "@/lib/acces";
 import { classementEnCache } from "@/lib/matching/cache";
+import { statsAccueil } from "@/lib/accueil/stats";
 import { FILTRE_MES_MISSIONS } from "@/lib/missions/responsables";
 import { alerteVisible } from "@/lib/alertes/libelles";
 import BilanAdmin from "./bilan-admin";
@@ -14,27 +15,19 @@ const LIBELLES_ALERTES: Record<string, string> = {
 
 export default async function Accueil() {
   const { utilisateur, supabase } = await exigerUtilisateur();
-  const compter = async (table: string, filtre?: [string, string]) => {
-    let q = supabase.from(table).select("*", { count: "exact", head: true });
-    if (filtre) q = q.eq(filtre[0], filtre[1]);
-    return (await q).count ?? 0;
-  };
-  // Tout est lu en même temps : l'accueil s'affiche en une fois.
+  // Tout est lu en même temps : l'accueil s'affiche en une fois. Chiffres communs à tous : préparés côté serveur (voir statsAccueil).
   const estAdmin = utilisateur.role === "admin";
-  const [consultants, cvs, { data: nouveaux }, { data: typesAlertes }, { data: missions }, missionsOuvertes] = await Promise.all([
-    compter("consultants"),
-    compter("documents", ["type", "word_nominatif"]),
+  const [{ consultants, cvs, missionsOuvertes, typesAlertes }, { data: nouveaux }, { data: missions }] = await Promise.all([
+    statsAccueil(),
     supabase.from("consultants").select("id, prenom, nom, intitule_poste, source, created_at").neq("source", "import_excel").gte("created_at", depuisJours(7))
       .order("created_at", { ascending: false }).limit(6),
-    supabase.from("alertes").select("type").eq("statut", "ouverte").limit(5000),
     // Mes missions ouvertes (et celles à assigner), les plus récentes d'abord.
     supabase.from("missions").select("id, intitule, client, created_at, responsable_id").eq("statut", "ouverte").or(FILTRE_MES_MISSIONS(utilisateur.id))
       .order("created_at", { ascending: false }).limit(4),
-    compter("missions", ["statut", "ouverte"]),
   ]);
   const parType = new Map<string, number>();
   // Les recruteurs ne voient que les cas qui les concernent (aucune alerte technique).
-  for (const a of typesAlertes ?? []) if (alerteVisible(a.type, estAdmin)) parType.set(a.type, (parType.get(a.type) ?? 0) + 1);
+  for (const [type, n] of Object.entries(typesAlertes)) if (alerteVisible(type, estAdmin)) parType.set(type, n);
   const alertes = [...parType.values()].reduce((t, n) => t + n, 0);
   const prenom = (utilisateur.nomAffiche ?? "").split(" ")[0];
 

@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { invaliderClassement } from "@/lib/matching/cache";
 import { exigerUtilisateur } from "@/lib/acces";
 import { exigerAdmin } from "@/lib/acces-admin";
@@ -110,6 +110,7 @@ export async function creerMission(_e: EtatFormulaireMission, formData: FormData
     return { erreur: "La mission n'a pas pu être enregistrée. Réessayez dans un instant." };
   }
   revalidatePath("/missions");
+  updateTag("accueil");
   redirect(`/missions/${missionId}`);
 }
 
@@ -139,6 +140,7 @@ export async function changerStatutMission(formData: FormData) {
   if (!STATUTS_MISSION.includes(statut as (typeof STATUTS_MISSION)[number])) return;
   await supabase.from("missions").update({ statut }).eq("id", missionId);
   invaliderClassement(missionId);
+  updateTag("accueil");
   revalidatePath(`/missions/${missionId}`);
   revalidatePath("/missions");
 }
@@ -183,6 +185,7 @@ export async function assignerMission(formData: FormData) {
   });
   revalidatePath(`/missions/${missionId}`);
   revalidatePath("/missions");
+  updateTag("accueil");
   revalidatePath("/");
 }
 

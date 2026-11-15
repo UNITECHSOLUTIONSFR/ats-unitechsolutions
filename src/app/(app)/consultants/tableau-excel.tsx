@@ -546,7 +546,7 @@ function ModificationMasse({ entetes, nombre, onAnnuler, onValider }: {
   );
 }
 
-/** Bouton « + » tout à droite : nouvelle fiche, nouvelle mission, export et import du fichier Excel. */
+/** Actions de l'écran : « Nouveau consultant » bien visible ; menu « Excel » (export, import) pour les administrateurs. */
 function MenuActions({ ongletId, idsVisibles, estAdmin }: { ongletId: string; idsVisibles: string[]; estAdmin: boolean }) {
   const [ouvert, setOuvert] = useState(false);
   const boite = useRef<HTMLDivElement>(null);
@@ -558,30 +558,31 @@ function MenuActions({ ongletId, idsVisibles, estAdmin }: { ongletId: string; id
     document.addEventListener("keydown", touche);
     return () => { document.removeEventListener("mousedown", clic); document.removeEventListener("keydown", touche); };
   }, [ouvert]);
-  const element = "flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium text-nuit transition hover:bg-white";
+  const element = "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium text-nuit transition hover:bg-slate-50 disabled:opacity-50";
   return (
-    <div ref={boite} className="relative">
-      <button type="button" onClick={() => setOuvert(!ouvert)} aria-expanded={ouvert} aria-label="Actions" title="Actions"
-        className={`flex h-10 w-10 items-center justify-center rounded-full bg-nuit text-white shadow-[0_8px_20px_-8px_rgba(11,26,63,0.6)] transition hover:bg-marque-700 ${ouvert ? "rotate-45" : ""}`}>
-        <IconePlus className="h-5 w-5" />
-      </button>
-      {ouvert && (
-        <div className="verre absolute right-0 top-12 z-50 w-64 rounded-2xl bg-white/85 p-1.5">
-          <Link href="/consultants/nouveau" className={element}><IconePlus className="h-4 w-4 text-marque-600" />Nouveau consultant</Link>
-          <Link href="/missions/nouvelle" className={element}><IconeFiche className="h-4 w-4 text-marque-600" />Nouvelle mission</Link>
-          {estAdmin && (
-            <>
-              <div className="my-1 border-t border-slate-200/70" />
+    <div className="flex shrink-0 items-center gap-2">
+      {estAdmin && (
+        <div ref={boite} className="relative">
+          <button type="button" onClick={() => setOuvert(!ouvert)} aria-expanded={ouvert} className="bouton-secondaire">
+            <IconeExport className="h-4 w-4" />Excel
+            <svg viewBox="0 0 20 20" fill="currentColor" className={`h-4 w-4 text-slate-400 transition ${ouvert ? "rotate-180" : ""}`} aria-hidden><path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" /></svg>
+          </button>
+          {ouvert && (
+            <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl bg-white p-1.5 shadow-lg ring-1 ring-slate-200">
               <form method="post" action="/tableau/export">
                 <input type="hidden" name="onglet" value={ongletId} />
                 <input type="hidden" name="ids" value={JSON.stringify(idsVisibles)} />
-                <button disabled={!idsVisibles.length} className={element}><IconeExport className="h-4 w-4 text-marque-600" />Exporter en Excel ({idsVisibles.length.toLocaleString("fr-FR")} lignes)</button>
+                <button disabled={!idsVisibles.length} className={element}>
+                  <IconeExport className="h-4 w-4 shrink-0 text-marque-600" />
+                  <span>Exporter <span className="text-slate-500">({idsVisibles.length.toLocaleString("fr-FR")} lignes)</span></span>
+                </button>
               </form>
-              <Link href="/parametres/import" className={element}><IconeImport className="h-4 w-4 text-marque-600" />Importer un fichier Excel</Link>
-            </>
+              <Link href="/parametres/import" className={element}><IconeImport className="h-4 w-4 shrink-0 text-marque-600" />Importer un fichier</Link>
+            </div>
           )}
         </div>
       )}
+      <Link href="/consultants/nouveau" className="bouton-primaire"><IconePlus className="h-4 w-4" />Nouveau consultant</Link>
     </div>
   );
 }

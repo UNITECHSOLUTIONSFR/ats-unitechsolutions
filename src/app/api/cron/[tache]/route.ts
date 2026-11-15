@@ -1,4 +1,6 @@
 import { after, NextResponse, type NextRequest } from "next/server";
+import { revalidateTag } from "next/cache";
+import { TAG_CLASSEMENTS } from "@/lib/matching/cache";
 import { clientSupabaseAdmin } from "@/lib/supabase/admin";
 import { autorisationTachesValide } from "@/lib/securite/secret";
 import { poursuivreEnvoi } from "@/lib/relance/declenchement";
@@ -18,6 +20,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   // Tâches planifiées (GitHub ou Supabase) : pas de double passage. La relance, lancée par un administrateur, n'est pas concernée.
   const r = await executerTache(tache as NomTache, supabase, { planifiee: tache !== "relance" });
   // Relance lancée par un administrateur : tant qu'il reste des emails à envoyer, l'appel suivant est enchaîné.
+  // Nouvelles fiches possibles : écran Consultants, accueil et classements rafraîchis en arrière-plan
+  // (la version actuelle reste servie instantanément pendant le recalcul).
+  if (tache !== "relance") for (const t of ["tableau-consultants", "accueil", TAG_CLASSEMENTS]) revalidateTag(t, "max");
   if (tache === "relance" && r.ok && Number(r.rapport.envoyes ?? 0) > 0) after(poursuivreEnvoi);
   return NextResponse.json(r, { status: r.ok ? 200 : 500 });
 }

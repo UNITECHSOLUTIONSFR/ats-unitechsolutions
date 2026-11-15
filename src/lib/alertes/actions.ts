@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { exigerUtilisateur } from "@/lib/acces";
 
 /** Marque une alerte comme résolue ou ignorée (trace de qui et quand). */
@@ -9,6 +9,7 @@ export async function traiterAlerte(formData: FormData) {
   const statut = formData.get("statut") === "ignoree" ? "ignoree" : "resolue";
   await supabase.from("alertes").update({ statut, resolue_par: utilisateur.id, resolue_le: new Date().toISOString() }).eq("id", String(formData.get("id")));
   revalidatePath("/alertes");
+  updateTag("accueil");
   revalidatePath("/");
 }
 
@@ -21,5 +22,6 @@ export async function traiterAlertes(formData: FormData) {
   if (!ids.length) return;
   await supabase.from("alertes").update({ statut, resolue_par: utilisateur.id, resolue_le: new Date().toISOString() }).in("id", ids);
   revalidatePath("/alertes");
+  updateTag("accueil");
   revalidatePath("/");
 }

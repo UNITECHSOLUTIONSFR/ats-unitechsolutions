@@ -37,6 +37,42 @@ export interface ResultatRecherche {
   raisons: string[];
   lieu: "ok" | "inconnu" | "autre" | null;
   extrait: { texte: string; source: string } | null;
+  /** Champs complémentaires pour les filtres (voir completerResultats). */
+  source?: string;
+  cree_le?: string;
+  disponible_le?: string | null;
+  dispo_maj_le?: string | null;
+  tjm_salaire?: string | null;
+  langues?: string[];
+  secteurs?: string[];
+  certifications?: string[];
+}
+
+/**
+ * Ajoute aux résultats les champs utiles aux filtres (origine, date d'ajout, disponibilité, TJM, langues, secteurs, certifications),
+ * lus en une fois pour toutes les personnes de la liste.
+ */
+export async function completerResultats(supabase: SupabaseClient, res: ResultatRecherche[]): Promise<ResultatRecherche[]> {
+  const ids = res.map((r) => r.id);
+  const fiches = new Map<string, { source: string; created_at: string; disponible_le: string | null; disponibilite_maj_le: string | null; tjm_salaire: string | null }>();
+  const profils = new Map<string, { langues: { langue?: string }[] | null; secteurs: string[] | null; certifications: string[] | null }>();
+  const lots = [];
+  for (let i = 0; i < ids.length; i += 300) lots.push(ids.slice(i, i + 300));
+  await Promise.all(lots.flatMap((lot) => [
+    supabase.from("consultants").select("id, source, created_at, disponible_le, disponibilite_maj_le, tjm_salaire").in("id", lot)
+      .then(({ data }) => { for (const f of data ?? []) fiches.set(f.id, f); }),
+    supabase.from("profils").select("consultant_id, langues, secteurs, certifications").in("consultant_id", lot)
+      .then(({ data }) => { for (const p of data ?? []) profils.set(p.consultant_id, p); }),
+  ]));
+  return res.map((r) => {
+    const f = fiches.get(r.id), p = profils.get(r.id);
+    return {
+      ...r, source: f?.source, cree_le: f?.created_at, disponible_le: f?.disponible_le ?? null, dispo_maj_le: f?.disponibilite_maj_le ?? null,
+      tjm_salaire: f?.tjm_salaire ?? null,
+      langues: (Array.isArray(p?.langues) ? p!.langues : []).map((l) => l?.langue).filter((l): l is string => !!l),
+      secteurs: p?.secteurs ?? [], certifications: p?.certifications ?? [],
+    };
+  });
 }
 
 interface Ligne {
@@ -174,12 +210,12 @@ export async function rechercherProfils(supabase: SupabaseClient, criteres: Crit
   const cible = criteres.annees_min ?? criteres.annees_max;
   const ecart = (a: number | null) => (cible === null ? 0 : a === null ? 99 : a < (criteres.annees_min ?? 0) ? (criteres.annees_min ?? 0) - a : criteres.annees_max !== null && a > criteres.annees_max ? a - criteres.annees_max : 0);
   const rangLieu = { ok: 0, inconnu: 1, autre: 2 } as const;
-  return lignes.map((l) => l.ligne).sort((a, b) =>
+  return completerResultats(supabase, lignes.map((l) => l.ligne).sort((a, b) =>
     Number(a.elimine) - Number(b.elimine) || b.score - a.score
     || (a.lieu ? rangLieu[a.lieu] : 0) - (b.lieu ? rangLieu[b.lieu] : 0)
     || ecart(a.annees) - ecart(b.annees)
     || b.competences.filter((k) => k.demandee).length - a.competences.filter((k) => k.demandee).length,
-  ).slice(0, 300);
+  ).slice(0, 300));
 }
 
 const GENERIQUES = new Set(["developpeur", "developpeuse", "consultant", "consultante", "ingenieur", "ingenieure", "senior", "junior", "confirme",
@@ -201,7 +237,7 @@ export async function profilsRecents(supabase: SupabaseClient, limite = 150): Pr
   const ordre = new Map((recents ?? []).map((c, i) => [c.consultant_id as string, i]));
   if (!ordre.size) return [];
   const { data } = await supabase.rpc("candidats_recherche", { p_competences: [], p_motifs_poste: [], p_ids: [...ordre.keys()] });
-  return ((data ?? []) as Ligne[])
+  return completerResultats(supabase, ((data ?? []) as Ligne[])
     .sort((a, b) => (ordre.get(a.consultant_id) ?? 0) - (ordre.get(b.consultant_id) ?? 0))
     .map((c) => ({
       id: c.consultant_id, prenom: c.prenom, nom: c.nom, trigramme: c.trigramme, intitule_poste: c.intitule_poste, statut: c.statut,
@@ -209,5 +245,5 @@ export async function profilsRecents(supabase: SupabaseClient, limite = 150): Pr
       resume: c.resume, disponibilite: c.disponibilite, telephone: c.telephone_e164, email: c.email, word_url: c.word_url, pdf_url: c.pdf_anonyme_url,
       competences: [...c.competences].sort((a, b) => (b.annees ?? 0) - (a.annees ?? 0)).slice(0, 10).map((k) => ({ nom: k.nom, demandee: false })),
       score: 0, elimine: false, manquantes: [], raisons: [], lieu: null, extrait: null,
-    }));
+    })));
 }
