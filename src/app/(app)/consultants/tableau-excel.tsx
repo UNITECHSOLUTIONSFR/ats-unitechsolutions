@@ -254,7 +254,7 @@ export default function TableauExcel({ vues, vueInitiale, ongletId, entetes, cha
           const tel = v("telephone").replace(/[^\d+]/g, "");
           const extrait = parLeCV.has(l.id) && l.consultant_id ? dansCV.extraits.get(l.consultant_id) : undefined;
           return (
-            <li key={l.id} className="carte p-3.5" onPointerDown={l.consultant_id ? () => prechargerFiche(l.consultant_id!) : undefined} onClick={(ev) => { if (l.consultant_id && !(ev.target as HTMLElement).closest("a, button")) setFicheOuverte(l.consultant_id); }}>
+            <li key={l.id} className="carte carte-cliquable p-3.5" onPointerDown={l.consultant_id ? () => prechargerFiche(l.consultant_id!) : undefined} onClick={(ev) => { if (l.consultant_id && !(ev.target as HTMLElement).closest("a, button")) setFicheOuverte(l.consultant_id); }}>
               <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-semibold text-nuit">{nom}</div>

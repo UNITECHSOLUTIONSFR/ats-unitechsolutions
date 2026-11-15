@@ -82,3 +82,14 @@ body { overflow-x: clip; }
   /* Squelette de chargement (affiché immédiatement pendant que la page se prépare). */
   .squelette { @apply animate-pulse rounded-2xl bg-slate-200/50; }
 }
+
+/* Confirmation du clic : barre de chargement en haut de l'écran et curseur « en attente » pendant l'ouverture d'une page. */
+@keyframes avance-navigation { 0% { width: 0; } 20% { width: 45%; } 60% { width: 75%; } 100% { width: 92%; } }
+.barre-navigation { animation: avance-navigation 6s cubic-bezier(0.1, 0.7, 0.2, 1) forwards; }
+html.navigation-en-cours, html.navigation-en-cours * { cursor: progress !important; }
+
+/* Éléments cliquables : main au survol et léger enfoncement au clic. */
+a, button:not(:disabled), summary, [role="button"], tr.cursor-pointer, li.cursor-pointer { cursor: pointer; }
+tr.cursor-pointer:active td { background-color: rgb(219 228 247); }
+.carte-cliquable { cursor: pointer; transition: transform 0.08s, box-shadow 0.15s; }
+.carte-cliquable:active { transform: scale(0.99); }

@@ -3,6 +3,8 @@ import BoutonRetour from "./bouton-retour";
 import { PrechargementConsultants } from "./consultants/chargeur";
 import { configSupabase } from "@/lib/supabase/config";
 import Link from "next/link";
+import { Suspense } from "react";
+import BarreNavigation from "./barre-navigation";
 import { redirect } from "next/navigation";
 import { clientSupabaseServeur, codeAttendu, utilisateurConnecte } from "@/lib/supabase/serveur";
 
@@ -38,6 +40,7 @@ export default async function LayoutApplication({ children }: { children: React.
 
   return (
     <div className="flex min-h-screen flex-col lg:flex-row">
+      <Suspense fallback={null}><BarreNavigation /></Suspense>
       <MenuLateral nom={utilisateur.nomAffiche ?? utilisateur.email.split("@")[0]} email={utilisateur.email} estAdmin={utilisateur.role === "admin"} />
       <main className="min-w-0 flex-1 px-3 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pt-6 lg:py-7 lg:pb-7 lg:pl-4 lg:pr-8">
         {sans2FA && (
