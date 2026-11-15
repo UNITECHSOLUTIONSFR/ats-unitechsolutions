@@ -9,7 +9,7 @@ import {
 } from "@/lib/tableau/modele";
 import { modifierCellules } from "@/lib/tableau/actions";
 import { classePastille } from "@/lib/statuts";
-import PanneauFiche, { prechargerFiche } from "./panneau-fiche";
+import PanneauFiche, { apercuDepuisLigne, prechargerFiche } from "./panneau-fiche";
 import { TexteSurligne, type ExtraitCV } from "./texte-surligne";
 import { BoutonWhatsApp } from "../whatsapp";
 import { IconeCopier, IconeCrayon, IconeExport, IconeFiche, IconeFiltre, IconeImport, IconePlus, IconeRecherche } from "../icones";
@@ -167,7 +167,10 @@ export default function TableauExcel({ vues, vueInitiale, ongletId, entetes, cha
 
   return (
     <div className="flex h-full flex-col gap-4">
-      {ficheOuverte && <PanneauFiche id={ficheOuverte} onFermer={fermerFiche} />}
+      {ficheOuverte && (
+        <PanneauFiche id={ficheOuverte} onFermer={fermerFiche}
+          apercu={(() => { const l = lignes.find((x) => x.consultant_id === ficheOuverte); return l ? apercuDepuisLigne(ficheOuverte, l.valeurs, champs) : undefined; })()} />
+      )}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="titre-page">Consultants</h1>
@@ -251,7 +254,7 @@ export default function TableauExcel({ vues, vueInitiale, ongletId, entetes, cha
           const tel = v("telephone").replace(/[^\d+]/g, "");
           const extrait = parLeCV.has(l.id) && l.consultant_id ? dansCV.extraits.get(l.consultant_id) : undefined;
           return (
-            <li key={l.id} className="carte p-3.5" onClick={(ev) => { if (l.consultant_id && !(ev.target as HTMLElement).closest("a, button")) setFicheOuverte(l.consultant_id); }}>
+            <li key={l.id} className="carte p-3.5" onPointerDown={l.consultant_id ? () => prechargerFiche(l.consultant_id!) : undefined} onClick={(ev) => { if (l.consultant_id && !(ev.target as HTMLElement).closest("a, button")) setFicheOuverte(l.consultant_id); }}>
               <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-semibold text-nuit">{nom}</div>

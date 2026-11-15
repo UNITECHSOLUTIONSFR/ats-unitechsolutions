@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState, useTransition } from "react";
 import type { FicheResume } from "@/lib/consultants/fiche";
+import type { ChampFiche } from "@/lib/import/excel";
 import { suivreProposition } from "@/lib/missions/actions";
 import { ajouterNote } from "@/lib/consultants/actions";
 import { classePastille } from "@/lib/statuts";
@@ -30,9 +31,24 @@ export function prechargerFiche(id: string) {
   if (!CACHE.has(id)) lireFiche(id, true).catch(() => CACHE.delete(id));
 }
 
+/**
+ * Aperçu immédiat tiré de la ligne du tableau (nom, poste, coordonnées, disponibilité) : le panneau s'ouvre sans attendre,
+ * le reste de la fiche (profil, missions, échanges) arrive juste derrière.
+ */
+export function apercuDepuisLigne(id: string, valeurs: Record<string, string>, champs: Record<string, ChampFiche>): FicheResume {
+  const v = (c: ChampFiche) => { const e = Object.keys(champs).find((k) => champs[k] === c); return (e && valeurs[e]?.trim()) || null; };
+  return {
+    id, prenom: v("prenom") ?? "", nom: v("nom") ?? "", trigramme: v("trigramme") ?? "", statut: v("statut") ?? "",
+    intitule_poste: v("intitule_poste"), telephone: v("telephone") ?? "", email: v("email"), email_2: v("email_2"),
+    localisation: v("localisation"), mobilite: null, disponibilite: v("disponibilite"), disponibilite_maj_le: null, linkedin: v("linkedin"),
+    notes: null, resume: null, annees_experience: null, seniorite: null, competences: [], documents: [], cvUnitech: null,
+    propositions: [], alertes: [], missionsOuvertes: [], notesEquipe: [], partiel: true,
+  };
+}
+
 /** Fiche complète dans un panneau à droite, sans quitter le tableau : contact, CV, compétences, missions. */
-export default function PanneauFiche({ id, onFermer }: { id: string; onFermer: () => void }) {
-  const [fiche, setFiche] = useState<FicheResume | null | undefined>(() => CACHE.get(id));
+export default function PanneauFiche({ id, apercu, onFermer }: { id: string; apercu?: FicheResume; onFermer: () => void }) {
+  const [fiche, setFiche] = useState<FicheResume | null | undefined>(() => CACHE.get(id) ?? apercu);
   const [envoi, demarrer] = useTransition();
   const recharger = useCallback(() => lireFiche(id).then(setFiche), [id]);
   useEffect(() => {
@@ -107,12 +123,17 @@ export default function PanneauFiche({ id, onFermer }: { id: string; onFermer: (
 
             <Bloc titre="Disponibilité">
               <p className="font-medium text-nuit">{fiche.disponibilite ?? "Non renseignée"}</p>
+              {fiche.partiel ? <div className="squelette h-4 w-40" /> : <>
               <p className={ancienne ? "text-amber-700" : "text-slate-500"}>
                 {fiche.disponibilite_maj_le ? `Mise à jour le ${new Date(fiche.disponibilite_maj_le).toLocaleDateString("fr-FR")}` : "Jamais mise à jour"}
                 {ancienne && " — à vérifier"}
               </p>
               {!pdf && !fiche.cvUnitech && <span className="pastille pastille-orange mt-1">PDF anonymisé manquant</span>}
+              </>}
             </Bloc>
+
+            {fiche.partiel && <div className="space-y-4" aria-busy="true"><div className="squelette h-28" /><div className="squelette h-20" /><div className="squelette h-24" /></div>}
+            {!fiche.partiel && <>
 
             <Bloc titre="Profil">
               {fiche.resume ? <p className="text-slate-700">{fiche.resume}</p> : <p className="text-slate-500">CV pas encore analysé.</p>}
@@ -162,6 +183,7 @@ export default function PanneauFiche({ id, onFermer }: { id: string; onFermer: (
             </Bloc>
 
             {fiche.notes && <Bloc titre="Notes (fichier de suivi)"><p className="whitespace-pre-line text-slate-700">{fiche.notes}</p></Bloc>}
+            </>}
           </div>
         )}
 

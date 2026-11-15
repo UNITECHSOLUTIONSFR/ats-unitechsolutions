@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { BoutonWhatsApp } from "../../whatsapp";
-import { notFound } from "next/navigation";
-import { exigerUtilisateur, journaliser } from "@/lib/acces";
+import { notFound, redirect } from "next/navigation";
+import { after } from "next/server";
+import { journaliser } from "@/lib/acces";
+import { clientSupabaseServeur, utilisateurConnecte } from "@/lib/supabase/serveur";
 import { formaterTelephone } from "@/lib/metier/telephone";
 import { modifierConsultant } from "@/lib/consultants/actions";
 import BlocRGPD from "./rgpd";
@@ -25,21 +27,24 @@ const STATUTS_PROPOSITION: Record<string, string> = {
 export default async function FicheConsultant({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ cv?: string; mission?: string }> }) {
   const { cv: avertissementCV, mission: missionId } = await searchParams;
   const { id } = await params;
-  const { utilisateur, supabase } = await exigerUtilisateur();
-  const [{ data: c }, { data: profil }, { data: competences }, { data: documents }, { data: propositions }] = await Promise.all([
+  const supabase = await clientSupabaseServeur();
+  if (!supabase) redirect("/");
+  // Vérification du compte et lectures en même temps (la base applique les règles d'accès à chaque lecture).
+  const [utilisateur, { data: c }, { data: profil }, { data: competences }, { data: documents }, { data: propositions }, { data: missionsOuvertes }, { data: cvGeneres }] = await Promise.all([
+    utilisateurConnecte(),
     supabase.from("consultants").select("*").eq("id", id).maybeSingle(),
     supabase.from("profils").select("annees_experience, seniorite, secteurs, langues, certifications, resume, modele").eq("consultant_id", id).maybeSingle(),
     supabase.from("consultant_competences").select("annees, niveau, competences(nom_canonique)").eq("consultant_id", id).order("annees", { ascending: false, nullsFirst: false }),
     supabase.from("documents").select("id, type, nom_fichier, url_web, modifie_sharepoint_le, statut_association").eq("consultant_id", id).eq("supprime_sharepoint", false),
     supabase.from("propositions").select("statut, score, updated_at, missions(id, intitule, client)").eq("consultant_id", id).order("updated_at", { ascending: false }),
-  ]);
-  if (!c) notFound();
-  const [evenements, { data: missionsOuvertes }, { data: cvGeneres }] = await Promise.all([
-    frise(supabase, id, c.created_at, c.source),
     supabase.from("missions").select("id, intitule, client").eq("statut", "ouverte").order("created_at", { ascending: false }),
     supabase.from("cv_unitech_generes").select("id, created_at, word_nom, word_url, pdf_nom, pdf_url, pdf_genere_le, dossier, missions(intitule, client)").eq("consultant_id", id).order("created_at", { ascending: false }).limit(10),
-    journaliser(supabase, utilisateur.id, "consultation", id),
   ]);
+  if (!utilisateur) redirect("/");
+  if (!c) notFound();
+  const evenements = await frise(supabase, id, c.created_at, c.source);
+  // Journal d'accès écrit après l'envoi de la page.
+  after(() => journaliser(supabase, utilisateur.id, "consultation", id));
 
   const { majDispo, dispoAncienne } = etatDisponibilite(c.disponibilite_maj_le);
   const pdf = (documents ?? []).find((d) => d.type === "pdf_anonyme");
