@@ -229,7 +229,7 @@ export async function modifierMission(_e: EtatGestionMission, formData: FormData
   if (!intitule) return { erreur: "L'intitulé est obligatoire." };
   const { error } = await supabase.from("missions").update({
     intitule, client: texte("client", 120) || null, localisation: texte("localisation", 200) || null,
-    texte_besoin: texte("texte_besoin", 30_000) || intitule, embedding: null,
+    texte_besoin: texte("texte_besoin", 30_000) || intitule,
   }).eq("id", id);
   if (error) return { erreur: "Enregistrement impossible : réessayez." };
   await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "modification", details: { mission: id, intitule } });

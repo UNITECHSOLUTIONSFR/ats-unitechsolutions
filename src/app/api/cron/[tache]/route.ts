@@ -1,7 +1,6 @@
 import { after, NextResponse, type NextRequest } from "next/server";
 import { revalidateTag } from "next/cache";
 import { prechaufferClassements, TAG_CLASSEMENTS } from "@/lib/matching/cache";
-import { preparerEmpreintes } from "@/lib/matching/empreintes";
 import { clientSupabaseAdmin } from "@/lib/supabase/admin";
 import { autorisationTachesValide } from "@/lib/securite/secret";
 import { poursuivreEnvoi } from "@/lib/relance/declenchement";
@@ -25,11 +24,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   // (la version actuelle reste servie instantanément pendant le recalcul).
   if (tache !== "relance") for (const t of ["tableau-consultants", "accueil", TAG_CLASSEMENTS]) revalidateTag(t, "max");
   // Missions Trello et nouveaux CV : classements préparés à l'avance, une mission après l'autre, après la réponse.
-  // Empreintes de sens manquantes (nouveaux CV, nouvelles missions) calculées d'abord, puis classements préparés.
-  if (tache === "trello" || tache === "emails" || tache === "cv") after(async () => {
-    await preparerEmpreintes(supabase).catch((e) => console.error("Empreintes :", (e as Error).message));
-    await prechaufferClassements(supabase);
-  });
+  if (tache === "trello" || tache === "emails") after(() => prechaufferClassements(supabase).then(() => undefined));
   if (tache === "relance" && r.ok && Number(r.rapport.envoyes ?? 0) > 0) after(poursuivreEnvoi);
   return NextResponse.json(r, { status: r.ok ? 200 : 500 });
 }
