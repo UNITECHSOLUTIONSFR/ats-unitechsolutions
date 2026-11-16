@@ -200,7 +200,7 @@ export async function synchroniserTrello(supabase: SupabaseClient, options: { si
           localisation: ex.localisation, annees_min: ex.annees_min && ex.annees_min > 0 ? ex.annees_min : null, seniorite: ex.seniorite,
           date_debut: /^\d{4}-\d{2}-\d{2}$/.test(ex.date_debut ?? "") ? ex.date_debut : null,
           ...(a.titre.client ? {} : ex.client ? { client: ex.client } : {}),
-          trello_empreinte: a.empreinte,
+          trello_empreinte: a.empreinte, embedding: null, // texte changé : empreinte de sens recalculée
         }).eq("id", a.missionId);
         revalidateTag(`classement:${a.missionId}`, { expire: 0 });
         bilan.analysees++;

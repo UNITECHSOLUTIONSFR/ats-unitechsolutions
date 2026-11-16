@@ -178,11 +178,11 @@ export function scorerConsultant(
 
   criteres.push({ cle: "disponibilite", ratio: dispo.ratio, texte: dispo.texte });
 
-  // Proximité sémantique : similarité cosinus ~0,70 (sans rapport) à ~0,90 (très proche)
+  // Proximité de sens (modèle gte-small) : ~0,80 = sans rapport, ~0,95 = même travail
   if (consultant.similarite === null || consultant.similarite === undefined) {
     criteres.push({ cle: "semantique", ratio: null, texte: "Proximité sémantique non calculée" });
   } else {
-    const r = Math.max(0, Math.min(1, (consultant.similarite - 0.7) / 0.2));
+    const r = Math.max(0, Math.min(1, (consultant.similarite - 0.8) / 0.15));
     criteres.push({ cle: "semantique", ratio: r, texte: `Profil proche du besoin à ${Math.round(r * 100)} %` });
   }
 
