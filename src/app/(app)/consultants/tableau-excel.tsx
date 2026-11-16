@@ -171,65 +171,45 @@ export default function TableauExcel({ vues, vueInitiale, ongletId, entetes, cha
         <PanneauFiche id={ficheOuverte} onFermer={fermerFiche}
           apercu={(() => { const l = lignes.find((x) => x.consultant_id === ficheOuverte); return l ? apercuDepuisLigne(ficheOuverte, l.valeurs, champs) : undefined; })()} />
       )}
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      {/* En-tête : titre à gauche, actions à droite (« Excel » réservé aux administrateurs). */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="titre-page">Consultants</h1>
-          <p className="text-sm text-zinc-500">
-            {chargementPartiel ? "Chargement des autres lignes…" : <>{visibles.length.toLocaleString("fr-FR")} ligne(s){nbFiltres > 0 && ` sur ${lignesVue.length.toLocaleString("fr-FR")}`}{parLeCV.size > 0 && `, dont ${parLeCV.size} où le mot est seulement dans le CV`}</>} ·
-            <span className="hidden sm:inline">double-cliquez sur une cellule pour la modifier</span>
+          <p className="text-sm text-slate-500">
+            {chargementPartiel ? "Chargement des autres lignes…" : <>{visibles.length.toLocaleString("fr-FR")} consultant(s){(nbFiltres > 0 || !!vueActive) && ` sur ${lignes.length.toLocaleString("fr-FR")}`}{parLeCV.size > 0 && `, dont ${parLeCV.size} où le mot est seulement dans le CV`}</>}
+            <span className="hidden sm:inline"> · double-cliquez sur une cellule pour la modifier</span>
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="relative">
-            <IconeRecherche className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input value={recherche} onChange={(e) => { setRecherche(e.target.value); setPage(0); }}
-              placeholder="Nom, compétence, ville, téléphone, mot du CV…" className="champ w-full pl-9 sm:w-72" />
-          </label>
-          <label className="flex items-center gap-1.5 text-xs text-slate-500" title="Chercher aussi le mot dans le texte complet des CV">
-            <input type="checkbox" checked={avecCV} onChange={(e) => { setAvecCV(e.target.checked); setPage(0); }} className="accent-marque-600" />
-            Chercher aussi dans les CV
-          </label>
-          {nbFiltres > 0 && (
-            <button className="bouton-secondaire" onClick={() => { setFiltres({}); setRecherche(""); setRapides([]); setTri(null); setPage(0); }}>
-              Effacer les filtres
-            </button>
-          )}
-          <MenuActions ongletId={ongletId} idsVisibles={visibles.map((l) => l.id)} estAdmin={estAdmin} />
-        </div>
+        <MenuActions ongletId={ongletId} idsVisibles={visibles.map((l) => l.id)} estAdmin={estAdmin} />
       </div>
 
-      {/* Vues : toute la base, ou les arrivées du jour par email ou SharePoint */}
-      <div className="verre flex w-fit max-w-full gap-1 overflow-x-auto rounded-full p-1">
-        {vues.map((o) => (
-          <button key={o.cle} type="button"
-            onClick={() => {
-              setVueActive(o.cle); setPage(0); setSelection(new Set());
-              window.history.replaceState(null, "", o.cle ? `/consultants?vue=${o.cle}` : "/consultants");
-            }}
-            className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-              o.cle === vueActive ? "bg-nuit text-white shadow-[0_6px_16px_-8px_rgba(11,26,63,0.7)]" : "text-slate-500 hover:bg-white/80 hover:text-nuit"
-            }`}>
-            {o.nom}
-            {o.cle && <span className={`ml-1.5 rounded-md px-1.5 py-0.5 text-xs font-bold ${o.cle === vueActive ? "bg-white/20" : "bg-slate-100 text-slate-500"}`}>{chargementPartiel ? "…" : nbParVue[o.cle] ?? 0}</span>}
-          </button>
-        ))}
+      {/* Recherche et filtres : un seul bouton « Filtres » ; seuls les filtres actifs s'affichent, en pastilles retirables. */}
+      <div className="space-y-2.5">
+        <div className="flex items-center gap-2">
+          <label className="relative min-w-0 flex-1 sm:max-w-xl">
+            <IconeRecherche className="pointer-events-none absolute left-3.5 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input value={recherche} onChange={(e) => { setRecherche(e.target.value); setPage(0); }}
+              placeholder="Rechercher : nom, compétence, ville, téléphone…" className="champ w-full py-2.5 pl-10" />
+          </label>
+          <PanneauFiltres
+            vues={vues.map((o) => ({ cle: o.cle, nom: o.nom, nombre: o.cle ? (chargementPartiel ? null : nbParVue[o.cle] ?? 0) : null }))}
+            vueActive={vueActive}
+            onVue={(cle) => { setVueActive(cle); setPage(0); setSelection(new Set()); window.history.replaceState(null, "", cle ? `/consultants?vue=${cle}` : "/consultants"); }}
+            rapides={rapides} onRapides={(r) => { setRapides(r); setPage(0); }} desactive={!!chargementPartiel}
+            avecCV={avecCV} onAvecCV={(v) => { setAvecCV(v); setPage(0); }} />
+        </div>
+        {(vueActive || rapides.length > 0 || !avecCV || Object.keys(filtres).length > 0) && (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            {vueActive && <Pastille texte={vues.find((o) => o.cle === vueActive)?.nom ?? ""} onRetirer={() => { setVueActive(""); setPage(0); window.history.replaceState(null, "", "/consultants"); }} />}
+            {rapides.map((f) => <Pastille key={f} texte={RAPIDES.find(([k]) => k === f)?.[1] ?? f} onRetirer={() => { setRapides((r) => r.filter((x) => x !== f)); setPage(0); }} />)}
+            {!avecCV && <Pastille texte="Sans le texte des CV" onRetirer={() => setAvecCV(true)} />}
+            {Object.keys(filtres).length > 0 && <Pastille texte={`${Object.keys(filtres).length} filtre(s) de colonne`} onRetirer={() => { setFiltres({}); setPage(0); }} />}
+            <button className="lien text-sm" onClick={() => { setFiltres({}); setRecherche(""); setRapides([]); setTri(null); setVueActive(""); setAvecCV(true); setPage(0); window.history.replaceState(null, "", "/consultants"); }}>Tout effacer</button>
+          </div>
+        )}
       </div>
 
       {chargementPartiel && vueActive && <p className="text-sm text-slate-500">Chargement des fiches du jour…</p>}
-
-      {/* Filtres rapides */}
-      <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1 text-sm sm:flex-wrap sm:overflow-visible">
-        {([["disponibles", "Disponibles maintenant"], ["a_verifier", "Dispo à vérifier (> 3 mois)"], ["semaine", "Ajoutés cette semaine"], ["cv", "CV analysé"]] as const).map(([f, libelle]) => {
-          const actif = rapides.includes(f);
-          return (
-            <button key={f} type="button" disabled={chargementPartiel}
-              onClick={() => { setRapides((r) => (actif ? r.filter((x) => x !== f) : [...r, f])); setPage(0); }}
-              className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1 font-medium ring-1 transition disabled:opacity-50 ${actif ? "bg-nuit text-white ring-nuit" : "bg-white/70 text-slate-600 ring-slate-200 hover:bg-white"}`}>
-              {libelle}
-            </button>
-          );
-        })}
-      </div>
 
       {selection.size > 0 && (
         <div className="flex flex-wrap items-center gap-2 rounded-xl bg-marque-50 px-4 py-2.5 text-sm ring-1 ring-marque-200">
@@ -542,6 +522,73 @@ function ModificationMasse({ entetes, nombre, onAnnuler, onValider }: {
           <button className="bouton-primaire" onClick={() => onValider(colonne, valeur)}>Appliquer à {nombre} ligne(s)</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+const RAPIDES = [["disponibles", "Disponibles maintenant"], ["a_verifier", "Disponibilité à vérifier (> 3 mois)"], ["semaine", "Ajoutés cette semaine"], ["cv", "CV analysé"]] as const;
+
+function Pastille({ texte, onRetirer }: { texte: string; onRetirer: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-marque-50 py-1 pl-3 pr-1.5 text-xs font-semibold text-marque-700 ring-1 ring-marque-100">
+      {texte}
+      <button type="button" onClick={onRetirer} aria-label={`Retirer : ${texte}`} className="rounded-full px-1 text-marque-400 hover:text-marque-700">✕</button>
+    </span>
+  );
+}
+
+/** Bouton « Filtres » : vues (toute la base, arrivées du jour), filtres rapides et recherche dans les CV, dans un panneau qui s'ouvre au clic. */
+function PanneauFiltres({ vues, vueActive, onVue, rapides, onRapides, desactive, avecCV, onAvecCV }: {
+  vues: { cle: string; nom: string; nombre: number | null }[]; vueActive: string; onVue: (cle: string) => void;
+  rapides: FiltreRapide[]; onRapides: (r: FiltreRapide[]) => void; desactive: boolean; avecCV: boolean; onAvecCV: (v: boolean) => void;
+}) {
+  const [ouvert, setOuvert] = useState(false);
+  const boite = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!ouvert) return;
+    const clic = (e: MouseEvent) => { if (boite.current && !boite.current.contains(e.target as Node)) setOuvert(false); };
+    const touche = (e: KeyboardEvent) => { if (e.key === "Escape") setOuvert(false); };
+    document.addEventListener("mousedown", clic);
+    document.addEventListener("keydown", touche);
+    return () => { document.removeEventListener("mousedown", clic); document.removeEventListener("keydown", touche); };
+  }, [ouvert]);
+  const nbActifs = Number(!!vueActive) + rapides.length + Number(!avecCV);
+  const ligne = "flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-nuit hover:bg-slate-50";
+  return (
+    <div ref={boite} className="relative shrink-0">
+      <button type="button" onClick={() => setOuvert(!ouvert)} aria-expanded={ouvert} className="bouton-secondaire py-2.5">
+        <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-slate-500" aria-hidden><path d="M3 4.75A.75.75 0 013.75 4h12.5a.75.75 0 01.53 1.28L12 10.06v4.19a.75.75 0 01-.33.62l-2.5 1.67a.75.75 0 01-1.17-.62v-5.86L3.22 5.28A.75.75 0 013 4.75z" /></svg>
+        Filtres{nbActifs > 0 && <span className="rounded-full bg-marque-600 px-1.5 text-xs font-bold text-white">{nbActifs}</span>}
+      </button>
+      {ouvert && (
+        <div className="absolute right-0 top-full z-50 mt-2 w-80 space-y-3 rounded-2xl bg-white p-3 shadow-xl ring-1 ring-slate-200">
+          <div>
+            <div className="px-2.5 pb-1 text-xs font-bold uppercase tracking-wide text-slate-400">Afficher</div>
+            {vues.map((o) => (
+              <label key={o.cle} className={ligne}>
+                <input type="radio" name="vue" checked={o.cle === vueActive} onChange={() => onVue(o.cle)} className="accent-marque-600" />
+                <span className="flex-1">{o.nom}</span>
+                {o.cle && <span className="rounded-md bg-slate-100 px-1.5 text-xs font-bold text-slate-500">{o.nombre ?? "…"}</span>}
+              </label>
+            ))}
+          </div>
+          <div className="border-t border-slate-100 pt-2">
+            <div className="px-2.5 pb-1 text-xs font-bold uppercase tracking-wide text-slate-400">Filtrer</div>
+            {RAPIDES.map(([f, libelle]) => (
+              <label key={f} className={`${ligne} ${desactive ? "opacity-50" : ""}`}>
+                <input type="checkbox" disabled={desactive} checked={rapides.includes(f)} onChange={(e) => onRapides(e.target.checked ? [...rapides, f] : rapides.filter((x) => x !== f))} className="h-4 w-4 accent-marque-600" />
+                {libelle}
+              </label>
+            ))}
+          </div>
+          <div className="border-t border-slate-100 pt-2">
+            <label className={ligne}>
+              <input type="checkbox" checked={avecCV} onChange={(e) => onAvecCV(e.target.checked)} className="h-4 w-4 accent-marque-600" />
+              Chercher aussi le mot dans le texte des CV
+            </label>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
