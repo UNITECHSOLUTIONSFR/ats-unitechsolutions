@@ -1,6 +1,5 @@
 import MenuLateral from "./menu-lateral";
 import BoutonRetour from "./bouton-retour";
-import { PrechargementConsultants } from "./consultants/chargeur";
 import { configSupabase } from "@/lib/supabase/config";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -50,7 +49,6 @@ export default async function LayoutApplication({ children }: { children: React.
         )}
         <BoutonRetour />{children}
       </main>
-      <PrechargementConsultants />
     </div>
   );
 }

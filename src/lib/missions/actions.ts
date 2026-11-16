@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath, updateTag } from "next/cache";
-import { invaliderClassement } from "@/lib/matching/cache";
+import { recalculerApres } from "@/lib/matching/recalcul";
 import { exigerUtilisateur } from "@/lib/acces";
 import { exigerAdmin } from "@/lib/acces-admin";
 import { extraireExigencesMission, ErreurIA, type UsageIA } from "@/lib/ai";
@@ -129,7 +129,7 @@ export async function modifierExigence(formData: FormData) {
     const importance = Math.min(3, Math.max(1, Number(formData.get("valeur"))));
     await supabase.from("mission_competences").update({ importance }).match({ mission_id: missionId, competence_id: competenceId });
   }
-  invaliderClassement(missionId);
+  await recalculerApres(supabase, missionId);
   revalidatePath(`/missions/${missionId}`);
 }
 
@@ -139,7 +139,7 @@ export async function changerStatutMission(formData: FormData) {
   const statut = String(formData.get("statut"));
   if (!STATUTS_MISSION.includes(statut as (typeof STATUTS_MISSION)[number])) return;
   await supabase.from("missions").update({ statut }).eq("id", missionId);
-  invaliderClassement(missionId);
+  await recalculerApres(supabase, missionId);
   updateTag("accueil");
   revalidatePath(`/missions/${missionId}`);
   revalidatePath("/missions");
@@ -153,7 +153,9 @@ export async function suivreProposition(formData: FormData) {
   const statut = String(formData.get("statut") ?? "propose");
   if (!STATUTS_PROPOSITION.includes(statut as (typeof STATUTS_PROPOSITION)[number])) return;
   const score = formData.get("score") ? Number(formData.get("score")) : null;
-  const detail = formData.get("detail") ? JSON.parse(String(formData.get("detail"))) : undefined;
+  // Détail du score : relu dans le classement rangé (plus envoyé par la page, qui en est allégée).
+  const { data: rang } = await supabase.from("classements_mission").select("top").eq("mission_id", missionId).maybeSingle();
+  const detail = ((rang?.top ?? []) as { consultant_id: string; resultat: unknown }[]).find((l) => l.consultant_id === consultantId)?.resultat;
 
   const { data: existante } = await supabase
     .from("propositions").select("id").match({ mission_id: missionId, consultant_id: consultantId }).maybeSingle();
@@ -208,7 +210,7 @@ export async function ajouterExigence(missionId: string, nom: string) {
   for (const id of correspondance.get(n) ?? []) {
     await supabase.from("mission_competences").upsert({ mission_id: missionId, competence_id: id, obligatoire: false, importance: 2 }, { onConflict: "mission_id,competence_id", ignoreDuplicates: true });
   }
-  invaliderClassement(missionId);
+  await recalculerApres(supabase, missionId);
   revalidatePath(`/missions/${missionId}`);
 }
 
@@ -260,4 +262,11 @@ export async function supprimerMission(_e: EtatGestionMission, formData: FormDat
   updateTag("accueil");
   revalidatePath("/missions");
   redirect("/missions");
+}
+
+/** Bouton « Recalculer » de l'écran de la mission : le classement est refait en arrière-plan (l'ancien reste affiché). */
+export async function recalculerMission(missionId: string) {
+  const { supabase } = await exigerUtilisateur();
+  await recalculerApres(supabase, missionId);
+  revalidatePath(`/missions/${missionId}`);
 }

@@ -1,16 +1,22 @@
 import Link from "next/link";
 import { exigerUtilisateur } from "@/lib/acces";
-import { COLONNE_DOMAINE } from "@/lib/import/excel";
-import { chargerApercuTableau } from "@/lib/tableau/chargement";
-import ChargeurTableau from "./chargeur";
+import { champsParEntete } from "@/lib/import/excel";
+import { lirePageTableau, type CriteresTableau } from "@/lib/tableau/page";
+import TableauExcel from "./tableau-excel";
 
+/** Vues de l'écran Consultants : toute la base, ou les arrivées du jour (email, SharePoint). Les métiers se filtrent par la colonne « Domaine ». */
+const VUES = [{ cle: "", nom: "Toute la base" }, { cle: "email_jour", nom: "Reçus par email aujourd'hui" }, { cle: "sharepoint_jour", nom: "Ajoutés depuis SharePoint aujourd'hui" }];
+
+/**
+ * Écran Consultants : la première page (50 lignes) est préparée ici et affichée tout de suite ;
+ * recherche, filtres, tri et pages suivantes sont demandés à la base au fur et à mesure (jamais toute la base).
+ */
 export default async function TableauDeSuivi({ searchParams }: { searchParams: Promise<{ vue?: string }> }) {
   const { utilisateur, supabase } = await exigerUtilisateur();
   const { vue } = await searchParams;
-  // Seulement les 100 premières lignes ici (affichage immédiat) ; le reste est chargé par l'écran, en arrière-plan.
-  const apercu = await chargerApercuTableau(supabase);
+  const { data: onglet } = await supabase.from("tableau_onglets").select("id, entetes").eq("principal", true).maybeSingle();
 
-  if (!apercu) {
+  if (!onglet) {
     return (
       <div className="space-y-4">
         <h1 className="titre-page">Consultants</h1>
@@ -28,5 +34,14 @@ export default async function TableauDeSuivi({ searchParams }: { searchParams: P
       </div>
     );
   }
-  return <ChargeurTableau apercu={apercu} vueInitiale={vue === "email_jour" || vue === "sharepoint_jour" ? vue : ""} colonneDomaine={COLONNE_DOMAINE} estAdmin={utilisateur.role === "admin"} />;
+  const entetes = onglet.entetes as string[];
+  const champs = champsParEntete(entetes, entetes);
+  // Tri par défaut : ordre alphabétique des prénoms.
+  const colonnePrenom = Object.entries(champs).find(([, c]) => c === "prenom")?.[0];
+  const criteres: CriteresTableau = {
+    filtres: {}, recherche: "", tri: colonnePrenom ? { colonne: colonnePrenom, sens: "asc" } : null, rapides: [],
+    vue: vue === "email_jour" || vue === "sharepoint_jour" ? vue : "", avecCV: true, page: 0,
+  };
+  const premiere = await lirePageTableau(supabase, criteres);
+  return <TableauExcel vues={VUES} criteresInitiaux={criteres} premiere={premiere} ongletId={onglet.id} entetes={entetes} champs={champs} estAdmin={utilisateur.role === "admin"} />;
 }

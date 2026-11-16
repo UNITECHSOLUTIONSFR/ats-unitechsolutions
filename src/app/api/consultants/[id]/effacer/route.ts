@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
+import { invaliderTableau } from "@/lib/tableau/cache";
 import { exigerUtilisateur } from "@/lib/acces";
 import { effacerPersonne } from "@/lib/rgpd/effacement";
 
@@ -18,7 +19,7 @@ export async function POST(requete: Request, { params }: { params: Promise<{ id:
   }
   try {
     const fichiers = await effacerPersonne(supabase, id);
-    revalidateTag("tableau-consultants", { expire: 0 });
+    invaliderTableau();
     revalidatePath("/consultants");
     revalidatePath("/");
     return NextResponse.json({ fichiers });

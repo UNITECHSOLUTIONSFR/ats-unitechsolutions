@@ -1,0 +1,165 @@
+import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { clientSupabaseAdmin } from "@/lib/supabase/admin";
+import { classementMission, type LigneClassement } from "./classement";
+import { trierParIA } from "./tri-ia";
+
+/**
+ * Classements rangés dans la base (table classements_mission) : calculés en arrière-plan, lus instantanément.
+ * - Ouvrir une mission lit le dernier classement complet (aucun calcul), avec sa date.
+ * - Une mission modifiée, de nouvelles fiches ou un nouveau CV analysé demandent un recalcul ; la tâche « matching »
+ *   (toutes les 10 minutes) le fait, une mission après l'autre. L'ancien classement reste affiché pendant ce temps.
+ * - Chaque nuit, tous les classements des missions ouvertes sont refaits (disponibilités mises à jour, etc.).
+ * - Un déploiement ne recalcule rien. Changer les règles du moteur : augmenter VERSION_MOTEUR (tout est refait).
+ * L'IA ne lit que les profils qui entrent dans les 30 premiers sans avis déjà rendu (voir tri-ia) : coût maîtrisé.
+ */
+export const VERSION_MOTEUR = "2026-11-17.1";
+
+export interface ClassementResume {
+  total: number;
+  pertinents: number;
+  /** Les 60 premiers, avec le détail du score. */
+  top: LigneClassement[];
+}
+export interface ClassementStocke extends ClassementResume {
+  calculeLe: string | null;
+  /** Vrai quand un recalcul est demandé ou en cours : le classement affiché est celui d'avant. */
+  miseAJour: boolean;
+}
+
+/** Statuts dont le classement est tenu à jour en arrière-plan. */
+const STATUTS_SUIVIS = ["ouverte", "chez_client"];
+/** Au-delà, un classement est refait même sans demande (disponibilités, fiches modifiées dans l'Excel…). */
+const AGE_MAX_MS = 20 * 3600_000;
+/** Fiches modifiées : un classement n'est pas refait plus souvent que cela pour cette raison. */
+const DELAI_CHANGEMENTS_MS = 30 * 60_000;
+/** Un calcul bloqué depuis plus longtemps (serveur arrêté) est considéré comme abandonné. */
+const CALCUL_ABANDONNE_MS = 6 * 60_000;
+
+const pertinent = (l: LigneClassement) => !l.resultat.elimine && l.avisIA?.verdict !== "hors_sujet" && l.resultat.score >= 60;
+
+/** Calcule le classement d'une mission (tri de toute la base, puis avis de l'IA sur les 30 premiers) et le range. */
+export async function calculerEtRanger(missionId: string, supabase: SupabaseClient = clientSupabaseAdmin()): Promise<ClassementResume> {
+  const debut = Date.now();
+  // Réservation : si un autre calcul de cette mission tourne déjà, on ne le double pas.
+  const { data: reserve } = await supabase.rpc("reserver_calcul_classement", { p_mission_id: missionId, p_abandon_secondes: CALCUL_ABANDONNE_MS / 1000 });
+  if (reserve === false) {
+    const deja = await lireClassement(supabase, missionId);
+    if (deja) return deja;
+  }
+  // Demandes arrivées pendant le calcul : gardées (le calcul suivant les prendra).
+  const demandeAvant = new Date().toISOString();
+  try {
+    const lignes = await trierParIA(supabase, missionId, await classementMission(supabase, missionId, 100_000));
+    const resume: ClassementResume = { total: lignes.length, pertinents: lignes.filter(pertinent).length, top: lignes.slice(0, 60) };
+    const scores = Object.fromEntries(lignes.map((l) => [l.consultant_id, [Math.round(l.resultat.score * 10) / 10, l.resultat.elimine]]));
+    const { data: ligne } = await supabase.from("classements_mission").select("demande_le").eq("mission_id", missionId).maybeSingle();
+    const redemande = !!ligne && Date.parse(ligne.demande_le) > Date.parse(demandeAvant);
+    // Publication d'un bloc : le nouveau classement remplace l'ancien seulement une fois complet.
+    await supabase.from("classements_mission").upsert({
+      mission_id: missionId, total: resume.total, pertinents: resume.pertinents, top: resume.top, scores,
+      calcule_le: new Date().toISOString(), duree_ms: Date.now() - debut, version: VERSION_MOTEUR,
+      a_recalculer: redemande, en_calcul_depuis: null, erreur: null,
+    });
+    return resume;
+  } catch (e) {
+    // Échec : l'ancien classement reste en place, avec sa date ; nouvel essai au prochain passage.
+    await supabase.from("classements_mission").update({ en_calcul_depuis: null, erreur: (e as Error).message.slice(0, 300) }).eq("mission_id", missionId);
+    throw e;
+  }
+}
+
+/** Dernier classement rangé (sans le détail des scores). Null si la mission n'a jamais été classée. */
+export async function lireClassement(supabase: SupabaseClient, missionId: string): Promise<ClassementStocke | null> {
+  const { data } = await supabase.from("classements_mission")
+    .select("total, pertinents, top, calcule_le, a_recalculer, en_calcul_depuis").eq("mission_id", missionId).maybeSingle();
+  if (!data?.calcule_le) return null;
+  return {
+    total: data.total, pertinents: data.pertinents, top: data.top as LigneClassement[], calculeLe: data.calcule_le,
+    miseAJour: data.a_recalculer || !!data.en_calcul_depuis,
+  };
+}
+
+/** Calculs lancés par ce serveur : deux écrans qui demandent une mission jamais classée attendent le même calcul. */
+const premiersCalculs = new Map<string, Promise<ClassementResume>>();
+
+/**
+ * Classement à afficher : celui rangé dans la base. Seule une mission jamais classée (toute nouvelle) est calculée
+ * sur le moment, une seule fois ; ensuite tout se fait en arrière-plan.
+ */
+export async function classementAAfficher(missionId: string, supabase: SupabaseClient = clientSupabaseAdmin()): Promise<ClassementStocke> {
+  const range = await lireClassement(supabase, missionId);
+  if (range) return range;
+  let p = premiersCalculs.get(missionId);
+  if (!p) {
+    p = calculerEtRanger(missionId).finally(() => premiersCalculs.delete(missionId));
+    premiersCalculs.set(missionId, p);
+  }
+  const r = await p;
+  return { ...r, calculeLe: new Date().toISOString(), miseAJour: false };
+}
+
+/** Classement rangé s'il existe, sans jamais lancer de calcul (listes, accueil). */
+export async function classementSiRange(missionId: string, supabase: SupabaseClient = clientSupabaseAdmin()): Promise<ClassementStocke | null> {
+  return lireClassement(supabase, missionId).catch(() => null);
+}
+
+/** Nombre de profils pertinents et 3 premiers profils de plusieurs missions, en une lecture (liste des missions). */
+export async function resumesMissions(supabase: SupabaseClient, missionIds: string[]): Promise<Map<string, { pertinents: number; premiers: LigneClassement[] }>> {
+  if (!missionIds.length) return new Map();
+  const { data } = await supabase.from("classements_mission").select("mission_id, pertinents, premiers:top->0, deux:top->1, trois:top->2, quatre:top->3, cinq:top->4")
+    .in("mission_id", missionIds).not("calcule_le", "is", null);
+  return new Map((data ?? []).map((r) => {
+    const premiers = [r.premiers, r.deux, r.trois, r.quatre, r.cinq].filter(Boolean) as unknown as LigneClassement[];
+    return [r.mission_id as string, { pertinents: r.pertinents as number, premiers }];
+  }));
+}
+
+/** Demande le recalcul de certaines missions, ou de toutes les missions suivies (nouvelles fiches, CV analysés…). */
+export async function demanderRecalcul(supabase: SupabaseClient, missionIds?: string[]): Promise<void> {
+  const maintenant = new Date().toISOString();
+  let ids = missionIds;
+  if (!ids) {
+    const { data } = await supabase.from("missions").select("id").in("statut", STATUTS_SUIVIS);
+    ids = (data ?? []).map((m) => m.id as string);
+  }
+  if (!ids.length) return;
+  // Ligne créée si besoin (mission nouvelle) ; un classement existant est gardé tel quel jusqu'au recalcul.
+  await supabase.from("classements_mission").upsert(ids.map((id) => ({ mission_id: id })), { onConflict: "mission_id", ignoreDuplicates: true });
+  await supabase.from("classements_mission").update({ a_recalculer: true, demande_le: maintenant }).in("mission_id", ids);
+}
+
+/**
+ * Tâche « matching » : recalcule, une mission après l'autre et dans le temps imparti, les classements à refaire :
+ * demandés, jamais calculés, d'une ancienne version du moteur, ou vieux de plus de 20 heures.
+ */
+export async function recalculerEnAttente(supabase: SupabaseClient, budgetMs = 230_000): Promise<{ recalcules: number; restants: number; erreurs: string[] }> {
+  const debut = Date.now();
+  const dernier = (table: string, colonne: string) => supabase.from(table).select(colonne).order(colonne, { ascending: false }).limit(1).maybeSingle()
+    .then((r) => Date.parse(String((r.data as Record<string, string> | null)?.[colonne] ?? "1970-01-01")));
+  const [{ data: missions }, { data: lignes }, ficheModifiee, profilModifie] = await Promise.all([
+    supabase.from("missions").select("id").in("statut", STATUTS_SUIVIS),
+    supabase.from("classements_mission").select("mission_id, calcule_le, version, a_recalculer, demande_le"),
+    dernier("consultants", "updated_at"),
+    dernier("profils", "updated_at"),
+  ]);
+  // Fiches ajoutées ou modifiées, CV analysés depuis le dernier calcul : classement refait, au plus toutes les 30 minutes.
+  const dernierChangement = Math.max(ficheModifiee, profilModifie);
+  const parMission = new Map((lignes ?? []).map((l) => [l.mission_id as string, l]));
+  const aFaire = (missions ?? []).map((m) => ({ id: m.id as string, l: parMission.get(m.id) }))
+    .filter(({ l }) => {
+      if (!l?.calcule_le || l.a_recalculer || l.version !== VERSION_MOTEUR) return true;
+      const calcule = Date.parse(l.calcule_le);
+      return Date.now() - calcule > AGE_MAX_MS || (dernierChangement > calcule && Date.now() - calcule > DELAI_CHANGEMENTS_MS);
+    })
+    // Jamais calculées d'abord, puis les demandes les plus anciennes.
+    .sort((a, b) => Number(!!a.l?.calcule_le) - Number(!!b.l?.calcule_le) || Date.parse(a.l?.demande_le ?? "1970") - Date.parse(b.l?.demande_le ?? "1970"));
+  let recalcules = 0;
+  const erreurs: string[] = [];
+  for (const { id } of aFaire) {
+    if (Date.now() - debut > budgetMs) break;
+    try { await calculerEtRanger(id, supabase); recalcules++; }
+    catch (e) { erreurs.push(`${id.slice(0, 8)} : ${(e as Error).message.slice(0, 120)}`); }
+  }
+  return { recalcules, restants: aFaire.length - recalcules - erreurs.length, erreurs };
+}

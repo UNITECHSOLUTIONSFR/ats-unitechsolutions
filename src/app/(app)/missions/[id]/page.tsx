@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { exigerUtilisateur } from "@/lib/acces";
 import type { LigneClassement } from "@/lib/matching/classement";
-import { classementEnCache } from "@/lib/matching/cache";
+import { classementAAfficher } from "@/lib/matching/stockage";
+import BoutonRecalculer from "./recalculer";
 import { formaterTelephone } from "@/lib/metier/telephone";
 import { responsablesPossibles } from "@/lib/missions/responsables";
 import ChoixResponsable from "../responsable";
@@ -37,7 +38,7 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
   if (!mission) notFound();
 
   const [resume, { data: propositions }, responsables, { data: cvMission }, { data: avisExistants }] = await Promise.all([
-    classementEnCache(id), // gardé en mémoire : recalculé quand la mission change, sinon toutes les 15 minutes
+    classementAAfficher(id), // rangé dans la base : lu sans calcul (recalculé en arrière-plan quand quelque chose change)
     supabase.from("propositions").select("consultant_id, statut").eq("mission_id", id),
     responsablesPossibles(supabase),
     supabase.from("cv_unitech_generes").select("id, consultant_id, word_url, pdf_url, created_at").eq("mission_id", id).order("created_at", { ascending: false }),
@@ -115,6 +116,11 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
               {resume.pertinents} profil(s) pertinent(s) pour cette mission
             </h2>
             <p className="sous-titre">Les 50 premiers sur {resume.total.toLocaleString("fr-FR")} consultant(s) classé(s) · le score est une aide à la décision, jamais un refus automatique.</p>
+            <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              {resume.calculeLe && <span>Classement du {new Date(resume.calculeLe).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Paris" })}</span>}
+              {resume.miseAJour && <span className="pastille pastille-orange">Mise à jour en cours…</span>}
+              <BoutonRecalculer missionId={id} />
+            </p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
             <span className="pastille pastille-vert">75 et plus : très bonne adéquation</span>
@@ -181,7 +187,6 @@ function CarteCandidat({ rang, c, missionId, statut, ouvert, cv, avis }: {
           <input type="hidden" name="mission_id" value={missionId} />
           <input type="hidden" name="consultant_id" value={c.consultant_id} />
           <input type="hidden" name="score" value={c.resultat.score} />
-          <input type="hidden" name="detail" value={JSON.stringify(c.resultat)} />
           <select name="statut" defaultValue={statut ?? "propose"} aria-label="Suivi" className="rounded-full bg-transparent px-2 py-1 text-xs font-semibold text-nuit outline-none">
             {Object.entries(STATUTS_PROPOSITION).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>

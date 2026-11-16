@@ -129,6 +129,14 @@ export interface Tri {
 }
 
 const pli = (s: string) => sansAccents(s).toLowerCase();
+/** Texte cherchable : sans accents ni majuscules (même règle pour les lignes et pour les mots tapés). */
+export const normaliserRecherche = pli;
+
+/** Mots tapés dans la recherche, prêts pour la base : chaque mot, et ses chiffres seuls s'il ressemble à un numéro. */
+export function motsRecherche(recherche: string): { mots: string[]; chiffres: string[] } {
+  const mots = pli(recherche).split(/\s+/).filter(Boolean).slice(0, 12);
+  return { mots, chiffres: mots.map((m) => (/^\+?\d[\d\s.]{3,}$/.test(m) ? m.replace(/\D/g, "").replace(/^0/, "") : "")) };
+}
 
 // Texte de recherche calculé une seule fois par ligne (une ligne modifiée est un nouvel objet, donc réindexée).
 const INDEX = new WeakMap<LigneTableau, { tout: string; chiffres: string }>();

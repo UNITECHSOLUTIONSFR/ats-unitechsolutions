@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { utilisateurConnecte, clientSupabaseServeur } from "@/lib/supabase/serveur";
 import { champsParEntete } from "@/lib/import/excel";
 import { valeurEcran } from "@/lib/tableau/modele";
+import { criteresValides, lireIdsTableau } from "@/lib/tableau/page";
 import { lignesHorsExcel, PREFIXE_HORS_EXCEL, type FicheHorsExcel } from "@/lib/tableau/hors-excel";
 
 /** Export Excel d'un onglet (lignes filtrées ou sélectionnées). Réservé aux administrateurs. */
@@ -16,7 +17,9 @@ export async function POST(requete: Request) {
   const ongletId = String(form.get("onglet") ?? "");
   let ids: string[] = [];
   try {
-    ids = JSON.parse(String(form.get("ids") ?? "[]")) as string[];
+    // Vue filtrée : les lignes sont retrouvées par la base à partir des critères de l'écran ; sélection : liste des lignes cochées.
+    const criteres = form.get("criteres");
+    ids = criteres ? await lireIdsTableau(supabase, criteresValides(JSON.parse(String(criteres)))) : (JSON.parse(String(form.get("ids") ?? "[]")) as string[]);
   } catch {
     return new NextResponse("Demande invalide.", { status: 400 });
   }

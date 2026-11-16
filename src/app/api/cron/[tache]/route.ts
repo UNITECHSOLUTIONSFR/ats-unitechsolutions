@@ -1,6 +1,7 @@
 import { after, NextResponse, type NextRequest } from "next/server";
 import { revalidateTag } from "next/cache";
-import { prechaufferClassements, TAG_CLASSEMENTS } from "@/lib/matching/cache";
+import { recalculerEnAttente } from "@/lib/matching/stockage";
+import { actualiserProjection } from "@/lib/tableau/projection";
 import { clientSupabaseAdmin } from "@/lib/supabase/admin";
 import { autorisationTachesValide } from "@/lib/securite/secret";
 import { poursuivreEnvoi } from "@/lib/relance/declenchement";
@@ -15,16 +16,21 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return new NextResponse("Non autorisé", { status: 401 });
   }
   const { tache } = await params;
+  // Classements des missions (toutes les 10 minutes) : seulement ce qui est à refaire, sans trace dans le journal des tâches.
+  if (tache === "matching") {
+    // Par sécurité, la projection de l'écran Consultants est aussi remise à jour (seules les lignes changées sont réécrites).
+    const projection = await actualiserProjection().catch((e) => ({ erreur: (e as Error).message }));
+    return NextResponse.json({ classements: await recalculerEnAttente(clientSupabaseAdmin(), 200_000), projection });
+  }
   if (!(tache in TACHES)) return new NextResponse("Tâche inconnue", { status: 404 });
   const supabase = clientSupabaseAdmin();
   // Tâches planifiées (GitHub ou Supabase) : pas de double passage. La relance, lancée par un administrateur, n'est pas concernée.
   const r = await executerTache(tache as NomTache, supabase, { planifiee: tache !== "relance" });
+  // Nouvelles fiches possibles : accueil rafraîchi et projection de l'écran Consultants mise à jour après la réponse.
+  // Les classements des missions, rangés dans la base, sont refaits par la tâche « matching ».
+  if (tache !== "relance") revalidateTag("accueil", "max");
+  if (tache === "excel" || tache === "emails" || tache === "cv") after(() => actualiserProjection().then(() => undefined).catch(() => undefined));
   // Relance lancée par un administrateur : tant qu'il reste des emails à envoyer, l'appel suivant est enchaîné.
-  // Nouvelles fiches possibles : écran Consultants, accueil et classements rafraîchis en arrière-plan
-  // (la version actuelle reste servie instantanément pendant le recalcul).
-  if (tache !== "relance") for (const t of ["tableau-consultants", "accueil", TAG_CLASSEMENTS]) revalidateTag(t, "max");
-  // Missions Trello et nouveaux CV : classements préparés à l'avance, une mission après l'autre, après la réponse.
-  if (tache === "trello" || tache === "emails") after(() => prechaufferClassements(supabase).then(() => undefined));
   if (tache === "relance" && r.ok && Number(r.rapport.envoyes ?? 0) > 0) after(poursuivreEnvoi);
   return NextResponse.json(r, { status: r.ok ? 200 : 500 });
 }

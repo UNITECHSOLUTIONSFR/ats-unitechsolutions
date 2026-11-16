@@ -236,3 +236,9 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Fait : bouton « Remplacer le Word Unitech » sur chaque CV généré (Word déposé à la place de l'ancien, même nom, PDF refait) ; récupération des fichiers du groupe en plusieurs passages (lecture des fils reprise là où elle s'est arrêtée, réglage `reprise_groupe_fils`, arrêt avant 5 min).
 - Testé : 242 tests, compilation, capture du bouton.
 - Suite : relancer la récupération du groupe puis de la boîte « Consultant » ; refermer les accès ensuite.
+
+### 17/11/2026 — Phase 1 « vitesse » (recommandation du développeur senior)
+- Fait : classements des missions rangés dans la base (table `classements_mission`), recalculés en arrière-plan (tâche `matching` toutes les 10 min, recalcul ciblé quand une mission change, bouton « Recalculer », date affichée, ancien classement gardé pendant le calcul) ; écran Consultants paginé côté serveur (projection `tableau_vue`, 50 lignes, recherche/filtres/tri dans Postgres, export par critères) ; préchargement des 3,9 Mo supprimé ; recherche dans les CV en deux temps (extraits seulement pour la page) ; page mission allégée.
+- Mesures (serveur local, base de production, « froid » = sans mémoire) : accueil 9,9 s → 1,5 s ; liste des missions 16,9 s → 1,0 s ; écran Consultants : 3,9 Mo téléchargés → 50 lignes (≈ 60 Ko) ; recherche « java paris » ≈ 0,3-0,9 s ; filtre de colonne 0,2 s ; mission ≈ 0,8 s (1,2 Mo → 1,1 Mo).
+- Testé : 244 tests (dont base : migrations 42-43), compilation, parcours navigateur (recherche, filtre, page suivante, mission, liste) sans erreur.
+- Suite : mise en ligne après go ; mesurer en production ; phase 2 selon les chiffres (fiche consultant ≈ 1,5-2,5 s : aperçu du CV).

@@ -3,9 +3,8 @@ import { exigerUtilisateur } from "@/lib/acces";
 import { FILTRE_MES_MISSIONS, responsablesPossibles } from "@/lib/missions/responsables";
 import { IconeMallette } from "../icones";
 import ListeMissions, { type CarteMission } from "./liste";
-import { Suspense } from "react";
-import { nombrePertinents } from "@/lib/matching/pour-consultant";
-import { classementEnCache } from "@/lib/matching/cache";
+import { resumesMissions } from "@/lib/matching/stockage";
+import type { LigneClassement } from "@/lib/matching/classement";
 import { JaugeScore } from "./evaluation";
 import { STATUTS_MISSIONS } from "@/lib/missions/statuts";
 import { BoutonActualiserTrello } from "./trello";
@@ -29,6 +28,9 @@ export default async function Missions({ searchParams }: { searchParams: Promise
   const derniereLecture = supabase.from("missions").select("trello_lu_le").not("trello_lu_le", "is", null).order("trello_lu_le", { ascending: false }).limit(1).maybeSingle()
     .then((r) => (r.data?.trello_lu_le as string | undefined) ?? null);
   const [{ data }, responsables, lu, ...nombres] = await Promise.all([q, responsablesPossibles(supabase), derniereLecture, ...ONGLETS.map(([s]) => compter(s))]);
+  // Meilleur score et nombre de pertinents : lus en une fois dans les classements rangés (aucun calcul ici).
+  const avecClassement = statut === "ouverte" || statut === "chez_client";
+  const resumes = avecClassement ? await resumesMissions(supabase, (data ?? []).map((m) => m.id as string)) : new Map();
 
   const missions: CarteMission[] = (data ?? []).map((m) => {
     const p = (m.propositions ?? []) as { statut: string }[];
@@ -68,18 +70,15 @@ export default async function Missions({ searchParams }: { searchParams: Promise
       <ListeMissions missions={missions} titre={`Missions ${ONGLETS.find(([s]) => s === statut)?.[1].toLowerCase() ?? ""}`}
         responsables={responsables} estAdmin={utilisateur.role === "admin"}
         lienVue={{ miennes: lien(statut, "miennes"), toutes: lien(statut, "toutes") }} miennes={miennes}
-        pertinents={statut === "ouverte" || statut === "chez_client" ? Object.fromEntries(missions.map((m) => [m.id,
-          <Suspense key={m.id} fallback={<span className="squelette inline-block h-7 w-36 rounded-full" />}><Pertinents missionId={m.id} /></Suspense>])) : undefined}
-        resumes={statut === "ouverte" || statut === "chez_client" ? Object.fromEntries(missions.map((m) => [m.id,
-          <Suspense key={m.id} fallback={<span className="squelette inline-block h-14 w-14 rounded-full" />}><MeilleurScore missionId={m.id} /></Suspense>])) : undefined} />
+        pertinents={avecClassement ? Object.fromEntries(missions.map((m) => [m.id, <Pertinents key={m.id} missionId={m.id} n={resumes.get(m.id)?.pertinents ?? null} />])) : undefined}
+        resumes={avecClassement ? Object.fromEntries(missions.map((m) => [m.id, <MeilleurScore key={m.id} premiers={resumes.get(m.id)?.premiers ?? []} />])) : undefined} />
     </div>
   );
 }
 
-/** Meilleur score de la mission (jauge) et trigrammes des 3 premiers profils : lus dans le classement gardé en mémoire. */
-async function MeilleurScore({ missionId }: { missionId: string }) {
-  const { top } = await classementEnCache(missionId);
-  const premiers = top.filter((c) => !c.resultat.elimine && c.avisIA?.verdict !== "hors_sujet").slice(0, 3);
+/** Meilleur score de la mission (jauge) et trigrammes des 3 premiers profils : lus dans le classement rangé. */
+function MeilleurScore({ premiers: tous }: { premiers: LigneClassement[] }) {
+  const premiers = tous.filter((c) => !c.resultat.elimine && c.avisIA?.verdict !== "hors_sujet").slice(0, 3);
   if (!premiers.length) return null;
   return (
     <div className="flex flex-col items-center gap-1.5">
@@ -92,8 +91,10 @@ async function MeilleurScore({ missionId }: { missionId: string }) {
 }
 
 /** Nombre de profils pertinents d'une mission ouverte (même règle que l'écran de la mission : non écartés, score ≥ 60). */
-async function Pertinents({ missionId }: { missionId: string }) {
-  const n = await nombrePertinents(missionId);
+function Pertinents({ missionId, n: nombre }: { missionId: string; n: number | null }) {
+  // Mission toute nouvelle, pas encore classée : le classement se prépare en arrière-plan.
+  if (nombre === null) return <span className="text-xs text-slate-400">Classement en préparation…</span>;
+  const n = nombre;
   return (
     <Link href={`/missions/${missionId}`} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold ring-1 ${n ? "bg-emerald-50 text-emerald-700 ring-emerald-200 hover:bg-emerald-100" : "bg-slate-50 text-slate-500 ring-slate-200"}`}>
       <span className="text-base font-bold tabular-nums">{n}</span> pertinent{n > 1 ? "s" : ""}

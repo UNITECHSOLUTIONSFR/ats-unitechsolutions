@@ -1,22 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import type { ChampFiche } from "@/lib/import/excel";
-import {
-  filtreRapide, filtrerEtTrier, valeurEcran, valeursDistinctes, VIDE,
-  type FiltreRapide, type Filtres, type LigneTableau, type Tri,
-} from "@/lib/tableau/modele";
+import { valeurEcran, VIDE, type FiltreRapide, type Filtres, type Tri } from "@/lib/tableau/modele";
+import type { CriteresTableau, LigneAffichee, PageTableau } from "@/lib/tableau/page";
 import { modifierCellules } from "@/lib/tableau/actions";
 import { classePastille } from "@/lib/statuts";
 import PanneauFiche, { apercuDepuisLigne, prechargerFiche } from "./panneau-fiche";
-import { TexteSurligne, type ExtraitCV } from "./texte-surligne";
+import { TexteSurligne } from "./texte-surligne";
 import { BoutonWhatsApp } from "../whatsapp";
 import { IconeCopier, IconeCrayon, IconeExport, IconeFiche, IconeFiltre, IconeImport, IconePlus, IconeRecherche } from "../icones";
 
-const PAR_PAGE = 100;
-
-
+const PAR_PAGE = 50;
 
 /** Largeur de chaque colonne selon ce qu'elle contient : compacte pour un trigramme, large pour des notes. Texte trop long = coupé, visible au survol. */
 const LARGEURS: Partial<Record<ChampFiche, string>> = {
@@ -29,95 +25,81 @@ const LARGEURS: Partial<Record<ChampFiche, string>> = {
 const largeur = (champ?: ChampFiche) => (champ && LARGEURS[champ]) || "min-w-32 max-w-56";
 
 interface Props {
-  /** Vues par domaine (colonne « Domaine »), affichées comme des onglets. */
+  /** Vues : toute la base, arrivées du jour. */
   vues: { cle: string; nom: string }[];
-  vueInitiale: string;
-  colonneDomaine: string;
+  criteresInitiaux: CriteresTableau;
+  /** Première page, préparée par le serveur (affichée tout de suite). */
+  premiere: PageTableau;
   ongletId: string;
   entetes: string[];
   champs: Record<string, ChampFiche>;
-  lignes: LigneTableau[];
   estAdmin: boolean;
-  /** Liens SharePoint par fiche consultant : Word Unitech et PDF anonymisé. */
-  documents: Record<string, { word?: string; email?: string; pdf?: string }>;
-  /** Vrai tant que seules les 100 premières lignes sont arrivées. */
-  chargementPartiel?: boolean;
 }
 
-export default function TableauExcel({ vues, vueInitiale, ongletId, entetes, champs, lignes: initiales, estAdmin, documents, chargementPartiel }: Props) {
-  const [lignes, setLignes] = useState(initiales);
-  // Données rafraîchies (après l'affichage de la version gardée en mémoire) : on les prend sans perdre filtres ni tri.
-  const [source, setSource] = useState(initiales);
-  if (source !== initiales) { setSource(initiales); setLignes(initiales); }
-  // Vue par domaine : filtrée dans le navigateur, sans recharger les 4 000 lignes.
-  const [vueActive, setVueActive] = useState(vueInitiale);
+/** Demande une page à la base (les demandes dépassées sont abandonnées). */
+async function lirePage(criteres: CriteresTableau, signal: AbortSignal): Promise<PageTableau> {
+  const r = await fetch("/api/consultants/page", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(criteres), signal });
+  if (!r.ok) throw new Error(String(r.status));
+  return r.json() as Promise<PageTableau>;
+}
+
+export default function TableauExcel({ vues, criteresInitiaux, premiere, ongletId, entetes, champs, estAdmin }: Props) {
+  const [donnees, setDonnees] = useState<PageTableau>(premiere);
+  const [chargement, setChargement] = useState(false);
+  const [erreurLecture, setErreurLecture] = useState(false);
+  const [vueActive, setVueActive] = useState(criteresInitiaux.vue);
   const [filtres, setFiltres] = useState<Filtres>({});
   const [recherche, setRecherche] = useState("");
-  // Tri par défaut : ordre alphabétique des prénoms.
-  const [tri, setTri] = useState<Tri | null>(() => {
-    const colonnePrenom = Object.entries(champs).find(([, c]) => c === "prenom")?.[0];
-    return colonnePrenom ? { colonne: colonnePrenom, sens: "asc" } : null;
-  });
+  const [tri, setTri] = useState<Tri | null>(criteresInitiaux.tri);
   const [page, setPage] = useState(0);
-  const [selection, setSelection] = useState<Set<string>>(new Set());
-  const [filtreOuvert, setFiltreOuvert] = useState<{ colonne: string; x: number; y: number } | null>(null);
+  // Lignes cochées, gardées avec leur contenu (copie des emails, fusion) même en changeant de page.
+  const [selection, setSelection] = useState<Map<string, LigneAffichee>>(new Map());
+  const [filtreOuvert, setFiltreOuvert] = useState<{ colonne: string; x: number; y: number; valeurs: { valeur: string; nombre: number }[] | null } | null>(null);
   const [edition, setEdition] = useState<{ id: string; colonne: string } | null>(null);
   const [masse, setMasse] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; texte: string } | null>(null);
   const [enCours, demarrer] = useTransition();
   const [ficheOuverte, setFicheOuverte] = useState<string | null>(null);
   const fermerFiche = useCallback(() => setFicheOuverte(null), []);
+  const [rapides, setRapides] = useState<FiltreRapide[]>([]);
+  const [avecCV, setAvecCV] = useState(true);
 
   const affiche = useCallback((c: string, v: string | undefined) => valeurEcran(champs[c], v), [champs]);
-  // La saisie reste fluide : le filtrage suit juste derrière la frappe.
-  const rechercheDifferee = useDeferredValue(recherche);
-  const [rapides, setRapides] = useState<FiltreRapide[]>([]);
-  const lignesVue = useMemo(() => {
-    const maintenant = Date.parse(new Date().toISOString());
-    return lignes.filter((l) =>
-      (!vueActive || filtreRapide(l, vueActive as FiltreRapide, maintenant)) &&
-      rapides.every((f) => filtreRapide(l, f, maintenant)));
-  }, [lignes, vueActive, rapides]);
-  // Nombre de fiches arrivées aujourd'hui, affiché sur chaque vue.
-  const nbParVue = useMemo(() => {
-    const maintenant = Date.parse(new Date().toISOString());
-    return Object.fromEntries(vues.filter((v) => v.cle).map((v) => [v.cle, lignes.filter((l) => filtreRapide(l, v.cle as FiltreRapide, maintenant)).length]));
-  }, [lignes, vues]);
-  // La recherche porte aussi sur le texte complet des CV (côté base, index plein texte).
-  const [dansCV, setDansCV] = useState<{ q: string; ids: Set<string>; extraits: Map<string, ExtraitCV> }>({ q: "", ids: new Set(), extraits: new Map() });
+  // La saisie reste fluide : la base n'est interrogée qu'une fois la frappe terminée (un quart de seconde).
+  const [rechercheEnvoyee, setRechercheEnvoyee] = useState("");
   useEffect(() => {
-    const q = rechercheDifferee.trim();
-    if (q.length < 3) return;
-    let actif = true;
-    const t = setTimeout(() => {
-      fetch(`/api/consultants/recherche-cv?q=${encodeURIComponent(q)}`).then((r) => (r.ok ? r.json() : [])).then((res: ({ id: string } & ExtraitCV)[]) => {
-        if (actif) setDansCV({ q, ids: new Set(res.map((x) => x.id)), extraits: new Map(res.map((x) => [x.id, { extrait: x.extrait, source: x.source }])) });
-      }).catch(() => undefined);
-    }, 300);
-    return () => { actif = false; clearTimeout(t); };
-  }, [rechercheDifferee]);
+    const t = setTimeout(() => setRechercheEnvoyee(recherche), 250);
+    return () => clearTimeout(t);
+  }, [recherche]);
+  const criteres = useMemo<CriteresTableau>(() => ({ filtres, recherche: rechercheEnvoyee, tri, rapides, vue: vueActive, avecCV, page }),
+    [filtres, rechercheEnvoyee, tri, rapides, vueActive, avecCV, page]);
+  // Nouvelle page demandée à chaque changement de critère (la première vient du serveur).
+  const premierPassage = useRef(true);
+  useEffect(() => {
+    if (premierPassage.current) { premierPassage.current = false; return; }
+    const arret = new AbortController();
+    setChargement(true);
+    lirePage(criteres, arret.signal)
+      .then((d) => { setDonnees(d); setErreurLecture(false); setChargement(false); })
+      .catch((e) => { if ((e as Error).name !== "AbortError") { setErreurLecture(true); setChargement(false); } });
+    return () => arret.abort();
+  }, [criteres]);
   // Suivi de l'activité : la recherche est notée une fois la saisie terminée (2 secondes sans frappe).
   useEffect(() => {
-    const q = rechercheDifferee.trim();
+    const q = rechercheEnvoyee.trim();
     if (q.length < 3) return;
     const t = setTimeout(() => {
       fetch("/api/activite/recherche", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ texte: q }) }).catch(() => undefined);
-    }, 2000);
+    }, 1750);
     return () => clearTimeout(t);
-  }, [rechercheDifferee]);
-  const [avecCV, setAvecCV] = useState(true);
-  const idsCV = avecCV && dansCV.q === rechercheDifferee.trim() ? dansCV.ids : undefined;
-  const visibles = useMemo(() => filtrerEtTrier(lignesVue, filtres, rechercheDifferee, tri, affiche, idsCV), [lignesVue, filtres, rechercheDifferee, tri, affiche, idsCV]);
-  // Lignes trouvées seulement grâce au texte du CV (le mot n'est dans aucune colonne) : signalées par une pastille.
-  const parLeCV = useMemo(() => {
-    if (!idsCV?.size) return new Set<string>();
-    const dansColonnes = new Set(filtrerEtTrier(lignesVue, filtres, rechercheDifferee, null, affiche).map((l) => l.id));
-    return new Set(visibles.filter((l) => !dansColonnes.has(l.id)).map((l) => l.id));
-  }, [idsCV, lignesVue, filtres, rechercheDifferee, affiche, visibles]);
-  const pages = Math.max(1, Math.ceil(visibles.length / PAR_PAGE));
+  }, [rechercheEnvoyee]);
+
+  const affichees = donnees.lignes;
+  const total = donnees.total;
+  const pages = Math.max(1, Math.ceil(total / PAR_PAGE));
   const pageCourante = Math.min(page, pages - 1);
-  const affichees = visibles.slice(pageCourante * PAR_PAGE, (pageCourante + 1) * PAR_PAGE);
   const nbFiltres = Object.keys(filtres).length + (recherche ? 1 : 0) + rapides.length;
+  const nbParVue: Record<string, number> = { email_jour: donnees.compteurs.email_jour, sharepoint_jour: donnees.compteurs.sharepoint_jour };
 
   useEffect(() => {
     if (!message) return;
@@ -125,45 +107,55 @@ export default function TableauExcel({ vues, vueInitiale, ongletId, entetes, cha
     return () => clearTimeout(t);
   }, [message]);
 
+  // Ouverture du filtre d'une colonne : ses valeurs (avec leur nombre) sont demandées à la base, selon les autres critères.
+  function ouvrirFiltre(colonne: string, x: number, y: number) {
+    setFiltreOuvert({ colonne, x, y, valeurs: null });
+    fetch("/api/consultants/valeurs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ criteres, colonne }) })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((valeurs: { valeur: string; nombre: number }[]) => setFiltreOuvert((f) => (f?.colonne === colonne ? { ...f, valeurs } : f)))
+      .catch(() => setFiltreOuvert((f) => (f?.colonne === colonne ? { ...f, valeurs: [] } : f)));
+  }
+
   function enregistrer(ids: string[], colonne: string, valeur: string) {
-    const avant = lignes;
+    const avant = donnees;
     const cibles = new Set(ids);
-    setLignes((ls) =>
-      ls.map((l) => {
-        if (!cibles.has(l.id)) return l;
-        const valeurs = { ...l.valeurs };
-        if (valeur.trim()) valeurs[colonne] = valeur.trim();
-        else delete valeurs[colonne];
-        return { ...l, valeurs };
-      }),
-    );
+    const maj = (l: LigneAffichee): LigneAffichee => {
+      if (!cibles.has(l.id)) return l;
+      const valeurs = { ...l.valeurs };
+      if (valeur.trim()) valeurs[colonne] = valeur.trim();
+      else delete valeurs[colonne];
+      return { ...l, valeurs };
+    };
+    // Affichage mis à jour tout de suite ; la base suit (projection mise à jour juste après l'enregistrement).
+    setDonnees((d) => ({ ...d, lignes: d.lignes.map(maj) }));
+    setSelection((s) => new Map([...s].map(([id, l]) => [id, maj(l)])));
     demarrer(async () => {
       const r = await modifierCellules(ids, colonne, valeur);
       setMessage({ ok: r.ok, texte: r.message });
-      if (!r.ok && !r.lignes && !/^Tableau modifié/.test(r.message)) setLignes(avant);
+      if (!r.ok && !r.lignes && !/^Tableau modifié/.test(r.message)) setDonnees(avant);
     });
   }
 
   const toutesCochees = affichees.length > 0 && affichees.every((l) => selection.has(l.id));
   function basculerPage() {
     setSelection((s) => {
-      const n = new Set(s);
-      affichees.forEach((l) => (toutesCochees ? n.delete(l.id) : n.add(l.id)));
+      const n = new Map(s);
+      affichees.forEach((l) => (toutesCochees ? n.delete(l.id) : n.set(l.id, l)));
       return n;
     });
   }
-  function basculer(id: string) {
+  function basculer(l: LigneAffichee) {
     setSelection((s) => {
-      const n = new Set(s);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
+      const n = new Map(s);
+      if (n.has(l.id)) n.delete(l.id);
+      else n.set(l.id, l);
       return n;
     });
   }
 
   const colEmail = entetes.find((e) => champs[e] === "email");
   const colTel = entetes.find((e) => champs[e] === "telephone");
-  const lignesSelection = lignes.filter((l) => selection.has(l.id));
+  const lignesSelection = [...selection.values()];
   async function copier(colonne: string, libelle: string) {
     const valeurs = [...new Set(lignesSelection.map((l) => affiche(colonne, l.valeurs[colonne])).filter(Boolean))];
     try {
@@ -173,23 +165,25 @@ export default function TableauExcel({ vues, vueInitiale, ongletId, entetes, cha
       setMessage({ ok: false, texte: "Copie impossible dans ce navigateur." });
     }
   }
+  const reinitialiser = () => { setFiltres({}); setRecherche(""); setRechercheEnvoyee(""); setRapides([]); setTri(criteresInitiaux.tri); setVueActive(""); setAvecCV(true); setPage(0); window.history.replaceState(null, "", "/consultants"); };
 
   return (
     <div className="flex h-full flex-col gap-4">
       {ficheOuverte && (
         <PanneauFiche id={ficheOuverte} onFermer={fermerFiche}
-          apercu={(() => { const l = lignes.find((x) => x.consultant_id === ficheOuverte); return l ? apercuDepuisLigne(ficheOuverte, l.valeurs, champs) : undefined; })()} />
+          apercu={(() => { const l = [...affichees, ...lignesSelection].find((x) => x.consultant_id === ficheOuverte); return l ? apercuDepuisLigne(ficheOuverte, l.valeurs, champs) : undefined; })()} />
       )}
       {/* En-tête : titre à gauche, actions à droite (« Excel » réservé aux administrateurs). */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="titre-page">Consultants</h1>
           <p className="text-sm text-slate-500">
-            {chargementPartiel ? "Chargement des autres lignes…" : <>{visibles.length.toLocaleString("fr-FR")} consultant(s){(nbFiltres > 0 || !!vueActive) && ` sur ${lignes.length.toLocaleString("fr-FR")}`}{parLeCV.size > 0 && `, dont ${parLeCV.size} où le mot est seulement dans le CV`}</>}
+            {total.toLocaleString("fr-FR")} consultant(s){(nbFiltres > 0 || !!vueActive) && ` sur ${donnees.compteurs.tout.toLocaleString("fr-FR")}`}
+            {chargement && <span className="ml-2 inline-flex items-center gap-1 text-marque-600"><span className="h-3 w-3 animate-spin rounded-full border-2 border-marque-200 border-t-marque-600" />mise à jour…</span>}
             <span className="hidden sm:inline"> · double-cliquez sur une cellule pour la modifier</span>
           </p>
         </div>
-        <MenuActions ongletId={ongletId} idsVisibles={visibles.map((l) => l.id)} estAdmin={estAdmin} />
+        <MenuActions ongletId={ongletId} criteres={criteres} nombre={total} estAdmin={estAdmin} />
       </div>
 
       {/* Recherche et filtres : un seul bouton « Filtres » ; seuls les filtres actifs s'affichent, en pastilles retirables. */}
@@ -201,10 +195,10 @@ export default function TableauExcel({ vues, vueInitiale, ongletId, entetes, cha
               placeholder="Rechercher : nom, compétence, ville, téléphone…" className="champ w-full py-2.5 pl-10" />
           </label>
           <PanneauFiltres
-            vues={vues.map((o) => ({ cle: o.cle, nom: o.nom, nombre: o.cle ? (chargementPartiel ? null : nbParVue[o.cle] ?? 0) : null }))}
+            vues={vues.map((o) => ({ cle: o.cle, nom: o.nom, nombre: o.cle ? nbParVue[o.cle] ?? 0 : null }))}
             vueActive={vueActive}
-            onVue={(cle) => { setVueActive(cle); setPage(0); setSelection(new Set()); window.history.replaceState(null, "", cle ? `/consultants?vue=${cle}` : "/consultants"); }}
-            rapides={rapides} onRapides={(r) => { setRapides(r); setPage(0); }} desactive={!!chargementPartiel}
+            onVue={(cle) => { setVueActive(cle); setPage(0); setSelection(new Map()); window.history.replaceState(null, "", cle ? `/consultants?vue=${cle}` : "/consultants"); }}
+            rapides={rapides} onRapides={(r) => { setRapides(r); setPage(0); }} desactive={false}
             avecCV={avecCV} onAvecCV={(v) => { setAvecCV(v); setPage(0); }} />
         </div>
         {(vueActive || rapides.length > 0 || !avecCV || Object.keys(filtres).length > 0) && (
@@ -213,12 +207,12 @@ export default function TableauExcel({ vues, vueInitiale, ongletId, entetes, cha
             {rapides.map((f) => <Pastille key={f} texte={RAPIDES.find(([k]) => k === f)?.[1] ?? f} onRetirer={() => { setRapides((r) => r.filter((x) => x !== f)); setPage(0); }} />)}
             {!avecCV && <Pastille texte="Sans le texte des CV" onRetirer={() => setAvecCV(true)} />}
             {Object.keys(filtres).length > 0 && <Pastille texte={`${Object.keys(filtres).length} filtre(s) de colonne`} onRetirer={() => { setFiltres({}); setPage(0); }} />}
-            <button className="lien text-sm" onClick={() => { setFiltres({}); setRecherche(""); setRapides([]); setTri(null); setVueActive(""); setAvecCV(true); setPage(0); window.history.replaceState(null, "", "/consultants"); }}>Tout effacer</button>
+            <button className="lien text-sm" onClick={reinitialiser}>Tout effacer</button>
           </div>
         )}
       </div>
 
-      {chargementPartiel && vueActive && <p className="text-sm text-slate-500">Chargement des fiches du jour…</p>}
+      {erreurLecture && <p className="text-sm text-red-700">La base n&apos;a pas répondu : modifiez un critère ou rechargez la page.</p>}
 
       {selection.size > 0 && (
         <div className="flex flex-wrap items-center gap-2 rounded-xl bg-marque-50 px-4 py-2.5 text-sm ring-1 ring-marque-200">
@@ -226,15 +220,15 @@ export default function TableauExcel({ vues, vueInitiale, ongletId, entetes, cha
           <button className="bouton-secondaire" onClick={() => setMasse(true)}><IconeCrayon className="h-4 w-4" />Modifier une colonne</button>
           {colEmail && <button className="bouton-secondaire" onClick={() => copier(colEmail, "email")}><IconeCopier className="h-4 w-4" />Copier les emails</button>}
           {colTel && <button className="bouton-secondaire" onClick={() => copier(colTel, "téléphone")}><IconeCopier className="h-4 w-4" />Copier les téléphones</button>}
-          {estAdmin && <FormulaireExport ongletId={ongletId} ids={visibles.filter((l) => selection.has(l.id)).map((l) => l.id)} libelle="Exporter la sélection" secondaire />}
+          {estAdmin && <FormulaireExport ongletId={ongletId} ids={[...selection.keys()]} libelle="Exporter la sélection" secondaire />}
           {estAdmin && selection.size === 2 && (() => {
             // Deux fiches cochées : comparaison et fusion (même écran que les « doublons possibles »).
-            const ids = lignes.filter((l) => selection.has(l.id)).map((l) => l.consultant_id).filter((x): x is string => !!x);
+            const ids = lignesSelection.map((l) => l.consultant_id).filter((x): x is string => !!x);
             return ids.length === 2 && ids[0] !== ids[1]
               ? <Link href={`/alertes/fusion?a=${ids[0]}&b=${ids[1]}`} className="bouton-primaire"><IconeCopier className="h-4 w-4" />Fusionner ces 2 fiches</Link>
               : null;
           })()}
-          <button className="ml-auto text-marque-700 hover:underline" onClick={() => setSelection(new Set())}>Tout désélectionner</button>
+          <button className="ml-auto text-marque-700 hover:underline" onClick={() => setSelection(new Map())}>Tout désélectionner</button>
         </div>
       )}
 
@@ -248,7 +242,7 @@ export default function TableauExcel({ vues, vueInitiale, ongletId, entetes, cha
           const v = (c?: ChampFiche) => { const e = c && entetes.find((x) => champs[x] === c); return e ? (l.valeurs[e] ?? "").trim() : ""; };
           const nom = [v("prenom"), v("nom")].filter(Boolean).join(" ") || v("nom_complet") || "—";
           const tel = v("telephone").replace(/[^\d+]/g, "");
-          const extrait = parLeCV.has(l.id) && l.consultant_id ? dansCV.extraits.get(l.consultant_id) : undefined;
+          const extrait = l.par_cv && l.consultant_id ? donnees.extraits[l.consultant_id] : undefined;
           return (
             <li key={l.id} className="carte carte-cliquable p-3.5" onPointerDown={l.consultant_id ? () => prechargerFiche(l.consultant_id!) : undefined} onClick={(ev) => { if (l.consultant_id && !(ev.target as HTMLElement).closest("a, button")) setFicheOuverte(l.consultant_id); }}>
               <div className="flex items-start gap-3">
@@ -258,7 +252,7 @@ export default function TableauExcel({ vues, vueInitiale, ongletId, entetes, cha
                   <div className="mt-1.5 flex min-w-0 flex-wrap gap-1.5 text-xs">
                     {v("disponibilite") && <span className={`${classePastille(v("disponibilite"))} !block max-w-full truncate`}>{v("disponibilite")}</span>}
                     {v("localisation") && <span className="pastille !block max-w-full truncate">📍 {v("localisation")}</span>}
-                    {parLeCV.has(l.id) && <span className="rounded-md bg-violet-50 px-1.5 py-0.5 font-bold text-violet-700">mot dans le CV</span>}
+                    {l.par_cv && <span className="rounded-md bg-violet-50 px-1.5 py-0.5 font-bold text-violet-700">mot dans le CV</span>}
                   </div>
                 </div>
                 {tel && (
@@ -289,7 +283,8 @@ export default function TableauExcel({ vues, vueInitiale, ongletId, entetes, cha
                     <button
                       onClick={(ev) => {
                         const r = ev.currentTarget.getBoundingClientRect();
-                        setFiltreOuvert(filtreOuvert?.colonne === e ? null : { colonne: e, x: Math.min(r.left, window.innerWidth - 300), y: r.bottom + 4 });
+                        if (filtreOuvert?.colonne === e) setFiltreOuvert(null);
+                        else ouvrirFiltre(e, Math.min(r.left, window.innerWidth - 300), r.bottom + 4);
                       }}
                       className="group/entete flex w-full items-center justify-between gap-2 px-3 py-3 transition hover:text-nuit">
                       <span className="truncate" title={e}>{e}</span>
@@ -306,7 +301,7 @@ export default function TableauExcel({ vues, vueInitiale, ongletId, entetes, cha
           <tbody>
             {affichees.map((l) => {
               const cochee = selection.has(l.id);
-              const extrait = parLeCV.has(l.id) && l.consultant_id ? dansCV.extraits.get(l.consultant_id) : undefined;
+              const extrait = l.par_cv && l.consultant_id ? donnees.extraits[l.consultant_id] : undefined;
               return (
                 <Fragment key={l.id}>
                 <tr
@@ -318,24 +313,24 @@ export default function TableauExcel({ vues, vueInitiale, ongletId, entetes, cha
                   className={`group cursor-pointer ${cochee ? "bg-marque-50" : "bg-white/90 hover:bg-marque-50/70"}`}>
                   <td className={`border-t border-slate-100/80 px-4 py-2.5 sm:sticky sm:left-0 sm:z-10 ${cochee ? "bg-marque-50" : "bg-white group-hover:bg-[#f3f6fc]"}`}>
                     <div className="flex items-center gap-2">
-                      <input type="checkbox" checked={cochee} onChange={() => basculer(l.id)} className="accent-marque-600" aria-label={`Ligne ${l.position}`} />
+                      <input type="checkbox" checked={cochee} onChange={() => basculer(l)} className="accent-marque-600" aria-label={`Ligne ${l.position}`} />
                       <span className="w-9 text-right text-[13px] tabular-nums text-slate-400">{l.position}</span>
-                      {parLeCV.has(l.id) && <span className="rounded-md bg-violet-50 px-1.5 py-0.5 text-[10px] font-bold text-violet-700" title="Le mot cherché figure dans le texte du CV de cette personne">mot dans le CV</span>}
+                      {l.par_cv && <span className="rounded-md bg-violet-50 px-1.5 py-0.5 text-[10px] font-bold text-violet-700" title="Le mot cherché figure dans le texte du CV de cette personne">mot dans le CV</span>}
                       {l.consultant_id ? (
                         <button type="button" onClick={() => setFicheOuverte(l.consultant_id)} title="Ouvrir la fiche" className="text-zinc-400 hover:text-marque-600">
                           <IconeFiche className="h-4 w-4" />
                         </button>
                       ) : <span className="w-4" />}
-                      {l.consultant_id && documents[l.consultant_id]?.word && (
-                        <a href={documents[l.consultant_id].word} target="_blank" rel="noreferrer" title="Ouvrir le CV Word (SharePoint)"
+                      {l.consultant_id && l.documents?.word && (
+                        <a href={l.documents.word} target="_blank" rel="noreferrer" title="Ouvrir le CV Word (SharePoint)"
                           className="rounded-md bg-marque-50 px-1.5 py-0.5 text-[10px] font-bold text-marque-700 hover:bg-marque-100">Word</a>
                       )}
-                      {l.consultant_id && documents[l.consultant_id]?.email && (
-                        <a href={documents[l.consultant_id].email} target="_blank" rel="noreferrer" title="Ouvrir le CV reçu par email (SharePoint)"
+                      {l.consultant_id && l.documents?.email && (
+                        <a href={l.documents.email} target="_blank" rel="noreferrer" title="Ouvrir le CV reçu par email (SharePoint)"
                           className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 hover:bg-amber-100">CV reçu</a>
                       )}
-                      {l.consultant_id && documents[l.consultant_id]?.pdf && (
-                        <a href={documents[l.consultant_id].pdf} target="_blank" rel="noreferrer" title="Ouvrir le PDF anonymisé (SharePoint)"
+                      {l.consultant_id && l.documents?.pdf && (
+                        <a href={l.documents.pdf} target="_blank" rel="noreferrer" title="Ouvrir le PDF anonymisé (SharePoint)"
                           className="rounded-md bg-marque-50 px-1.5 py-0.5 text-[10px] font-bold text-marque-700 hover:bg-marque-100">PDF</a>
                       )}
                     </div>
@@ -385,16 +380,18 @@ export default function TableauExcel({ vues, vueInitiale, ongletId, entetes, cha
         </div>
       </div>
 
-      {filtreOuvert && (
+      {filtreOuvert && !filtreOuvert.valeurs && (
+        <div style={{ left: Math.max(8, filtreOuvert.x), top: filtreOuvert.y }} className="verre fixed z-50 flex w-72 items-center gap-2 rounded-2xl bg-white/85 p-4 text-sm text-slate-500">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-marque-200 border-t-marque-600" />Lecture des valeurs…
+        </div>
+      )}
+      {filtreOuvert?.valeurs && (
         <MenuFiltre
           key={filtreOuvert.colonne}
           colonne={filtreOuvert.colonne}
           position={filtreOuvert}
-          // Comme Excel : les choix proposés tiennent compte des autres filtres.
-          valeurs={valeursDistinctes(
-            filtrerEtTrier(lignesVue, Object.fromEntries(Object.entries(filtres).filter(([c]) => c !== filtreOuvert.colonne)), recherche, null, affiche),
-            filtreOuvert.colonne, affiche,
-          )}
+          // Comme Excel : les choix proposés tiennent compte des autres filtres (calculés par la base).
+          valeurs={filtreOuvert.valeurs}
           coches={filtres[filtreOuvert.colonne]}
           onTrier={(sens) => { setTri({ colonne: filtreOuvert.colonne, sens }); setFiltreOuvert(null); }}
           onAppliquer={(vals) => {
@@ -416,7 +413,7 @@ export default function TableauExcel({ vues, vueInitiale, ongletId, entetes, cha
           entetes={entetes}
           nombre={selection.size}
           onAnnuler={() => setMasse(false)}
-          onValider={(colonne, valeur) => { setMasse(false); enregistrer([...selection], colonne, valeur); }}
+          onValider={(colonne, valeur) => { setMasse(false); enregistrer([...selection.keys()], colonne, valeur); }}
         />
       )}
     </div>
@@ -610,7 +607,7 @@ function PanneauFiltres({ vues, vueActive, onVue, rapides, onRapides, desactive,
 }
 
 /** Actions de l'écran : « Nouveau consultant » bien visible ; menu « Excel » (export, import) pour les administrateurs. */
-function MenuActions({ ongletId, idsVisibles, estAdmin }: { ongletId: string; idsVisibles: string[]; estAdmin: boolean }) {
+function MenuActions({ ongletId, criteres, nombre, estAdmin }: { ongletId: string; criteres: CriteresTableau; nombre: number; estAdmin: boolean }) {
   const [ouvert, setOuvert] = useState(false);
   const boite = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -634,10 +631,11 @@ function MenuActions({ ongletId, idsVisibles, estAdmin }: { ongletId: string; id
             <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl bg-white p-1.5 shadow-lg ring-1 ring-slate-200">
               <form method="post" action="/tableau/export">
                 <input type="hidden" name="onglet" value={ongletId} />
-                <input type="hidden" name="ids" value={JSON.stringify(idsVisibles)} />
-                <button disabled={!idsVisibles.length} className={element}>
+                {/* Toutes les lignes retenues par la recherche et les filtres (retrouvées par la base au moment de l'export). */}
+                <input type="hidden" name="criteres" value={JSON.stringify({ ...criteres, page: 0 })} />
+                <button disabled={!nombre} className={element}>
                   <IconeExport className="h-4 w-4 shrink-0 text-marque-600" />
-                  <span>Exporter <span className="text-slate-500">({idsVisibles.length.toLocaleString("fr-FR")} lignes)</span></span>
+                  <span>Exporter <span className="text-slate-500">({nombre.toLocaleString("fr-FR")} lignes)</span></span>
                 </button>
               </form>
               <Link href="/parametres/import" className={element}><IconeImport className="h-4 w-4 shrink-0 text-marque-600" />Importer un fichier</Link>

@@ -72,3 +72,15 @@ describe("tableau de suivi", () => {
     expect(cleStable(2, { a: "1" })).not.toBe(cleStable(3, { a: "1" }));
   });
 });
+
+describe("écran Consultants paginé : critères envoyés à la base", () => {
+  it("mots sans accents ni majuscules, chiffres seuls pour un numéro", async () => {
+    const { motsRecherche } = await import("@/lib/tableau/modele");
+    expect(motsRecherche("  Jérôme  JAVA 06.12.34.56 ")).toEqual({ mots: ["jerome", "java", "06.12.34.56"], chiffres: ["", "", "6123456"] });
+  });
+  it("critères bornés et nettoyés (rien d'autre n'est transmis)", async () => {
+    const { criteresValides } = await import("@/lib/tableau/page");
+    const c = criteresValides({ filtres: { Domaine: ["Data", 3], X: "pas une liste" }, tri: { colonne: "Nom", sens: "n'importe" }, rapides: ["cv", "piratage"], vue: "autre", page: -4, avecCV: false, recherche: "a".repeat(500) });
+    expect(c).toEqual({ filtres: { Domaine: ["Data", "3"] }, tri: { colonne: "Nom", sens: "asc" }, rapides: ["cv"], vue: "", page: 0, avecCV: false, recherche: "a".repeat(200) });
+  });
+});

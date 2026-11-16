@@ -1,4 +1,5 @@
 import "server-only";
+import { demanderRecalcul } from "@/lib/matching/stockage";
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { revalidateTag } from "next/cache";
@@ -125,7 +126,7 @@ export async function synchroniserTrello(supabase: SupabaseClient, options: { si
         if (!simulation) {
           const { error } = await supabase.from("missions").update(champs).eq("id", missionId);
           if (error) throw new Error(error.message);
-          if (existante.statut !== champs.statut) revalidateTag(`classement:${missionId}`, { expire: 0 });
+          if (existante.statut !== champs.statut) await demanderRecalcul(supabase, [missionId]);
         }
         bilan.misesAJour++;
         action = "mettre_a_jour";
@@ -202,7 +203,7 @@ export async function synchroniserTrello(supabase: SupabaseClient, options: { si
           ...(a.titre.client ? {} : ex.client ? { client: ex.client } : {}),
           trello_empreinte: a.empreinte,
         }).eq("id", a.missionId);
-        revalidateTag(`classement:${a.missionId}`, { expire: 0 });
+        await demanderRecalcul(supabase, [a.missionId]);
         bilan.analysees++;
       } catch (e) {
         usages.push(...((e as { usages?: UsageIA[] }).usages ?? []));
@@ -212,6 +213,6 @@ export async function synchroniserTrello(supabase: SupabaseClient, options: { si
   }
   bilan.coutUSD = Math.round(usages.reduce((t, u) => t + u.cout_estime_usd, 0) * 1000) / 1000;
   await enregistrerUsages(usages, "mission:trello").catch(() => {});
-  for (const t of ["accueil", "classements"]) revalidateTag(t, "max");
+  revalidateTag("accueil", "max");
   return bilan;
 }
