@@ -19,7 +19,7 @@ export async function enregistrerProfil(
   const { error } = await supabase.from("profils").upsert({
     consultant_id: consultantId, document_id: documentId, annees_experience: p.annees_experience, seniorite: p.seniorite,
     secteurs: p.secteurs, langues: p.langues, certifications: p.certifications, resume: p.resume,
-    modele, prompt_version: PROMPT_VERSION,
+    modele, prompt_version: PROMPT_VERSION, embedding: null, // nouveau CV : empreinte de sens recalculée
   }, { onConflict: "consultant_id" });
   if (error) return false;
   const lignes = new Map<string, { niveau: number | null; annees: number | null }>();

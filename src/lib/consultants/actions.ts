@@ -154,3 +154,40 @@ export async function retirerNote(formData: FormData) {
   await supabase.from("notes_consultant").delete().eq("id", String(formData.get("id")));
   revalidatePath(`/consultants/${String(formData.get("consultant_id"))}`);
 }
+
+export interface EtatAjoutCV { erreur?: string }
+
+/**
+ * Ajoute (ou remplace) le CV d'une fiche existante : même chemin qu'à la création (lecture par l'IA, fichier rangé dans SharePoint
+ * « Candidatures reçues », compétences et profil mis à jour). Les champs vides de la fiche sont complétés à partir du CV ;
+ * ce que l'équipe a déjà saisi n'est jamais remplacé.
+ */
+export async function ajouterCVConsultant(_e: EtatAjoutCV, formData: FormData): Promise<EtatAjoutCV> {
+  const { utilisateur, supabase } = await exigerUtilisateur();
+  const id = String(formData.get("id"));
+  const fichier = formData.get("cv");
+  if (!(fichier instanceof File) || fichier.size === 0) return { erreur: "Choisissez le CV (PDF ou Word)." };
+  const { data: c } = await supabase.from("consultants").select("prenom, nom, email, telephone_e164, intitule_poste, localisation, linkedin").eq("id", id).maybeSingle();
+  if (!c) return { erreur: "Fiche introuvable." };
+  const lecture = await lireCVJoint(fichier);
+  if ("erreur" in lecture) return { erreur: lecture.erreur };
+  const avertissement = await enregistrerCVJoint(id, lecture, { prenom: c.prenom, nom: c.nom });
+  // Champs vides complétés à partir du CV.
+  const p = lecture.profil;
+  const complements: Record<string, unknown> = {};
+  if (!c.intitule_poste && p?.intitule_poste) complements.intitule_poste = p.intitule_poste;
+  if (!c.localisation && p?.localisation) complements.localisation = p.localisation;
+  if (!c.linkedin && lecture.linkedin) complements.linkedin = lecture.linkedin;
+  if (!c.email && p?.email) { const e = normaliserEmail(p.email); if (e) complements.email = e; }
+  if (!c.telephone_e164 && p?.telephone) { const t = normaliserTelephone(p.telephone); if (t.e164) complements.telephone_e164 = t.e164; }
+  if (Object.keys(complements).length) await supabase.from("consultants").update(complements).eq("id", id);
+  await supabase.from("consultants_historique").insert({
+    consultant_id: id, source: "interface", par: utilisateur.id,
+    modifications: { cv: { avant: null, apres: lecture.nom }, ...Object.fromEntries(Object.entries(complements).map(([k, v]) => [k, { avant: null, apres: v }])) },
+  });
+  await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "modification", consultant_id: id, details: { cv_ajoute: lecture.nom } });
+  invaliderTableau();
+  revalidatePath(`/consultants/${id}`);
+  revalidatePath("/consultants");
+  redirect(`/consultants/${id}${avertissement ? `?cv=${encodeURIComponent(avertissement)}` : ""}`);
+}

@@ -7,6 +7,7 @@ import { clientSupabaseServeur, utilisateurConnecte } from "@/lib/supabase/serve
 import { formaterTelephone } from "@/lib/metier/telephone";
 import { modifierConsultant } from "@/lib/consultants/actions";
 import BlocRGPD from "./rgpd";
+import AjoutCV from "./ajout-cv";
 import BlocCVUnitech from "./cv-unitech";
 import { Suspense } from "react";
 import { ApercuDuCV, EvaluationMission, MissionsPourLui } from "./blocs-mission";
@@ -109,6 +110,7 @@ export default async function FicheConsultant({ params, searchParams }: { params
 
           {/* Le CV vient après le résumé du profil : on le lit quand le résumé donne envie d'en savoir plus. */}
           <Suspense fallback={<div className="squelette h-[480px]" />}><ApercuDuCV consultantId={c.id} /></Suspense>
+          <AjoutCV id={c.id} aDejaUnCV={(documents ?? []).some((d) => d.type === "word_nominatif")} />
           <div className="carte p-6 text-sm">
             <h2 className="titre-section">Informations du fichier de suivi</h2>
             <ul className="mt-2 space-y-1">
