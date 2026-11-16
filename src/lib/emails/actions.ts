@@ -45,3 +45,26 @@ export async function lancerRepriseDossier(_e: EtatReprise, formData: FormData):
     return { erreur: `Reprise impossible : ${(e as Error).message}` };
   }
 }
+
+export interface EtatFichiers { message?: string; erreur?: string; ranges?: number; restants?: number }
+
+/**
+ * Récupère les FICHIERS des CV déjà analysés (historique du groupe recrutement@ ou dossier « Consultant » de la boîte de
+ * l'administratrice connectée) et les range dans SharePoint « Candidatures reçues ». Administrateurs, par passages.
+ */
+export async function recupererFichiersCV(_e: EtatFichiers, formData: FormData): Promise<EtatFichiers> {
+  const { utilisateur } = await exigerAdmin();
+  const source = String(formData.get("source")) === "groupe" ? "groupe" : "perso";
+  try {
+    const { recupererFichiersHistorique } = await import("./fichiers-historique");
+    const b = await recupererFichiersHistorique(clientSupabaseAdmin(), source, { boite: utilisateur.email, limite: source === "groupe" ? 200 : 120 });
+    const reste = Math.max(0, b.aTraiter - b.ranges);
+    revalidatePath("/parametres/emails");
+    return {
+      message: `${b.ranges} fichier(s) rangé(s) dans SharePoint.`, ranges: b.ranges, restants: b.ranges ? reste : 0,
+      erreur: b.erreurs.length ? `${b.erreurs.length} fichier(s) non récupéré(s) : ${b.erreurs.slice(0, 2).join(" ; ")}` : undefined,
+    };
+  } catch (e) {
+    return { erreur: `Récupération impossible : ${(e as Error).message}` };
+  }
+}

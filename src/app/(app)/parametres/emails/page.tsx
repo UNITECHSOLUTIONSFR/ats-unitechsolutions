@@ -4,6 +4,7 @@ import { BOITE_CANDIDATURES } from "@/lib/emails/boite";
 import { classePastille } from "@/lib/statuts";
 import Bouton from "./bouton";
 import RepriseDossier from "./reprise";
+import RecuperationFichiers from "./fichiers";
 
 // Jusqu'à 25 emails par clic, avec lecture des CV par l'IA : jusqu'à 5 minutes.
 export const maxDuration = 300;
@@ -27,6 +28,7 @@ export default async function CandidaturesEmail() {
         l&apos;objet sont conservés.
       </p>
       <Bouton />
+      <RecuperationFichiers />
       <RepriseDossier boiteParDefaut={utilisateur.email} />
       <div className="carte overflow-x-auto">
         <table className="w-full text-sm">
