@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { exigerAdmin } from "@/lib/acces-admin";
-import { fusionnerFiches } from "@/lib/consultants/actions";
+import FormulaireFusion, { type ChampFusion } from "./formulaire";
 import { formaterTelephone } from "@/lib/metier/telephone";
 
 const CHAMPS: [string, string][] = [
@@ -28,49 +28,21 @@ export default async function Fusion({ searchParams }: { searchParams: Promise<{
   const [garde, autre] = new Date(A.created_at) <= new Date(B.created_at) ? [A, B] : [B, A];
   const n = (i: number) => comptes[i].count ?? 0;
   const [docsG, propsG, docsA, propsA] = garde.id === a ? [n(0), n(1), n(2), n(3)] : [n(2), n(3), n(0), n(1)];
-  const aff = (k: string, v: unknown) => (v === null || v === undefined || v === "" ? "" : k === "telephone_e164" ? formaterTelephone(String(v)) : String(v));
+  const aff = (k: string, v: unknown) => (v === null || v === undefined || v === "" ? "" : k === "telephone_e164" ? formaterTelephone(String(v)) : k === "disponible_le" ? String(v).slice(0, 10) : String(v));
+
+  const TYPES: Record<string, ChampFusion["type"]> = { notes: "long", disponible_le: "date", statut: "statut" };
+  const champs: ChampFusion[] = CHAMPS.map(([k, libelle]) => ({ cle: k, libelle, garde: aff(k, garde[k]), autre: aff(k, autre[k]), type: TYPES[k] ?? "texte" }));
 
   return (
-    <form action={fusionnerFiches} className="space-y-4">
+    <div className="space-y-4">
       <div>
         <h1 className="titre-page">Fusionner deux fiches</h1>
-        <p className="sous-titre mt-1">Pour chaque ligne, cochez la valeur à garder. Documents, compétences, missions, lignes du tableau et historique sont réunis sur une seule fiche ; l&apos;autre est supprimée (suppression tracée).</p>
+        <p className="sous-titre mt-1">Pour chaque champ, choisissez ou saisissez la valeur à garder. Documents, compétences, missions, lignes du tableau et historique sont réunis sur une seule fiche ; l&apos;autre est supprimée (suppression tracée).</p>
       </div>
-      <input type="hidden" name="garde" value={garde.id} />
-      <input type="hidden" name="supprime" value={autre.id} />
-      <div className="carte overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left text-xs font-semibold text-slate-500">
-            <tr>
-              <th className="p-3">Champ</th>
-              <th className="p-3">Fiche gardée · <Link href={`/consultants/${garde.id}`} className="lien">ouvrir</Link> <span className="font-normal">({docsG} document(s), {propsG} mission(s))</span></th>
-              <th className="p-3">Fiche fusionnée · <Link href={`/consultants/${autre.id}`} className="lien">ouvrir</Link> <span className="font-normal">({docsA} document(s), {propsA} mission(s))</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            {CHAMPS.map(([k, libelle]) => {
-              const g = aff(k, garde[k]), o = aff(k, autre[k]);
-              const differents = g !== o;
-              return (
-                <tr key={k} className={`border-t border-white/70 ${differents ? "" : "text-slate-400"}`}>
-                  <td className="p-3 font-medium text-nuit">{libelle}</td>
-                  {differents ? (
-                    <>
-                      <td className="p-3"><label className="flex items-center gap-2"><input type="radio" name={`champ:${k}`} value="garde" defaultChecked={!!g || !o} className="accent-marque-600" />{g || <em className="text-slate-400">vide</em>}</label></td>
-                      <td className="p-3"><label className="flex items-center gap-2"><input type="radio" name={`champ:${k}`} value="autre" defaultChecked={!g && !!o} className="accent-marque-600" />{o || <em className="text-slate-400">vide</em>}
-                        <input type="hidden" name={`valeur:${k}`} value={autre[k] ?? ""} /></label></td>
-                    </>
-                  ) : <td className="p-3" colSpan={2}>{g || "—"} <span className="text-xs">(identique)</span></td>}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      <div className="flex items-center justify-between">
-        <Link href="/alertes" className="bouton-secondaire">Annuler</Link>
-        <button className="bouton-primaire px-6 py-2.5">Fusionner les deux fiches</button>
-      </div>
-    </form>
+      <FormulaireFusion gardeId={garde.id} autreId={autre.id} champs={champs} entetes={{
+        garde: <>Fiche gardée · <Link href={`/consultants/${garde.id}`} className="lien">ouvrir</Link> <span className="font-normal">({docsG} document(s), {propsG} mission(s))</span></>,
+        autre: <>Fiche fusionnée · <Link href={`/consultants/${autre.id}`} className="lien">ouvrir</Link> <span className="font-normal">({docsA} document(s), {propsA} mission(s))</span></>,
+      }} />
+    </div>
   );
 }

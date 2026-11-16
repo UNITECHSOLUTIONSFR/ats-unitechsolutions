@@ -123,13 +123,29 @@ export async function fusionnerFiches(formData: FormData) {
   const { utilisateur, supabase } = await exigerUtilisateur();
   if (utilisateur.role !== "admin") throw new Error("Fusion réservée aux administrateurs.");
   const garde = String(formData.get("garde")), supprime = String(formData.get("supprime"));
+  const { data: g } = await supabase.from("consultants").select("*").eq("id", garde).maybeSingle();
+  if (!g) throw new Error("Fiche introuvable.");
+  // Valeur finale de chaque champ (choisie ou saisie) ; seuls les champs qui changent sur la fiche gardée sont envoyés.
   const valeurs: Record<string, unknown> = {};
   for (const [k, v] of formData.entries()) {
-    if (!k.startsWith("champ:")) continue;
-    const [source, champ] = [String(v), k.slice(6)];
-    if (source !== "autre") continue; // par défaut, la valeur de la fiche gardée reste
-    valeurs[champ] = formData.get(`valeur:${champ}`) === "" ? null : formData.get(`valeur:${champ}`);
+    if (!k.startsWith("final:")) continue;
+    const champ = k.slice(6);
+    let val: string | null = String(v).trim() || null;
+    if (champ === "telephone_e164") {
+      const t = normaliserTelephone(val);
+      if (t.statut === "vide") val = null;
+      else if (t.e164) val = t.e164;
+      else { valeurs.telephone_brut = val; val = null; }
+    }
+    if ((champ === "email" || champ === "email_2") && val) val = normaliserEmail(val) ?? val;
+    if (champ === "trigramme" && val) val = val.toUpperCase().slice(0, 5);
+    if (champ === "disponible_le" && val && !/^\d{4}-\d{2}-\d{2}$/.test(val)) continue;
+    if (champ === "statut" && (!val || !STATUTS.includes(val))) continue;
+    if (champ === "nom" && !val) continue; // le nom ne peut pas être vidé
+    const actuel = g[champ] === null || g[champ] === undefined ? null : String(g[champ]).slice(0, champ === "disponible_le" ? 10 : undefined);
+    if ((actuel ?? null) !== val) valeurs[champ] = val;
   }
+  if (valeurs.disponibilite !== undefined || valeurs.disponible_le !== undefined) valeurs.disponibilite_maj_le = new Date().toISOString();
   const { error } = await supabase.rpc("fusionner_consultants", { p_garde: garde, p_supprime: supprime, p_valeurs: valeurs });
   if (error) throw new Error(error.message);
   revalidatePath("/alertes");
