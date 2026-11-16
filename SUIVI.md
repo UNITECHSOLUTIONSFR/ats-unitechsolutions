@@ -226,3 +226,8 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Testé : 242 tests (dont tri IA simulé : ordre, aucun nom ni coordonnée envoyés, avis réutilisés) ; appel réel de l'IA seulement en production (clé sur Vercel).
 - Suite : vérifier le coût réel après la première préparation des classements ; proximité de sens (modèle gratuit).
 
+
+### 16/11/2026 — Bilan cliquable + tâches de nuit bloquées
+- Fait : alertes du bilan cliquables (tâche en retard → Synchronisations, secrets → Échéances, secours → Santé) ; recopie vers l'Excel limitée à 90 s (le reste la nuit suivante) ; étapes secondaires de la tâche CV reportées si le temps manque ; exécutions restées « en cours » > 15 min closes en échec.
+- Testé : 242 tests, compilation OK.
+- Suite : relancer Excel et CV depuis Synchronisations ; récupération des fichiers CV (bouton admin) ; décision sur la méthode de matching.

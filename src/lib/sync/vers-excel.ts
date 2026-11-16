@@ -94,9 +94,12 @@ export async function ajouterFichesAuFichierExcel(supabase: SupabaseClient): Pro
  * - cases remplies par un import de fichier (« cellules ») : écrites SEULEMENT si la case de l'Excel est vide.
  * La ligne de la personne est retrouvée par email, sinon prénom + nom unique.
  */
-export async function recopierDisponibilitesDansExcel(supabase: SupabaseClient): Promise<{ recopiees: number; introuvables: number }> {
+export async function recopierDisponibilitesDansExcel(
+  supabase: SupabaseClient, budgetMs = 90_000,
+): Promise<{ recopiees: number; introuvables: number; restantes: number }> {
+  const debut = Date.now();
   const { data: fiches } = await supabase.from("consultants").select("id, prenom, nom, email, excel_maj_en_attente").not("excel_maj_en_attente", "is", null);
-  if (!fiches?.length) return { recopiees: 0, introuvables: 0 };
+  if (!fiches?.length) return { recopiees: 0, introuvables: 0, restantes: 0 };
 
   const o = await ongletPrincipal();
   const { f, values } = o;
@@ -114,8 +117,11 @@ export async function recopierDisponibilitesDansExcel(supabase: SupabaseClient):
     if (cNom >= 0) { const k = cle(cPrenom >= 0 ? l[cPrenom] : "", l[cNom]); parNom.set(k, [...(parNom.get(k) ?? []), i + 1]); }
   });
 
-  let recopiees = 0, introuvables = 0;
+  // Une cellule = un appel Microsoft : au-delà du budget, le reste attend la nuit suivante
+  // (sinon la tâche dépasse 5 minutes et la relecture de l'Excel n'a jamais lieu).
+  let recopiees = 0, introuvables = 0, restantes = 0;
   for (const fiche of fiches) {
+    if (Date.now() - debut > budgetMs) { restantes++; continue; }
     const attente = fiche.excel_maj_en_attente as { disponibilite?: string; cellules?: Record<string, string> };
     const homonymes = parNom.get(cle(fiche.prenom, fiche.nom)) ?? [];
     const ligne = (fiche.email && parEmail.get(fiche.email)) || (homonymes.length === 1 ? homonymes[0] : null);
@@ -133,5 +139,5 @@ export async function recopierDisponibilitesDansExcel(supabase: SupabaseClient):
     await supabase.from("consultants").update({ excel_maj_en_attente: null }).eq("id", fiche.id);
     recopiees++;
   }
-  return { recopiees, introuvables };
+  return { recopiees, introuvables, restantes };
 }

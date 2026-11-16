@@ -11,7 +11,7 @@ const ETAT = "excel:suivi";
 export interface BilanSynchroExcel {
   inchange: boolean;
   versExcel?: BilanVersExcel;
-  disponibilites?: { recopiees: number; introuvables: number };
+  disponibilites?: { recopiees: number; introuvables: number; restantes: number };
   modifieLe?: string;
   fiches?: BilanEcriture;
   lignesTableau?: number;

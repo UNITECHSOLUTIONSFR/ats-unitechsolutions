@@ -53,6 +53,9 @@ export async function executerTache(nom: NomTache, supabase: SupabaseClient, opt
       return { ok: true, rapport: { ignoree: deja } };
     }
   }
+  // Exécution coupée par la limite de 5 minutes de l'hébergeur : restée « en cours », elle est close en échec.
+  await supabase.from("executions").update({ fin: new Date().toISOString(), statut: "echec", erreurs: 1, rapport: { erreur: "interrompue (durée maximale dépassée)" } })
+    .eq("type", TACHES[nom].type).eq("statut", "en_cours").lt("debut", new Date(Date.now() - 15 * 60_000).toISOString());
   const { data: execution } = await supabase.from("executions").insert({ type: TACHES[nom].type }).select("id").single();
   let rapport: Record<string, unknown> = {};
   let ok = true;
@@ -60,15 +63,20 @@ export async function executerTache(nom: NomTache, supabase: SupabaseClient, opt
     if (nom === "excel") rapport = { ...(await synchroniserExcel(supabase)) };
     if (nom === "cv") {
       // Résultats de l'analyse lancée la veille, puis nouveaux fichiers, puis nouvelle analyse (lot à 50 %).
+      // La tâche dure souvent 3 à 5 minutes (limite de l'hébergeur : 5) : les étapes secondaires sont reportées
+      // au passage suivant s'il ne reste plus assez de temps, pour que la tâche se termine toujours proprement.
+      const debut = Date.now();
+      const reporte = { reportee: "manque de temps, faite au prochain passage" };
+      const tempsRestant = (marge: number) => Date.now() - debut < 270_000 - marge;
       const resultats = await collecterAnalyse(supabase);
       const synchro = await synchroniserCV(supabase);
       // CV illisibles (vieux .doc, scans) : une dizaine repris par nuit, avant l'envoi de l'analyse.
-      const illisibles = await reprendreIllisibles(supabase).catch((e) => ({ erreur: (e as Error).message }));
-      const envoi = await envoyerAnalyse(supabase);
+      const illisibles = tempsRestant(90_000) ? await reprendreIllisibles(supabase).catch((e) => ({ erreur: (e as Error).message })) : reporte;
+      const envoi = tempsRestant(30_000) ? await envoyerAnalyse(supabase) : { message: reporte.reportee, erreur: undefined };
       // CV reçus par email : Word et PDF Unitech déposés dans SharePoint (une fois le rendu validé).
-      const cvUnitech = await deposerCVEmails(supabase).catch((e) => ({ erreur: (e as Error).message }));
+      const cvUnitech = tempsRestant(60_000) ? await deposerCVEmails(supabase).catch((e) => ({ erreur: (e as Error).message })) : reporte;
       // Word Unitech corrigés dans SharePoint depuis leur dernier PDF : PDF mis à jour.
-      const pdfUnitech = await actualiserPDFUnitech(supabase).catch((e) => ({ erreur: (e as Error).message }));
+      const pdfUnitech = tempsRestant(60_000) ? await actualiserPDFUnitech(supabase).catch((e) => ({ erreur: (e as Error).message })) : reporte;
       rapport = { synchro, illisibles, cvUnitech, pdfUnitech, resultatsAnalyse: resultats.message ?? resultats.erreur, envoiAnalyse: envoi.message ?? envoi.erreur };
     }
     if (nom === "emails") rapport = { ...(await traiterEmails(supabase)) };

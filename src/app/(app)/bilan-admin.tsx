@@ -18,15 +18,18 @@ export default async function BilanAdmin() {
   const b = await chargerBilanAdmin(supabase);
   const aSurveiller = b.echeances.filter((e) => e.niveau !== "ok" && e.niveau !== "inconnu");
   const sansDate = b.echeances.filter((e) => e.niveau === "inconnu").length;
+  const lienProblemes = b.taches.some((t) => t.etat !== "ok") ? "/parametres/synchronisations"
+    : aSurveiller.length ? "/parametres/echeances"
+    : !b.secoursPret ? "/parametres/sante" : "/parametres/couts";
   const part = Math.min(100, (b.ia.mois / Math.max(b.ia.plafond, 0.01)) * 100);
 
   return (
     <section className={`carte p-6 ${b.problemes ? "ring-1 ring-amber-200" : ""}`}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-semibold text-nuit">Bilan du jour · administrateurs</h2>
-        <span className={b.problemes ? "pastille pastille-orange" : "pastille pastille-vert"}>
-          {b.problemes ? `${b.problemes} point(s) à regarder` : "Tout fonctionne"}
-        </span>
+        {b.problemes
+          ? <Link href={lienProblemes} className="pastille pastille-orange hover:brightness-95" title="Aller corriger">{b.problemes} point(s) à regarder →</Link>
+          : <span className="pastille pastille-vert">Tout fonctionne</span>}
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-3 [&>*]:min-w-0">
@@ -40,13 +43,15 @@ export default async function BilanAdmin() {
                   <span className="block text-slate-700">{t.libelle}</span>
                   <span className="text-xs text-slate-400">{t.derniereReussite ? `Réussie ${quand(t.derniereReussite)}` : "Jamais réussie"}</span>
                 </span>
-                <span className={`${ETATS[t.etat].classe} shrink-0`}>{ETATS[t.etat].icone} {ETATS[t.etat].texte}</span>
+                {t.etat === "ok"
+                  ? <span className={`${ETATS[t.etat].classe} shrink-0`}>{ETATS[t.etat].icone} {ETATS[t.etat].texte}</span>
+                  : <Link href="/parametres/synchronisations" title="Voir le détail et relancer la tâche" className={`${ETATS[t.etat].classe} shrink-0 hover:brightness-95`}>{ETATS[t.etat].icone} {ETATS[t.etat].texte} →</Link>}
               </li>
             ))}
           </ul>
-          <p className={`mt-2 text-xs ${b.secoursPret ? "text-emerald-700" : "text-amber-700"}`}>
-            {b.secoursPret ? "✓ Planificateur de secours (Supabase) actif" : "Planificateur de secours : clé à enregistrer dans Supabase"}
-          </p>
+          {b.secoursPret
+            ? <p className="mt-2 text-xs text-emerald-700">✓ Planificateur de secours (Supabase) actif</p>
+            : <Link href="/parametres/sante" className="mt-2 block text-xs text-amber-700 hover:underline">Planificateur de secours : clé à enregistrer dans Supabase →</Link>}
           <Link href="/parametres/sante" className="mt-2 inline-block text-xs font-medium text-marque-600 hover:underline">Bilan de santé →</Link>
         </div>
 
@@ -55,8 +60,10 @@ export default async function BilanAdmin() {
           <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Échéances des secrets</h3>
           <ul className="mt-2 space-y-1.5 text-sm">
             {aSurveiller.map((e) => (
-              <li key={e.id} className="flex items-center justify-between gap-2">
-                <span className="truncate text-slate-700">{e.nom}</span><PastilleEcheance e={e} />
+              <li key={e.id}>
+                <Link href="/parametres/echeances" title="Renouveler ou mettre à jour la date" className="-mx-1 flex items-center justify-between gap-2 rounded-lg px-1 hover:bg-slate-50">
+                  <span className="truncate text-slate-700">{e.nom}</span><PastilleEcheance e={e} />
+                </Link>
               </li>
             ))}
             {!aSurveiller.length && <li className="text-slate-500">Aucune échéance dans les 30 jours.</li>}
