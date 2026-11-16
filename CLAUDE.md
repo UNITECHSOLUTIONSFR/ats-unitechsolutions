@@ -25,7 +25,7 @@
 7. Tenir CLAUDE.md et SUIVI.md à jour à chaque fin d'étape.
 8. Un commit clair par étape, poussé. Fin de session : résumé en 3 lignes + prochaine étape.
 9. Signaler avant d'agir toute demande qui contredit le brief ou augmente nettement les coûts.
-10. **Ne rien publier ni lancer sans son go explicite** quand elle l'a demandé ; montrer un aperçu (capture) avant tout changement visuel.
+10. **Un travail demandé (go donné) se termine jusqu'à la mise en ligne, sans redemander** (décision du 17/11/2026) ; une capture accompagne le compte rendu des changements visuels. Ne jamais commencer un nouveau chantier sans son accord.
 11. **Quand l'utilisatrice pose une question, y répondre d'abord, littéralement, sans rien modifier.** N'agir qu'ensuite, si elle le demande.
 12. Elle veut avancer **vite** : réponses courtes, pas de détours.
 
