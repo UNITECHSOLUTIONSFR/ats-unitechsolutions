@@ -79,7 +79,7 @@ export default async function Missions({ searchParams }: { searchParams: Promise
 /** Meilleur score de la mission (jauge) et trigrammes des 3 premiers profils : lus dans le classement gardé en mémoire. */
 async function MeilleurScore({ missionId }: { missionId: string }) {
   const { top } = await classementEnCache(missionId);
-  const premiers = top.filter((c) => !c.resultat.elimine).slice(0, 3);
+  const premiers = top.filter((c) => !c.resultat.elimine && c.avisIA?.verdict !== "hors_sujet").slice(0, 3);
   if (!premiers.length) return null;
   return (
     <div className="flex flex-col items-center gap-1.5">

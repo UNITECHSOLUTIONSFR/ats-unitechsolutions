@@ -221,3 +221,8 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Testé : 241 tests ; mission « Testeur QA fonctionnel » : le top 15 ne contient plus que des profils de test.
 - Suite : proximité de sens (embeddings gratuits) pour les 20 points « contexte », jamais calculés jusqu'ici.
 
+### 16/11/2026 — Matching avec IA
+- Fait : 2e temps du matching par l'IA (Haiku lit la mission entière et les 30 premiers profils, anonymes → pertinent / à étudier / hors sujet + raison, migration 40 `avis_matching`) ; ordre : pertinents, à étudier, non lus, hors sujet ; avis affiché sur chaque profil ; métier d'après les titres devenu un simple indice (−30 %) ; classements recalculés (clé v3).
+- Testé : 242 tests (dont tri IA simulé : ordre, aucun nom ni coordonnée envoyés, avis réutilisés) ; appel réel de l'IA seulement en production (clé sur Vercel).
+- Suite : vérifier le coût réel après la première préparation des classements ; proximité de sens (modèle gratuit).
+

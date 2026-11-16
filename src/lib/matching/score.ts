@@ -121,7 +121,6 @@ export function scorerConsultant(
   // Métier : un profil d'un autre métier est écarté (un développeur Java ne fait pas une mission de testeur QA).
   const fMission = familleMetier(mission.metier), fConsultant = familleMetier(consultant.metier);
   const metier = compatibiliteMetier(fMission, fConsultant);
-  if (metier === 0) motifsElimination.push(`Métier différent : ${LIBELLES_METIER[fConsultant!]} pour une mission ${LIBELLES_METIER[fMission!]}`);
 
   if (consultant.disponibilite_maj_le) {
     const age = (aujourdHui.getTime() - new Date(consultant.disponibilite_maj_le).getTime()) / JOUR;
@@ -200,13 +199,17 @@ export function scorerConsultant(
     raisons.push({ critere: c.cle, points: arrondi(points), max: arrondi((max * 100) / poidsUtiles), texte: c.texte });
   }
 
-  // Métier voisin (ex. DevOps pour une mission de développeur) : score réduit de 15 %.
-  if (metier === 0.6) {
+  // Métier d'après les titres : indice seulement (un titre peut être faux) ; c'est l'IA qui tranche en lisant la mission et le profil.
+  if (metier === 0) {
+    score *= 0.7;
+    raisons.push({ critere: "filtre", points: 0, max: 0, texte: `Titre d'un autre métier : ${LIBELLES_METIER[fConsultant!]} pour une mission ${LIBELLES_METIER[fMission!]} (score réduit de 30 %)` });
+  } else if (metier === 0.6) {
     score *= 0.85;
     raisons.push({ critere: "filtre", points: 0, max: 0, texte: `Métier voisin : ${LIBELLES_METIER[fConsultant!]} pour une mission ${LIBELLES_METIER[fMission!]} (score réduit de 15 %)` });
   } else if (metier === 1) raisons.push({ critere: "filtre", points: 0, max: 0, texte: `Même métier : ${LIBELLES_METIER[fMission!]}` });
   const explication = expliquer(mission, consultant, parId, alertes);
   if (metier === 1) explication.atouts.unshift(`Même métier que la mission (${LIBELLES_METIER[fMission!]})`);
+  if (metier === 0) explication.manques.unshift(`Titre d'un autre métier : ${LIBELLES_METIER[fConsultant!]} pour une mission ${LIBELLES_METIER[fMission!]}`);
   if (metier === 0.6) explication.aVerifier.unshift(`Métier voisin : ${LIBELLES_METIER[fConsultant!]} pour une mission ${LIBELLES_METIER[fMission!]}`);
   return { score: arrondi(score), elimine: motifsElimination.length > 0, motifsElimination, raisons, alertes, explication };
 }

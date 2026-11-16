@@ -137,13 +137,20 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
 }
 
 /** Un consultant classé : identité et score, actions, puis l'explication du score critère par critère. */
+/** Avis de l'IA sur le profil (lecture de la mission et du profil). */
+const AVIS_IA = {
+  pertinent: { libelle: "Pertinent", classe: "bg-emerald-50 text-emerald-800 ring-emerald-200" },
+  a_etudier: { libelle: "À étudier", classe: "bg-amber-50 text-amber-800 ring-amber-200" },
+  hors_sujet: { libelle: "Hors sujet", classe: "bg-red-50 text-red-800 ring-red-200" },
+} as const;
+
 function CarteCandidat({ rang, c, missionId, statut, ouvert, cv, avis }: {
   rang: number; c: LigneClassement; missionId: string; statut?: string; ouvert: boolean; cv?: { id: string; word: string; pdf: string | null }; avis?: AvisMission;
 }) {
   const initiales = `${c.prenom?.[0] ?? ""}${c.nom?.[0] ?? ""}`.replace("—", "").toUpperCase() || "?";
   const action = "flex h-10 items-center gap-1.5 rounded-full sm:h-9 bg-white px-3 text-xs font-semibold text-nuit ring-1 ring-slate-200 transition hover:bg-slate-50 hover:ring-slate-300";
   return (
-    <article className={`carte p-4 sm:p-5 ${c.resultat.elimine ? "opacity-60" : ""}`}>
+    <article className={`carte p-4 sm:p-5 ${c.resultat.elimine || c.avisIA?.verdict === "hors_sujet" ? "opacity-60" : ""}`}>
       <div className="flex items-center gap-3 sm:gap-4">
         <div className="relative shrink-0">
           <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-marque-400 to-marque-700 text-base font-bold text-white sm:h-14 sm:w-14 sm:text-lg">{initiales}</span>
@@ -155,7 +162,13 @@ function CarteCandidat({ rang, c, missionId, statut, ouvert, cv, avis }: {
           <div className="mt-0.5 truncate text-xs text-slate-500">Disponibilité : {c.disponible_le ? new Date(c.disponible_le).toLocaleDateString("fr-FR") : c.disponibilite ?? "non renseignée"}</div>
         </div>
         <JaugeScore score={c.resultat.score} />
-            </div>
+      </div>
+      {c.avisIA && (
+        <div className={`mt-3 flex items-start gap-2 rounded-xl px-3 py-2 text-sm ring-1 ${AVIS_IA[c.avisIA.verdict].classe}`}>
+          <span className="shrink-0 font-bold">IA · {AVIS_IA[c.avisIA.verdict].libelle}</span>
+          {c.avisIA.raison && <span className="text-slate-700">{c.avisIA.raison}</span>}
+        </div>
+      )}
 
       <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
         {c.telephone_e164 && <a href={`tel:${c.telephone_e164}`} className={action} title={formaterTelephone(c.telephone_e164)}>☎ {formaterTelephone(c.telephone_e164)}</a>}

@@ -15,6 +15,7 @@ export const MODELES = {
   adequation: "claude-haiku-5-5", // section « Adéquation à la mission »
   recherche: "claude-haiku-5-5", // section « Recherche » : phrase du recruteur → critères
   avisMission: "claude-haiku-5-5", // « Avis IA » sur un consultant pour une mission (sur demande)
+  triCandidats: "claude-haiku-5-5", // matching : lecture des 30 meilleurs profils d'une mission (pertinent / à étudier / hors sujet)
 } as const;
 
 export const MAX_TOKENS = {
@@ -28,6 +29,7 @@ export const MAX_TOKENS = {
   adequation: 1200,
   recherche: 700,
   avisMission: 700,
+  triCandidats: 3500, // 30 avis courts
 } as const;
 
 /** Texte envoyé à l'IA tronqué à cette longueur (règle 4 du brief). */

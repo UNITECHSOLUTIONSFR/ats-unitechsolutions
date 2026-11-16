@@ -28,6 +28,8 @@ export interface LigneClassement {
   word_url: string | null;
   annees_experience: number | null;
   resultat: ResultatScore;
+  /** Avis de l'IA (matching) : lecture de la mission et du profil, verdict et raison. */
+  avisIA?: { verdict: "pertinent" | "a_etudier" | "hors_sujet"; raison: string | null } | null;
 }
 
 interface LigneCandidat {

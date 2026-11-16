@@ -8,6 +8,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
 import { LONGUEUR_MAX_TEXTE, MAX_TOKENS, MODELES, estimerCoutUSD } from "./config";
+import { CONSIGNES_TRI_CANDIDATS } from "./consignes";
 import { CONSIGNES_ADEQUATION, CONSIGNES_AVIS_MISSION, CONSIGNES_CV_UNITECH, CONSIGNES_MISSION, CONSIGNES_PROFIL_CV, CONSIGNES_RECHERCHE, CONSIGNES_REPONSE_DISPO } from "./consignes";
 import {
   PROMPT_VERSION,
@@ -18,6 +19,8 @@ import {
   SchemaAdequation,
   SchemaCriteresRecherche,
   SchemaAvisMission,
+  SchemaTriCandidats,
+  type TriCandidats,
   borner,
   bornerMission,
   ficheCVValide,
@@ -34,7 +37,7 @@ export { PROMPT_VERSION };
 export type { ExigencesMission, ProfilCV, ReponseDisponibilite, CVStructure, Adequation, CriteresRecherche, AvisMission };
 
 export interface UsageIA {
-  usage: "fiche_cv" | "mission" | "tri_email" | "analyse_approfondie" | "reponse_disponibilite" | "lecture_scan" | "cv_unitech" | "adequation" | "recherche" | "avis_mission";
+  usage: "fiche_cv" | "mission" | "tri_email" | "analyse_approfondie" | "reponse_disponibilite" | "lecture_scan" | "cv_unitech" | "adequation" | "recherche" | "avis_mission" | "tri_candidats";
   modele: string;
   mode: "standard" | "batch";
   tokens_entree: number;
@@ -278,4 +281,15 @@ export async function donnerAvisMission(ficheDePoste: string, cv: string): Promi
     donnees: { ...d, points_forts: d.points_forts.slice(0, 3), manques: d.manques.slice(0, 3), questions: d.questions.slice(0, 2) },
     modele: MODELES.avisMission, promptVersion: PROMPT_VERSION, usages: [r.usage],
   };
+}
+
+/**
+ * Matching : l'IA lit la mission entière et juge chaque profil présélectionné (pertinent / à étudier / hors sujet), avec une raison.
+ * Les profils sont envoyés SANS nom, email ni téléphone (référence C1, C2… seulement).
+ */
+export async function trierCandidats(mission: string, profils: { ref: string; texte: string }[]): Promise<ResultatIA<TriCandidats>> {
+  const texte = `MISSION :\n${mission.slice(0, 9000)}\n\nPROFILS :\n${profils.map((p) => `[${p.ref}]\n${p.texte.slice(0, 1200)}`).join("\n\n")}`;
+  const r = await appeler(MODELES.triCandidats, CONSIGNES_TRI_CANDIDATS, SchemaTriCandidats, texte, MAX_TOKENS.triCandidats, "tri_candidats");
+  if (!r.donnees) throw Object.assign(new ErreurIA("Tri des profils impossible."), { usages: [r.usage] });
+  return { donnees: r.donnees, modele: MODELES.triCandidats, promptVersion: PROMPT_VERSION, usages: [r.usage] };
 }

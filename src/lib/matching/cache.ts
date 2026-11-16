@@ -3,6 +3,7 @@ import { unstable_cache, updateTag } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { clientSupabaseAdmin } from "@/lib/supabase/admin";
 import { classementMission, type LigneClassement } from "./classement";
+import { trierParIA } from "./tri-ia";
 
 /**
  * Classement d'une mission gardé en mémoire côté serveur : calculé une fois, puis relu instantanément par
@@ -44,14 +45,15 @@ export function classementEnCache(missionId: string): Promise<ClassementResume> 
 
 function lireOuCalculer(missionId: string): Promise<ClassementResume> {
   return unstable_cache(async (): Promise<ClassementResume> => {
-    const lignes = await avecPlace(() => classementMission(clientSupabaseAdmin(), missionId, 100_000));
+    // 1er temps : tri de toute la base (compétences, expérience, métier) ; 2e temps : l'IA lit la mission et les 30 premiers profils.
+    const lignes = await avecPlace(async () => trierParIA(clientSupabaseAdmin(), missionId, await classementMission(clientSupabaseAdmin(), missionId, 100_000)));
     return {
       total: lignes.length,
-      pertinents: lignes.filter((c) => !c.resultat.elimine && c.resultat.score >= 60).length,
+      pertinents: lignes.filter((c) => !c.resultat.elimine && c.avisIA?.verdict !== "hors_sujet" && c.resultat.score >= 60).length,
       top: lignes.slice(0, 60),
       scores: Object.fromEntries(lignes.map((l) => [l.consultant_id, [Math.round(l.resultat.score * 10) / 10, l.resultat.elimine]])),
     };
-  }, ["classement-v2", missionId], { revalidate: 3600, tags: [tag(missionId), TAG_CLASSEMENTS] })();
+  }, ["classement-v3", missionId], { revalidate: 3600, tags: [tag(missionId), TAG_CLASSEMENTS] })();
 }
 
 /**

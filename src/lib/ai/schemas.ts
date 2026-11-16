@@ -129,3 +129,13 @@ export const SchemaAvisMission = z.object({
   questions: z.array(z.string()),
 });
 export type AvisMission = z.infer<typeof SchemaAvisMission>;
+
+/** Tri des meilleurs profils d'une mission par l'IA : chaque profil (référence C1, C2…) est jugé sur le contenu, pas sur des mots-clés. */
+export const SchemaTriCandidats = z.object({
+  avis: z.array(z.object({
+    ref: z.string(),
+    verdict: z.enum(["pertinent", "a_etudier", "hors_sujet"]),
+    raison: z.string(),
+  })),
+});
+export type TriCandidats = z.infer<typeof SchemaTriCandidats>;
