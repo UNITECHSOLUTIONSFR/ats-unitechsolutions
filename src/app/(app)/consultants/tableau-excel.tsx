@@ -96,6 +96,15 @@ export default function TableauExcel({ vues, vueInitiale, ongletId, entetes, cha
     }, 300);
     return () => { actif = false; clearTimeout(t); };
   }, [rechercheDifferee]);
+  // Suivi de l'activité : la recherche est notée une fois la saisie terminée (2 secondes sans frappe).
+  useEffect(() => {
+    const q = rechercheDifferee.trim();
+    if (q.length < 3) return;
+    const t = setTimeout(() => {
+      fetch("/api/activite/recherche", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ texte: q }) }).catch(() => undefined);
+    }, 2000);
+    return () => clearTimeout(t);
+  }, [rechercheDifferee]);
   const [avecCV, setAvecCV] = useState(true);
   const idsCV = avecCV && dansCV.q === rechercheDifferee.trim() ? dansCV.ids : undefined;
   const visibles = useMemo(() => filtrerEtTrier(lignesVue, filtres, rechercheDifferee, tri, affiche, idsCV), [lignesVue, filtres, rechercheDifferee, tri, affiche, idsCV]);

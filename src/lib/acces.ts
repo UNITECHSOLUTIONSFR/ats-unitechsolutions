@@ -15,7 +15,7 @@ export async function exigerUtilisateur(): Promise<{ utilisateur: UtilisateurCon
 export async function journaliser(
   supabase: SupabaseClient,
   utilisateurId: string,
-  action: "consultation" | "creation" | "modification" | "export",
+  action: "consultation" | "creation" | "modification" | "export" | "recherche",
   consultantId: string | null,
   details: Record<string, unknown> = {},
 ) {

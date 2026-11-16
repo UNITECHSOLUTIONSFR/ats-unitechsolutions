@@ -1,5 +1,6 @@
 "use server";
 
+import { after } from "next/server";
 import { exigerUtilisateur } from "@/lib/acces";
 import { ErreurIA, lireRecherche } from "@/lib/ai";
 import { enregistrerUsages, etatBudgetMois } from "@/lib/ai/journal";
@@ -9,9 +10,11 @@ export interface ReponseRecherche { criteres?: Criteres; reponse?: string; resul
 
 /** Message du recruteur : l'IA met à jour les critères (elle ne voit aucun candidat), puis le classement est calculé sans IA. */
 export async function envoyerMessageRecherche(message: string, criteresActuels: Criteres | null): Promise<ReponseRecherche> {
-  const { supabase } = await exigerUtilisateur();
+  const { utilisateur, supabase } = await exigerUtilisateur();
   const texte = message.trim().slice(0, 2000);
   if (!texte) return { erreur: "Décrivez le profil recherché." };
+  // Suivi de l'activité (Paramètres → Activité de l'équipe) : la recherche est notée après la réponse.
+  after(async () => { await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "recherche", details: { texte: texte.slice(0, 200) } }); });
   const budget = await etatBudgetMois();
   if (budget.depasse) return { erreur: `Plafond IA du mois atteint (${budget.depense.toFixed(2)} $ / ${budget.plafond} $) : modifiez les critères à la main.` };
   try {
