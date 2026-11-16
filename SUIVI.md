@@ -210,3 +210,9 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Testé : 204 tests (dont 17 règles Trello), build. Pas de test réel depuis la session (Trello bloqué ici, clé seulement dans Vercel).
 - Suite : l'utilisatrice vérifie Paramètres → Trello sur la version d'aperçu, puis go pour la mise en ligne et la première lecture réelle.
 
+### 16/11/2026 — Grille des missions, vitesse, revue de sécurité avant l'ouverture aux équipes
+- Fait : missions en grille « décision » ; classements jamais calculés deux fois, 2 à la fois au plus, préparés après chaque lecture Trello/email ; recherche dans les textes compétence par compétence (fin des dépassements de délai), gardée 6 h (migration 36) ; titres Trello « Poste - Client - Contact ».
+- Sécurité : visiteur non connecté = aucun accès (vérifié en appelant l'API publique sur 22 tables et 6 fonctions) ; droits « anon » retirés, fonctions de déclenchement non appelables, ancienne recherche par motifs réservée au serveur, search_path figé, index en double retiré (migration 37) ; écrans admin fermés aux recruteurs (vérifié) ; mot de passe provisoire : changé côté serveur (impossible de retirer la mention sans le changer) ; désinscription des relances : confirmation par clic (les antivirus de messagerie ouvrent les liens) ; aucun secret dans l'historique Git. Non disponible : protection contre les mots de passe divulgués (offre Supabase supérieure).
+- Testé : 209 tests (26 de règles d'accès), 27 écrans ouverts sans erreur (admin), parcours recruteur, build.
+- Suite : réponse de l'utilisatrice sur la modification / suppression des missions ; carte Trello « IMPORTANT | % Contribution » (à ignorer ?).
+

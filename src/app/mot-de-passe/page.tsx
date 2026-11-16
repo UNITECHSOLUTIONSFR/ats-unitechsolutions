@@ -34,9 +34,8 @@ export default function ChoixMotDePasse() {
     if (!url || !cle) return;
     setEtat({ enCours: true });
     const supabase = createBrowserClient(url, cle);
-    const { error } = await supabase.auth.updateUser({ password: mdp });
-    if (error) return setEtat({ erreur: error.message.includes("different") ? "Choisissez un mot de passe différent de l'ancien." : /session/i.test(error.message) ? "Session absente : reconnectez-vous, ou redemandez un lien « Mot de passe oublié ? »." : "Enregistrement impossible : réessayez." });
-    await motDePasseChoisi();
+    const r = await motDePasseChoisi(mdp);
+    if (r.erreur) return setEtat({ erreur: r.erreur });
     await supabase.auth.refreshSession(); // la session ne porte plus la mention « provisoire »
     // Rechargement complet voulu : la nouvelle session (cookies) est lue par le serveur.
     // eslint-disable-next-line @next/next/no-location-assign-relative-destination

@@ -138,12 +138,18 @@ describe("règles d'accès", () => {
   it("textes des consultants : jamais lus directement, seulement par la fonction de matching", async () => {
     await expect(commeUtilisateur(RECRUTEUR, "select * from textes_consultants")).rejects.toThrow(/permission denied/);
     await expect(commeUtilisateur(null, "select * from consultants_par_motifs(array['java'])")).rejects.toThrow(/permission denied/);
-    expect(await commeUtilisateur(INACTIF, "select * from consultants_par_motifs(array['java'])")).toEqual([]);
-    await commeUtilisateur(RECRUTEUR, "select * from consultants_par_motifs(array['java'])");
+    // Ancienne recherche par motifs : plus utilisée par l'application, réservée au serveur depuis le 16/11/2026.
+    await expect(commeUtilisateur(RECRUTEUR, "select * from consultants_par_motifs(array['java'])")).rejects.toThrow(/permission denied/);
     await expect(commeUtilisateur(RECRUTEUR, "select * from competences_textes")).rejects.toThrow(/permission denied/);
     await expect(commeUtilisateur(null, "select * from consultants_par_competences('{}', '{}')")).rejects.toThrow(/permission denied/);
     expect(await commeUtilisateur(INACTIF, "select * from consultants_par_competences('{}', '{}')")).toEqual([]);
     await expect(commeUtilisateur(RECRUTEUR, "select preparer_competences_textes()")).rejects.toThrow(/permission denied/);
+  });
+
+  it("durcissement : aucun droit pour un visiteur, fonctions de déclenchement jamais appelables", async () => {
+    await expect(commeUtilisateur(null, "select * from notes_consultant")).rejects.toThrow(/permission denied/);
+    await expect(commeUtilisateur(null, "select est_admin()")).rejects.toThrow(/permission denied/);
+    await expect(commeUtilisateur(RECRUTEUR, "select historiser_proposition()")).rejects.toThrow(/permission denied/);
   });
 
   it("recherche : un recruteur lit les candidats et les extraits ; un visiteur n'y a pas accès", async () => {

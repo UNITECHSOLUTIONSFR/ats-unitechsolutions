@@ -119,8 +119,8 @@ export default async function FicheConsultant({ params, searchParams }: { params
               {c.linkedin && <li><span className="text-slate-500">LinkedIn : </span><Lien valeur={c.linkedin} /></li>}
               {c.cv_lien && <li><span className="text-slate-500">CV : </span><Lien valeur={c.cv_lien} /></li>}
             </ul>
-            {(c.donnees_excel ?? []).map((d: { ligne: number; valeurs: Record<string, string> }) => (
-              <details key={d.ligne} className="mt-2">
+            {(c.donnees_excel ?? []).map((d: { ligne: number; valeurs: Record<string, string> }, i: number) => (
+              <details key={`${d.ligne}-${i}`} className="mt-2">
                 <summary className="cursor-pointer text-slate-500">Toutes les colonnes du fichier de suivi</summary>
                 <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
                   {Object.entries(d.valeurs).map(([k, v]) => (

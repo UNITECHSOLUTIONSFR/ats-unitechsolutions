@@ -86,10 +86,16 @@ export async function nouveauMotDePasse(_e: EtatUtilisateur, formData: FormData)
 }
 
 /** Après le choix d'un mot de passe personnel : le mot de passe n'est plus « provisoire ». */
-export async function motDePasseChoisi(): Promise<void> {
+export async function motDePasseChoisi(mdp: string): Promise<{ erreur?: string }> {
+  // Le mot de passe est enregistré ICI, côté serveur, en même temps que la mention « provisoire » est retirée :
+  // impossible de retirer la mention sans avoir réellement choisi un nouveau mot de passe.
+  if (typeof mdp !== "string" || mdp.length < 10 || mdp.length > 200 || !/[a-zA-Z]/.test(mdp) || !/\d/.test(mdp)) {
+    return { erreur: "10 caractères au moins, avec des lettres et des chiffres." };
+  }
   const supabase = await clientSupabaseServeur();
   const { data } = (await supabase?.auth.getClaims()) ?? { data: null };
   const id = data?.claims?.sub;
-  if (!id) return;
-  await clientSupabaseAdmin().auth.admin.updateUserById(id, { app_metadata: { mdp_provisoire: false } });
+  if (!id) return { erreur: "Session absente : reconnectez-vous, ou redemandez un lien « Mot de passe oublié ? »." };
+  const { error } = await clientSupabaseAdmin().auth.admin.updateUserById(id, { password: mdp, app_metadata: { mdp_provisoire: false } });
+  return error ? { erreur: "Enregistrement impossible : réessayez." } : {};
 }
