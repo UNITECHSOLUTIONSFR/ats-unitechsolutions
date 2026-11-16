@@ -68,3 +68,17 @@ describe("Trello : rapprochement des missions déjà créées dans l'outil", () 
     expect(Object.fromEntries(liens)).toEqual({ b: "m1" });
   });
 });
+
+import { lieuCourt, montantTJM } from "@/app/(app)/missions/liste";
+describe("Grille des missions : lieu court et montant du TJM", () => {
+  it("ville sans l'adresse", () => {
+    expect(lieuCourt("16 rue du Général Alain Boissière, 75015 Paris")).toBe("Paris");
+    expect(lieuCourt("Saint-Denis (17 rue des Bretons, 93100 Saint-Denis)")).toBe("Saint-Denis");
+    expect(lieuCourt("DGOPI / DTEL, 6 avenue François Mitterrand, 93574 La Plaine Saint-Denis Cedex")).toBe("La Plaine Saint-Denis");
+    expect(lieuCourt("Rennes")).toBe("Rennes");
+  });
+  it("montant sans le libellé", () => {
+    expect(montantTJM("Prix d'achat maximum : 425 € HT")).toBe("425 € HT");
+    expect(montantTJM("TJM 800 euros")).toBe("800 euros");
+  });
+});

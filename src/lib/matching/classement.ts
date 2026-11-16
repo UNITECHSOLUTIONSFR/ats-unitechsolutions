@@ -165,10 +165,17 @@ export async function competencesDansLesTextes(supabase: SupabaseClient, compete
   const { data: comps } = await supabase.from("competences").select("id, nom_canonique, synonymes").in("id", ids);
   const avecMotif = (comps ?? []).map((k) => ({ id: k.id as string, motif: motifCompetence(k.nom_canonique, k.synonymes ?? []) })).filter((k): k is { id: string; motif: string } => !!k.motif);
   if (!avecMotif.length) return resultat;
-  // Une ligne par compétence (liste des personnes), calculée une fois par heure côté base.
-  const { data, error } = await supabase.rpc("consultants_par_competences", { p_ids: avecMotif.map((k) => k.id), p_motifs: avecMotif.map((k) => k.motif) });
-  if (error) { console.error("Matching contextuel :", error.message); return resultat; }
-  for (const r of (data ?? []) as { competence_id: string; consultants: string[] }[]) {
+  // Une compétence par appel (chaque recherche dans les textes reste courte, jamais coupée par le délai maximal de la base),
+  // 3 à la fois ; le résultat est gardé une heure côté base (table competences_textes).
+  const lignes: { competence_id: string; consultants: string[] }[] = [];
+  for (let i = 0; i < avecMotif.length; i += 3) {
+    await Promise.all(avecMotif.slice(i, i + 3).map(async (k) => {
+      const { data, error } = await supabase.rpc("consultants_par_competences", { p_ids: [k.id], p_motifs: [k.motif] });
+      if (error) console.error("Matching contextuel :", k.motif.slice(0, 40), error.message);
+      else lignes.push(...((data ?? []) as typeof lignes));
+    }));
+  }
+  for (const r of lignes) {
     for (const c of r.consultants) {
       if (!resultat.has(c)) resultat.set(c, new Set());
       resultat.get(c)!.add(r.competence_id);

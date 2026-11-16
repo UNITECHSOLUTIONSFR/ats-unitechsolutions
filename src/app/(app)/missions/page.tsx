@@ -5,6 +5,8 @@ import { IconeMallette } from "../icones";
 import ListeMissions, { type CarteMission } from "./liste";
 import { Suspense } from "react";
 import { nombrePertinents } from "@/lib/matching/pour-consultant";
+import { classementEnCache } from "@/lib/matching/cache";
+import { JaugeScore } from "./evaluation";
 import { STATUTS_MISSIONS } from "@/lib/missions/statuts";
 import { BoutonActualiserTrello } from "./trello";
 
@@ -21,7 +23,7 @@ export default async function Missions({ searchParams }: { searchParams: Promise
     return q.then((r) => r.count ?? 0);
   };
   let q = supabase.from("missions")
-    .select("id, client, intitule, statut, created_at, date_debut, localisation, responsable_id, trello_carte_id, trello_colonne, trello_recruteur, trello_url, tjm, propositions(statut)")
+    .select("id, client, intitule, statut, created_at, date_debut, localisation, responsable_id, trello_carte_id, trello_colonne, trello_recruteur, trello_url, tjm, propositions(statut), mission_competences(obligatoire, importance, competences(nom_canonique))")
     .eq("statut", statut).order("created_at", { ascending: false }).limit(300);
   if (miennes) q = q.or(FILTRE_MES_MISSIONS(utilisateur.id));
   const derniereLecture = supabase.from("missions").select("trello_lu_le").not("trello_lu_le", "is", null).order("trello_lu_le", { ascending: false }).limit(1).maybeSingle()
@@ -34,6 +36,8 @@ export default async function Missions({ searchParams }: { searchParams: Promise
     return {
       id: m.id, intitule: m.intitule, client: m.client, localisation: m.localisation, creeLe: m.created_at, debut: m.date_debut,
       responsableId: m.responsable_id, suivis: p.length,
+      competences: ((m.mission_competences ?? []) as unknown as { obligatoire: boolean; importance: number; competences: { nom_canonique: string } | null }[])
+        .sort((a, b) => Number(b.obligatoire) - Number(a.obligatoire) || b.importance - a.importance).map((k) => k.competences?.nom_canonique).filter((x): x is string => !!x),
       trello: m.trello_carte_id ? { colonne: m.trello_colonne, recruteur: m.trello_recruteur, url: m.trello_url } : null, tjm: m.tjm, appeles: n("appele"), envoyes: n("envoye_client"), retenus: n("retenu"),
     };
   });
@@ -65,7 +69,24 @@ export default async function Missions({ searchParams }: { searchParams: Promise
         responsables={responsables} estAdmin={utilisateur.role === "admin"}
         lienVue={{ miennes: lien(statut, "miennes"), toutes: lien(statut, "toutes") }} miennes={miennes}
         pertinents={statut === "ouverte" || statut === "chez_client" ? Object.fromEntries(missions.map((m) => [m.id,
-          <Suspense key={m.id} fallback={<span className="squelette inline-block h-7 w-36 rounded-full" />}><Pertinents missionId={m.id} /></Suspense>])) : undefined} />
+          <Suspense key={m.id} fallback={<span className="squelette inline-block h-7 w-36 rounded-full" />}><Pertinents missionId={m.id} /></Suspense>])) : undefined}
+        resumes={statut === "ouverte" || statut === "chez_client" ? Object.fromEntries(missions.map((m) => [m.id,
+          <Suspense key={m.id} fallback={<span className="squelette inline-block h-14 w-14 rounded-full" />}><MeilleurScore missionId={m.id} /></Suspense>])) : undefined} />
+    </div>
+  );
+}
+
+/** Meilleur score de la mission (jauge) et trigrammes des 3 premiers profils : lus dans le classement gardé en mémoire. */
+async function MeilleurScore({ missionId }: { missionId: string }) {
+  const { top } = await classementEnCache(missionId);
+  const premiers = top.filter((c) => !c.resultat.elimine).slice(0, 3);
+  if (!premiers.length) return null;
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <JaugeScore score={premiers[0].resultat.score} petite sansLibelle />
+      <div className="flex gap-1" title="Les 3 premiers profils">
+        {premiers.map((c) => <span key={c.consultant_id} className="rounded-full bg-marque-50 px-1.5 py-0.5 text-[10px] font-bold tracking-tight text-marque-700">{c.trigramme || "?"}</span>)}
+      </div>
     </div>
   );
 }
@@ -75,7 +96,7 @@ async function Pertinents({ missionId }: { missionId: string }) {
   const n = await nombrePertinents(missionId);
   return (
     <Link href={`/missions/${missionId}`} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold ring-1 ${n ? "bg-emerald-50 text-emerald-700 ring-emerald-200 hover:bg-emerald-100" : "bg-slate-50 text-slate-500 ring-slate-200"}`}>
-      <span className="text-base font-bold tabular-nums">{n}</span> profil{n > 1 ? "s" : ""} pertinent{n > 1 ? "s" : ""}
+      <span className="text-base font-bold tabular-nums">{n}</span> pertinent{n > 1 ? "s" : ""}
     </Link>
   );
 }
