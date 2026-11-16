@@ -17,7 +17,7 @@ export async function modifierConsultant(formData: FormData) {
   const id = String(formData.get("id"));
   const { data: avant } = await supabase
     .from("consultants")
-    .select("intitule_poste, disponibilite, disponible_le, telephone_e164, email, localisation, mobilite, statut, notes")
+    .select("prenom, nom, trigramme, intitule_poste, disponibilite, disponible_le, telephone_e164, email, localisation, mobilite, statut, notes")
     .eq("id", id)
     .maybeSingle();
   if (!avant) return;
@@ -28,7 +28,13 @@ export async function modifierConsultant(formData: FormData) {
   };
   const tel = normaliserTelephone(texte("telephone"));
   const statut = String(formData.get("statut"));
+  // Prénom et nom : le nom ne peut pas être vidé ; le trigramme suit s'il était calculé (un trigramme repris de l'Excel est gardé).
+  const prenom = texte("prenom") ?? avant.prenom;
+  const nom = texte("nom") ?? avant.nom;
+  const trigrammeAuto = avant.trigramme === calculerTrigramme(avant.prenom, avant.nom);
   const apres: Record<string, unknown> = {
+    prenom, nom,
+    trigramme: trigrammeAuto ? calculerTrigramme(prenom, nom) : avant.trigramme,
     intitule_poste: texte("intitule_poste"),
     disponibilite: texte("disponibilite"),
     disponible_le: texte("disponible_le"),

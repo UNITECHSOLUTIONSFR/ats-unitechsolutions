@@ -105,7 +105,14 @@ export default function Recherche({ recents }: { recents: ResultatRecherche[] })
                   <p className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm ${m.de === "moi" ? "rounded-br-md bg-white text-nuit" : "rounded-bl-md bg-white/15 text-white ring-1 ring-white/20"}`}>{m.texte}</p>
                 </div>
               ))}
-              {enCours && <div className="flex"><p className="animate-pulse rounded-2xl rounded-bl-md bg-white/15 px-3.5 py-2 text-sm text-white/80">Recherche en cours…</p></div>}
+              {enCours && (
+                <div className="flex">
+                  <p className="flex items-center gap-2.5 rounded-2xl rounded-bl-md bg-white/15 px-3.5 py-2 text-sm text-white/90">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" aria-hidden />
+                    Je comprends la demande et je cherche dans vos consultants…
+                  </p>
+                </div>
+              )}
             </div>
           )}
           <form onSubmit={(e) => { e.preventDefault(); envoyer(saisie); }} className="flex items-center gap-2 rounded-2xl bg-white p-1.5 pl-4 shadow-lg focus-within:ring-4 focus-within:ring-white/30">

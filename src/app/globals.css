@@ -93,3 +93,9 @@ a, button:not(:disabled), summary, [role="button"], tr.cursor-pointer, li.cursor
 tr.cursor-pointer:active td { background-color: rgb(219 228 247); }
 .carte-cliquable { cursor: pointer; transition: transform 0.08s, box-shadow 0.15s; }
 .carte-cliquable:active { transform: scale(0.99); }
+
+/* Écrans d'attente : apparition après 0,4 s (rien ne clignote si c'est rapide), message qui glisse doucement. */
+@keyframes attente-apparition { 0%, 60% { opacity: 0; } 100% { opacity: 1; } }
+.attente-apparition { animation: attente-apparition 0.9s ease-out both; }
+@keyframes attente-message { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.attente-message { animation: attente-message 0.35s ease-out both; }

@@ -1,5 +1,7 @@
 "use client";
 
+import { AttenteVoile } from "../../attente";
+
 import { useActionState } from "react";
 import { genererCVUnitechAction, genererPDFUnitechAction, type EtatCVUnitech, type EtatPDFUnitech } from "@/lib/cv-unitech/actions";
 
@@ -12,8 +14,10 @@ export interface CVGenere { id: string; date: string; mission: string | null; do
  */
 export default function BlocCVUnitech({ consultantId, missions, generes }: { consultantId: string; missions: { id: string; intitule: string; client: string | null }[]; generes: CVGenere[] }) {
   const [etat, action, enCours] = useActionState<EtatCVUnitech, FormData>(genererCVUnitechAction, {});
+  const voileCV = <AttenteVoile actif={enCours} messages={["Je lis le CV du consultant…", "Je rédige le CV au format Unitech…", "Je mets en page le Word…", "J'enregistre le document, presque fini…"]} sousTitre="Environ 30 secondes. Vous pouvez rester sur cette page." />;
   return (
     <div className="carte space-y-3 p-6 text-sm">
+      {voileCV}
       <h2 className="titre-section">CV Unitech</h2>
       <p className="text-slate-500"><b>1.</b> Générez le Word, relisez-le et corrigez-le dans SharePoint. <b>2.</b> Produisez le PDF : il reprend le Word corrigé.</p>
       <form action={action} className="space-y-3">
@@ -45,9 +49,11 @@ export default function BlocCVUnitech({ consultantId, missions, generes }: { con
 
 function LigneCV({ g }: { g: CVGenere }) {
   const [etat, action, enCours] = useActionState<EtatPDFUnitech, FormData>(genererPDFUnitechAction, {});
+  const voilePDF = <AttenteVoile actif={enCours} messages={["Je convertis le Word en PDF…", "J'enregistre le PDF…"]} sousTitre="Quelques secondes." />;
   const pdf = etat.resultat?.pdf ?? g.pdf;
   return (
     <form action={action} className="rounded-xl bg-slate-50 px-3 py-2.5 ring-1 ring-slate-200/70">
+      {voilePDF}
       <input type="hidden" name="generation_id" value={g.id} />
       <div className="text-xs text-slate-400">{new Date(g.date).toLocaleDateString("fr-FR")} · {g.mission ?? "Sans mission"}{g.dossier ? ` · ${g.dossier.split("/").slice(-1)[0]}` : ""}</div>
       <div className="mt-1 flex flex-wrap items-center gap-2">

@@ -3,6 +3,7 @@
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { lancerTache, type EtatTache } from "@/lib/sync/actions";
+import { AttenteVoile } from "../attente";
 
 /** Colonne Trello de la mission (« À répartir » pour « Missions en cours », sinon le recruteur ou l'étape), avec le lien vers la carte. */
 export function EtiquetteTrello({ colonne, recruteur, url, compacte }: { colonne: string | null; recruteur: string | null; url: string | null; compacte?: boolean }) {
@@ -20,6 +21,7 @@ export function BoutonActualiserTrello({ derniereLecture }: { derniereLecture: s
   useEffect(() => { if (etat.message) router.refresh(); }, [etat.message, router]);
   return (
     <form action={action} className="flex flex-wrap items-center gap-3">
+      <AttenteVoile actif={enCours} messages={["Je lis le tableau Trello…", "Je mets les missions à jour…", "L'IA lit les nouvelles fiches de poste…"]} sousTitre="Jusqu'à une minute s'il y a de nouvelles missions." />
       <input type="hidden" name="tache" value="trello" />
       <span className="text-xs text-slate-500">
         {enCours ? "Lecture du tableau Trello…" : etat.erreur ? <span className="text-red-700">{etat.erreur}</span> : etat.message ? <span className="text-emerald-700">Missions à jour ✓</span>

@@ -189,6 +189,10 @@ export default async function FicheConsultant({ params, searchParams }: { params
         <form action={modifierConsultant} className="space-y-3 carte p-6 text-sm">
           <h2 className="titre-section">Modifier la fiche</h2>
           <input type="hidden" name="id" value={c.id} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Champ nom="prenom" libelle="Prénom" valeur={c.prenom === "—" ? "" : c.prenom} />
+            <Champ nom="nom" libelle="Nom" valeur={c.nom} />
+          </div>
           <Champ nom="telephone" libelle="Téléphone" valeur={formaterTelephone(c.telephone_e164) || c.telephone_brut} />
           <Champ nom="email" libelle="Email" valeur={c.email} />
           <Champ nom="intitule_poste" libelle="Intitulé de poste" valeur={c.intitule_poste} />
