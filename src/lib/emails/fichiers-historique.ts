@@ -46,11 +46,16 @@ async function avancerFils(supabase: SupabaseClient, gid: string, attendus: Set<
 }
 
 function telechargeurGroupe(gid: string, fils: Record<string, string>) {
+  // Le téléchargement direct d'une pièce jointe de groupe est refusé (403) : elle est lue avec les messages de son fil.
+  const parFil = new Map<string, Promise<{ id: string; attachments?: { id: string; contentBytes?: string }[] }[]>>();
   return async (postId: string, pjId: string) => {
     const fil = fils[postId];
     if (!fil) throw new Error("message introuvable dans le groupe");
-    const pj = await graphGet<{ contentBytes?: string }>(`groups/${gid}/threads/${fil}/posts/${postId}/attachments/${pjId}`);
-    if (!pj.contentBytes) throw new Error("pièce jointe vide");
+    if (!parFil.has(fil)) parFil.set(fil, graphGet<{ value: { id: string; attachments?: { id: string; contentBytes?: string }[] }[] }>(
+      `groups/${gid}/threads/${fil}/posts?$select=id&$expand=attachments`).then((r) => r.value));
+    const posts = await parFil.get(fil)!;
+    const pj = posts.find((p) => p.id === postId)?.attachments?.find((a) => a.id === pjId);
+    if (!pj?.contentBytes) throw new Error("pièce jointe introuvable ou vide");
     return Buffer.from(pj.contentBytes, "base64");
   };
 }
