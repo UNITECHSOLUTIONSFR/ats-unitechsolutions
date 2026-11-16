@@ -24,4 +24,10 @@ begin
 end;
 $function$;
 
-select cron.schedule('ats-trello', '7 * * * *', $$select public.lancer_tache_planifiee('trello')$$);
+-- (Base de test locale sans pg_cron : la planification est sautée.)
+do $$
+begin
+  if exists (select 1 from pg_extension where extname = 'pg_cron') then
+    perform cron.schedule('ats-trello', '7 * * * *', 'select public.lancer_tache_planifiee(''trello'')');
+  end if;
+end $$;
