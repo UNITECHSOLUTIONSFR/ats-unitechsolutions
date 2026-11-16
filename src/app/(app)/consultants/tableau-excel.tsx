@@ -227,6 +227,13 @@ export default function TableauExcel({ vues, vueInitiale, ongletId, entetes, cha
           {colEmail && <button className="bouton-secondaire" onClick={() => copier(colEmail, "email")}><IconeCopier className="h-4 w-4" />Copier les emails</button>}
           {colTel && <button className="bouton-secondaire" onClick={() => copier(colTel, "téléphone")}><IconeCopier className="h-4 w-4" />Copier les téléphones</button>}
           {estAdmin && <FormulaireExport ongletId={ongletId} ids={visibles.filter((l) => selection.has(l.id)).map((l) => l.id)} libelle="Exporter la sélection" secondaire />}
+          {estAdmin && selection.size === 2 && (() => {
+            // Deux fiches cochées : comparaison et fusion (même écran que les « doublons possibles »).
+            const ids = lignes.filter((l) => selection.has(l.id)).map((l) => l.consultant_id).filter((x): x is string => !!x);
+            return ids.length === 2 && ids[0] !== ids[1]
+              ? <Link href={`/alertes/fusion?a=${ids[0]}&b=${ids[1]}`} className="bouton-primaire"><IconeCopier className="h-4 w-4" />Fusionner ces 2 fiches</Link>
+              : null;
+          })()}
           <button className="ml-auto text-marque-700 hover:underline" onClick={() => setSelection(new Set())}>Tout désélectionner</button>
         </div>
       )}
