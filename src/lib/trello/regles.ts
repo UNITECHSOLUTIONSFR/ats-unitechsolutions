@@ -28,10 +28,13 @@ export function lireColonne(nom: string): Colonne | null {
   return null;
 }
 
-/** « EDF – Architecte système » → client EDF, intitulé « Architecte système ». Sans séparateur : pas de client dans le titre. */
+/**
+ * Titres des cartes au format « Poste - Client - Contact » (« Développeur Java Angular - URSAFF », « Data Engineer IA - SNCF - Amar ») :
+ * le poste avant le premier tiret, le client après ; le contact (3e partie) est ignoré. Sans tiret : pas de client dans le titre.
+ */
 export function lireTitre(titre: string): { client: string | null; intitule: string } {
-  const m = /^\s*(.{2,60}?)\s+[-–—|:]\s+(.+)$/.exec(titre);
-  if (m) return { client: m[1].trim(), intitule: m[2].trim() };
+  const parties = titre.split(/\s+[-–—]\s+/).map((p) => p.trim()).filter(Boolean);
+  if (parties.length >= 2) return { intitule: parties[0], client: parties[1] };
   return { client: null, intitule: titre.trim() };
 }
 

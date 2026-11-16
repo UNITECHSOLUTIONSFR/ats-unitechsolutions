@@ -26,9 +26,10 @@ describe("Trello : colonnes du tableau des missions", () => {
 });
 
 describe("Trello : titre, TJM", () => {
-  it("client avant le tiret, sinon pas de client", () => {
-    expect(lireTitre("EDF – Architecte système Microsoft")).toEqual({ client: "EDF", intitule: "Architecte système Microsoft" });
-    expect(lireTitre("RATP - Dev senior full stack")).toEqual({ client: "RATP", intitule: "Dev senior full stack" });
+  it("titre « Poste - Client - Contact »", () => {
+    expect(lireTitre("Développeur Java Angular - URSAFF")).toEqual({ intitule: "Développeur Java Angular", client: "URSAFF" });
+    expect(lireTitre("Data Engineer IA - SNCF - Amar")).toEqual({ intitule: "Data Engineer IA", client: "SNCF" });
+    expect(lireTitre("Expert Ivalua confirmé | spécialiste de la solution - Agromousquetaires - Stecy")).toEqual({ intitule: "Expert Ivalua confirmé | spécialiste de la solution", client: "Agromousquetaires" });
     expect(lireTitre("Lead testeur")).toEqual({ client: null, intitule: "Lead testeur" });
   });
   it("TJM repris à part et retiré du texte lu par l'IA", () => {
@@ -51,11 +52,11 @@ describe("Trello : rapprochement des missions déjà créées dans l'outil", () 
   ];
   it("même client et mots du poste en commun : relié ; sinon : non", () => {
     const liens = rapprocher(missions, [
-      { id: "c1", name: "BPCE - Tech Lead Java Angular", desc: "" },
-      { id: "c2", name: "RATP Dev - Développeur full stack senior", desc: "" },
+      { id: "c1", name: "Tech Lead Java Angular - BPCE", desc: "" },
+      { id: "c2", name: "Développeur full stack senior - RATP Dev", desc: "" },
       { id: "c3", name: "Data Analyst Power BI", desc: "Client : e.SNCF Solutions, Lyon" },
-      { id: "c4", name: "Orange - Développeur Java", desc: "" },
-      { id: "c5", name: "Banque Postale - Expert MFA Ilex", desc: "" },
+      { id: "c4", name: "Développeur Java - Orange", desc: "" },
+      { id: "c5", name: "Expert MFA Ilex - Banque Postale", desc: "" },
     ]);
     expect(Object.fromEntries(liens)).toEqual({ c1: "m1", c2: "m2", c3: "m3", c5: "m4" });
   });
