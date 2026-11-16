@@ -13,7 +13,7 @@ export async function signalerMissionsCorrespondantes(supabase: SupabaseClient, 
     supabase.from("missions").select("id").eq("statut", "ouverte"),
     supabase.from("reglages").select("valeur").eq("cle", "seuil_alerte_nouvelle_fiche").maybeSingle(),
     ponderationsReglees(supabase),
-    supabase.from("consultants").select("disponibilite, disponible_le, disponibilite_maj_le, localisation, statut, profils(annees_experience, seniorite)").eq("id", consultantId).maybeSingle(),
+    supabase.from("consultants").select("intitule_poste, disponibilite, disponible_le, disponibilite_maj_le, localisation, statut, profils(annees_experience, seniorite)").eq("id", consultantId).maybeSingle(),
     supabase.from("consultant_competences").select("competence_id, annees").eq("consultant_id", consultantId),
   ]);
   if (!missions?.length || !c || c.statut === "inactif") return 0;
@@ -27,7 +27,7 @@ export async function signalerMissionsCorrespondantes(supabase: SupabaseClient, 
     const r = scorerConsultant(mission, {
       competences: (comp ?? []).map((k) => ({ competence_id: k.competence_id, annees: k.annees === null ? null : Number(k.annees) })),
       annees_experience: profil?.annees_experience ?? null, seniorite: profil?.seniorite ?? null,
-      disponible_le: c.disponible_le, disponibilite: c.disponibilite, disponibilite_maj_le: c.disponibilite_maj_le, localisation: c.localisation,
+      disponible_le: c.disponible_le, disponibilite: c.disponibilite, disponibilite_maj_le: c.disponibilite_maj_le, localisation: c.localisation, metier: c.intitule_poste,
     }, ponderations);
     if (r.elimine || r.score < seuil) continue;
     const { error } = await supabase.from("propositions").insert({

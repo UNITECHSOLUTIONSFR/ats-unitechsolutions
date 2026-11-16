@@ -6,6 +6,8 @@
  * Le score est une aide à la décision : il n'entraîne jamais de refus automatique.
  */
 
+import { compatibiliteMetier, familleMetier, LIBELLES_METIER } from "./metiers";
+
 export type Seniorite = "junior" | "confirme" | "senior" | "expert";
 const RANG: Record<Seniorite, number> = { junior: 0, confirme: 1, senior: 2, expert: 3 };
 
@@ -41,6 +43,8 @@ export interface MissionAScorer {
   localisation?: string | null;
   disponibilite_obligatoire?: boolean;
   localisation_obligatoire?: boolean;
+  /** Intitulé du poste demandé : sert à comparer le métier (voir metiers.ts). */
+  metier?: string | null;
 }
 
 export interface ConsultantAScorer {
@@ -53,6 +57,8 @@ export interface ConsultantAScorer {
   disponibilite_maj_le?: string | null;
   localisation?: string | null;
   similarite?: number | null; // similarité cosinus 0..1 entre profil et mission (pgvector)
+  /** Titre du consultant (intitulé de poste) : sert à comparer le métier avec la mission. */
+  metier?: string | null;
 }
 
 export interface Raison {
@@ -111,6 +117,11 @@ export function scorerConsultant(
     const ok = !!consultant.localisation && sansAccentsMin(consultant.localisation).includes(sansAccentsMin(mission.localisation));
     if (!ok) motifsElimination.push(`Localisation différente de « ${mission.localisation} »`);
   }
+
+  // Métier : un profil d'un autre métier est écarté (un développeur Java ne fait pas une mission de testeur QA).
+  const fMission = familleMetier(mission.metier), fConsultant = familleMetier(consultant.metier);
+  const metier = compatibiliteMetier(fMission, fConsultant);
+  if (metier === 0) motifsElimination.push(`Métier différent : ${LIBELLES_METIER[fConsultant!]} pour une mission ${LIBELLES_METIER[fMission!]}`);
 
   if (consultant.disponibilite_maj_le) {
     const age = (aujourdHui.getTime() - new Date(consultant.disponibilite_maj_le).getTime()) / JOUR;
@@ -189,7 +200,15 @@ export function scorerConsultant(
     raisons.push({ critere: c.cle, points: arrondi(points), max: arrondi((max * 100) / poidsUtiles), texte: c.texte });
   }
 
-  return { score: arrondi(score), elimine: motifsElimination.length > 0, motifsElimination, raisons, alertes, explication: expliquer(mission, consultant, parId, alertes) };
+  // Métier voisin (ex. DevOps pour une mission de développeur) : score réduit de 15 %.
+  if (metier === 0.6) {
+    score *= 0.85;
+    raisons.push({ critere: "filtre", points: 0, max: 0, texte: `Métier voisin : ${LIBELLES_METIER[fConsultant!]} pour une mission ${LIBELLES_METIER[fMission!]} (score réduit de 15 %)` });
+  } else if (metier === 1) raisons.push({ critere: "filtre", points: 0, max: 0, texte: `Même métier : ${LIBELLES_METIER[fMission!]}` });
+  const explication = expliquer(mission, consultant, parId, alertes);
+  if (metier === 1) explication.atouts.unshift(`Même métier que la mission (${LIBELLES_METIER[fMission!]})`);
+  if (metier === 0.6) explication.aVerifier.unshift(`Métier voisin : ${LIBELLES_METIER[fConsultant!]} pour une mission ${LIBELLES_METIER[fMission!]}`);
+  return { score: arrondi(score), elimine: motifsElimination.length > 0, motifsElimination, raisons, alertes, explication };
 }
 
 const liste = (noms: string[]) => noms.length <= 1 ? noms.join("") : `${noms.slice(0, -1).join(", ")} et ${noms[noms.length - 1]}`;

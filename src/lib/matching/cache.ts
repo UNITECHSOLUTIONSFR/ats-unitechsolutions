@@ -51,7 +51,7 @@ function lireOuCalculer(missionId: string): Promise<ClassementResume> {
       top: lignes.slice(0, 60),
       scores: Object.fromEntries(lignes.map((l) => [l.consultant_id, [Math.round(l.resultat.score * 10) / 10, l.resultat.elimine]])),
     };
-  }, ["classement-v1", missionId], { revalidate: 3600, tags: [tag(missionId), TAG_CLASSEMENTS] })();
+  }, ["classement-v2", missionId], { revalidate: 3600, tags: [tag(missionId), TAG_CLASSEMENTS] })();
 }
 
 /**

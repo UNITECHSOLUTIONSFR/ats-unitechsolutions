@@ -155,7 +155,7 @@ export async function rechercherProfils(supabase: SupabaseClient, criteres: Crit
 
   // La disponibilité ne compte pas pour l'instant ; pas de proximité sémantique sans mission enregistrée.
   const ponderations = { ...PONDERATIONS_PAR_DEFAUT, ...ponderationsBase, disponibilite: 0 };
-  const mission = { competences: exigences, annees_min: criteres.annees_min, seniorite: criteres.seniorite, localisation: null };
+  const mission = { competences: exigences, annees_min: criteres.annees_min, seniorite: criteres.seniorite, localisation: null, metier: criteres.poste };
   const motsPoste = motsSignificatifs(criteres.poste);
 
   const lignes = ((data ?? []) as Ligne[])
@@ -165,7 +165,7 @@ export async function rechercherProfils(supabase: SupabaseClient, criteres: Crit
       for (const [id, m] of parTexte) if (m.has(c.consultant_id)) possedees.push({ competence_id: id, annees: null, partiel: true });
       const r = scorerConsultant(mission, {
         competences: possedees, annees_experience: c.annees_experience === null ? null : Number(c.annees_experience),
-        seniorite: c.seniorite, disponible_le: null, disponibilite: null, disponibilite_maj_le: null, localisation: c.localisation, similarite: null,
+        seniorite: c.seniorite, disponible_le: null, disponibilite: null, disponibilite_maj_le: null, localisation: c.localisation, similarite: null, metier: c.intitule_poste,
       }, ponderations);
 
       let score = r.score;

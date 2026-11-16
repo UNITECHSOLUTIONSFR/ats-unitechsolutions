@@ -216,3 +216,8 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Testé : 209 tests (26 de règles d'accès), 27 écrans ouverts sans erreur (admin), parcours recruteur, build.
 - Suite : réponse de l'utilisatrice sur la modification / suppression des missions ; carte Trello « IMPORTANT | % Contribution » (à ignorer ?).
 
+### 16/11/2026 (matin) — Consultants, activité de l'équipe, matching par métier
+- Fait : écran Consultants réorganisé (actions à droite, un bouton « Filtres », pastilles des filtres actifs) ; Paramètres → Activité de l'équipe (recherches, fiches consultées/ajoutées, modifications, par personne et par jour, actualisée chaque minute ; migration 38) ; missions modifiables/supprimables ; cartes « IMPORTANT » ignorées ; plus d'ajout automatique sur mission sans compétence (380 ajouts erronés retirés) ; matching par famille de métier (classements recalculés, clé v2) ; Trello ajouté au planificateur de secours Supabase chaque heure (migration 39 : GitHub ne déclenche que quelques fois par jour).
+- Testé : 241 tests ; mission « Testeur QA fonctionnel » : le top 15 ne contient plus que des profils de test.
+- Suite : proximité de sens (embeddings gratuits) pour les 20 points « contexte », jamais calculés jusqu'ici.
+

@@ -1,3 +1,4 @@
+import { familleMetier } from "./metiers";
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
@@ -82,6 +83,8 @@ export async function chargerMissionAScorer(supabase: SupabaseClient, missionId:
     localisation: m.localisation,
     disponibilite_obligatoire: !!options.disponibilite_obligatoire,
     localisation_obligatoire: !!options.localisation_obligatoire,
+    // Métier : l'intitulé de la mission, sinon le poste lu par l'IA dans la fiche (titre Trello sans poste reconnaissable).
+    metier: familleMetier(intitule?.intitule) ? intitule!.intitule : ((m.exigences as { intitule?: string } | null)?.intitule ?? intitule?.intitule ?? null),
   };
 }
 
@@ -133,6 +136,7 @@ export async function classementMission(supabase: SupabaseClient, missionId: str
       disponibilite_maj_le: c.disponibilite_maj_le,
       localisation: c.localisation,
       similarite: c.similarite,
+      metier: c.intitule_poste,
     }, ponderations),
   }));
   const classes = classer(lignes);
