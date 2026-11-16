@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleIntitule, lireColonne, lireTitre, lireTJM, rapprocher, sansTJM } from "@/lib/trello/regles";
+import { carteInformation, cleIntitule, lireColonne, lireTitre, lireTJM, rapprocher, sansTJM } from "@/lib/trello/regles";
 
 describe("Trello : colonnes du tableau des missions", () => {
   it.each([
@@ -80,5 +80,13 @@ describe("Grille des missions : lieu court et montant du TJM", () => {
   it("montant sans le libellé", () => {
     expect(montantTJM("Prix d'achat maximum : 425 € HT")).toBe("425 € HT");
     expect(montantTJM("TJM 800 euros")).toBe("800 euros");
+  });
+});
+
+describe("Trello : cartes d'information", () => {
+  it("« IMPORTANT | … » n'est jamais une mission", () => {
+    expect(carteInformation("IMPORTANT | % Contribution")).toBe(true);
+    expect(carteInformation("important : lire avant")).toBe(true);
+    expect(carteInformation("Développeur Java - URSAFF")).toBe(false);
   });
 });

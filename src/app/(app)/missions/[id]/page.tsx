@@ -19,6 +19,7 @@ export const maxDuration = 120;
 import { suivreProposition } from "@/lib/missions/actions";
 import ChoixStatut from "../statut";
 import { EtiquetteTrello } from "../trello";
+import GestionMission from "./gestion";
 import { LIBELLE_STATUT } from "@/lib/missions/statuts";
 
 const STATUTS_PROPOSITION: Record<string, string> = {
@@ -97,6 +98,10 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
         )}
         </div>
       </div>
+
+      <GestionMission estAdmin={utilisateur.role === "admin"} mission={{
+        id, intitule: mission.intitule, client: mission.client, localisation: mission.localisation, texte_besoin: mission.texte_besoin, trello: !!mission.trello_carte_id,
+      }} />
 
       <Exigences missionId={id} texteBesoin={mission.texte_besoin} exigences={exigences.map((e) => ({
         competence_id: e.competence_id, nom: e.competences?.nom_canonique ?? "?", obligatoire: e.obligatoire, importance: e.importance, profils: profilsParCompetence.get(e.competence_id) ?? 0,

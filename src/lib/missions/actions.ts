@@ -211,3 +211,53 @@ export async function ajouterExigence(missionId: string, nom: string) {
   invaliderClassement(missionId);
   revalidatePath(`/missions/${missionId}`);
 }
+
+export interface EtatGestionMission { erreur?: string; message?: string }
+
+/**
+ * Modifie une mission créée dans l'outil (intitulé, client, lieu, description).
+ * Les missions Trello se modifient dans Trello : l'outil les relit toutes les heures (sinon la modification serait écrasée).
+ */
+export async function modifierMission(_e: EtatGestionMission, formData: FormData): Promise<EtatGestionMission> {
+  const { utilisateur, supabase } = await exigerUtilisateur();
+  const id = String(formData.get("mission_id"));
+  const { data: m } = await supabase.from("missions").select("id, trello_carte_id").eq("id", id).maybeSingle();
+  if (!m) return { erreur: "Mission introuvable." };
+  if (m.trello_carte_id) return { erreur: "Mission Trello : modifiez-la dans Trello, l'outil suit dans l'heure (ou « Actualiser depuis Trello »)." };
+  const texte = (k: string, max: number) => String(formData.get(k) ?? "").trim().slice(0, max);
+  const intitule = texte("intitule", 200);
+  if (!intitule) return { erreur: "L'intitulé est obligatoire." };
+  const { error } = await supabase.from("missions").update({
+    intitule, client: texte("client", 120) || null, localisation: texte("localisation", 200) || null,
+    texte_besoin: texte("texte_besoin", 30_000) || intitule,
+  }).eq("id", id);
+  if (error) return { erreur: "Enregistrement impossible : réessayez." };
+  await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "modification", details: { mission: id, intitule } });
+  updateTag("accueil");
+  revalidatePath(`/missions/${id}`);
+  revalidatePath("/missions");
+  return { message: "Mission enregistrée ✓" };
+}
+
+/**
+ * Supprime une mission (administrateurs, confirmation « SUPPRIMER ») : son suivi des candidats est supprimé avec elle.
+ * Mission Trello : la carte n'est plus jamais réimportée (pensez à l'archiver dans Trello).
+ */
+export async function supprimerMission(_e: EtatGestionMission, formData: FormData): Promise<EtatGestionMission> {
+  const { utilisateur, supabase } = await exigerAdmin();
+  const id = String(formData.get("mission_id"));
+  if (String(formData.get("confirmation") ?? "").trim().toUpperCase() !== "SUPPRIMER") return { erreur: "Saisissez SUPPRIMER pour confirmer." };
+  const { data: m } = await supabase.from("missions").select("id, intitule, client, trello_carte_id").eq("id", id).maybeSingle();
+  if (!m) return { erreur: "Mission introuvable." };
+  if (m.trello_carte_id) {
+    const { data: r } = await supabase.from("reglages").select("valeur").eq("cle", "trello_cartes_supprimees").maybeSingle();
+    const liste = Array.isArray(r?.valeur) ? (r!.valeur as string[]) : [];
+    await supabase.from("reglages").upsert({ cle: "trello_cartes_supprimees", valeur: [...new Set([...liste, m.trello_carte_id])], updated_at: new Date().toISOString() });
+  }
+  const { error } = await supabase.from("missions").delete().eq("id", id);
+  if (error) return { erreur: "Suppression impossible : réessayez." };
+  await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "modification", details: { suppression_mission: `${m.intitule}${m.client ? ` · ${m.client}` : ""}`, trello: !!m.trello_carte_id } });
+  updateTag("accueil");
+  revalidatePath("/missions");
+  redirect("/missions");
+}

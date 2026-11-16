@@ -28,6 +28,11 @@ export function lireColonne(nom: string): Colonne | null {
   return null;
 }
 
+/** Cartes d'information (« IMPORTANT | … ») : jamais des missions. */
+export function carteInformation(titre: string): boolean {
+  return /^\s*important\b/i.test(titre);
+}
+
 /**
  * Titres des cartes au format « Poste - Client - Contact » (« Développeur Java Angular - URSAFF », « Data Engineer IA - SNCF - Amar ») :
  * le poste avant le premier tiret, le client après ; le contact (3e partie) est ignoré. Sans tiret : pas de client dans le titre.

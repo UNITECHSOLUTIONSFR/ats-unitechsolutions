@@ -22,7 +22,8 @@ export async function signalerMissionsCorrespondantes(supabase: SupabaseClient, 
   let signales = 0;
   for (const m of missions) {
     const mission = await chargerMissionAScorer(supabase, m.id);
-    if (!mission) continue;
+    // Mission sans compétence demandée : tout le monde aurait un bon score, aucun ajout automatique.
+    if (!mission || !mission.competences.length) continue;
     const r = scorerConsultant(mission, {
       competences: (comp ?? []).map((k) => ({ competence_id: k.competence_id, annees: k.annees === null ? null : Number(k.annees) })),
       annees_experience: profil?.annees_experience ?? null, seniorite: profil?.seniorite ?? null,

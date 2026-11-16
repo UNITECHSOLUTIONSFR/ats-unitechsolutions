@@ -8,7 +8,10 @@ import { resoudreCompetences } from "@/lib/matching/competences";
 import { extraireTexte } from "@/lib/sharepoint/extraction";
 import { normaliserNomPersonne } from "@/lib/metier/texte";
 import { telechargerPieceJointe, trelloGet, type CarteTrello, type ListeTrello } from "./client";
-import { cleIntitule, lireColonne, lireTitre, lireTJM, rapprocher, sansTJM, TABLEAU_TRELLO } from "./regles";
+import { carteInformation, cleIntitule, lireColonne, lireTitre, lireTJM, rapprocher, sansTJM, TABLEAU_TRELLO } from "./regles";
+
+/** Cartes dont la mission a été supprimée par un administrateur : jamais recréées. */
+export const REGLAGE_CARTES_SUPPRIMEES = "trello_cartes_supprimees";
 
 /** Ce qui est fait (ou, en simulation, serait fait) pour une carte : sert à l'aperçu avant la première lecture réelle. */
 export interface PlanCarte {
@@ -46,6 +49,9 @@ export async function synchroniserTrello(supabase: SupabaseClient, options: { si
     trelloGet<CarteTrello[]>(`/boards/${TABLEAU_TRELLO}/cards/all?fields=name,desc,idList,closed,shortUrl,dateLastActivity&attachments=true&attachment_fields=name,mimeType,bytes,isUpload,date`),
   ]);
   const nomListe = new Map(listes.map((l) => [l.id, l.name]));
+  const { data: reglage } = await supabase.from("reglages").select("valeur").eq("cle", REGLAGE_CARTES_SUPPRIMEES).maybeSingle();
+  const supprimees = new Set(Array.isArray(reglage?.valeur) ? (reglage!.valeur as string[]) : []);
+  const ignorer = (c: CarteTrello) => supprimees.has(c.id) || carteInformation(c.name);
 
   const { data: existantes } = await supabase.from("missions").select("id, intitule, statut, trello_carte_id, trello_empreinte, trello_colonne, trello_recruteur, client, tjm");
   const parCarte = new Map<string, MissionExistante>();
@@ -62,7 +68,7 @@ export async function synchroniserTrello(supabase: SupabaseClient, options: { si
   };
 
   // Une nouvelle mission n'entre dans l'outil QUE par « Missions en cours » ; une carte déjà connue est suivie dans toutes les colonnes.
-  const nouvellesPossibles = cartes.filter((c) => !c.closed && !parCarte.has(c.id) && lireColonne(nomListe.get(c.idList) ?? "")?.aRepartir);
+  const nouvellesPossibles = cartes.filter((c) => !ignorer(c) && !c.closed && !parCarte.has(c.id) && lireColonne(nomListe.get(c.idList) ?? "")?.aRepartir);
   const liens = rapprocher([...sansCarte.values()], nouvellesPossibles);
   const parId = new Map([...sansCarte.values()].map((m) => [m.id, m]));
 
@@ -70,6 +76,7 @@ export async function synchroniserTrello(supabase: SupabaseClient, options: { si
   const aAnalyser: { carte: CarteTrello; missionId: string; texte: string; empreinte: string; titre: ReturnType<typeof lireTitre>; dejaRelieeAvecExigences: boolean }[] = [];
 
   for (const carte of cartes) {
+    if (ignorer(carte)) { bilan.ignorees++; continue; } // carte d'information ou mission supprimée par un administrateur
     const colonne = carte.closed ? { statut: "fermee" as const, recruteur: null, aRepartir: false } : lireColonne(nomListe.get(carte.idList) ?? "");
     const existante = parCarte.get(carte.id);
     if (!colonne) { if (!existante) bilan.ignorees++; continue; } // colonne ignorée (ex. Sourcing Kefi) : rien ne change
