@@ -12,12 +12,12 @@ export default function RecuperationFichiers() {
     setEnCours(source);
     setEtat((e) => ({ ...e, [source]: { ranges: 0, dernier: {} } }));
     try {
-      for (let i = 0; i < 20; i++) {
+      for (let i = 0; i < 60; i++) {
         const fd = new FormData();
         fd.set("source", source);
         const r = await recupererFichiersCV({}, fd);
         setEtat((e) => ({ ...e, [source]: { ranges: (e[source]?.ranges ?? 0) + (r.ranges ?? 0), dernier: r } }));
-        if (!r.ranges || !r.restants) break;
+        if (!r.aSuivre) break;
       }
     } catch {
       setEtat((e) => ({ ...e, [source]: { ranges: e[source]?.ranges ?? 0, dernier: { erreur: "Connexion interrompue : relancez, la récupération reprend là où elle s'est arrêtée." } } }));
@@ -32,7 +32,9 @@ export default function RecuperationFichiers() {
         <div className="text-slate-500">{texte}</div>
         {etat[source] && (
           <div className="mt-1">
-            <span className="text-emerald-700">{etat[source].ranges} fichier(s) rangé(s){!enCours && " · terminé"}</span>
+            <span className="text-emerald-700">{etat[source].ranges} fichier(s) rangé(s){enCours === source ? "…" : " · terminé"}</span>
+            {enCours === source && etat[source].dernier.lecture && <span className="ml-2 text-slate-500">({etat[source].dernier.lecture})</span>}
+            {enCours !== source && etat[source].dernier.restants ? <span className="ml-2 text-slate-500">{etat[source].dernier.restants} restant(s)</span> : null}
             {etat[source].dernier.erreur && <span className="ml-2 text-red-700">{etat[source].dernier.erreur}</span>}
           </div>
         )}
@@ -47,7 +49,7 @@ export default function RecuperationFichiers() {
         <h2 className="titre-section">Fichiers des CV déjà analysés</h2>
         <p className="mt-0.5 text-slate-500">Une seule fois, accès temporaire ouvert : les CV d&apos;origine (Word, PDF) sont rangés dans SharePoint, « Candidatures reçues », et chaque fiche peut les ouvrir. Aucune IA.</p>
       </div>
-      {ligne("groupe", "Historique du groupe recrutement@", "522 CV · accès « Group.Read.All » à ouvrir dans Entra")}
+      {ligne("groupe", "Historique du groupe recrutement@", "522 CV · plusieurs minutes, gardez la page ouverte")}
       {ligne("perso", "Votre dossier « Consultant »", "469 CV · accès temporaire à votre boîte")}
     </section>
   );

@@ -16,29 +16,46 @@ export const SOURCES = {
 
 type Doc = { id: string; consultant_id: string | null; nom_fichier: string; sharepoint_item_id: string; modifie_sharepoint_le: string | null };
 
-/** Téléchargement d'une pièce jointe. Groupe : le fil de chaque message est retrouvé une fois (liste des fils du groupe). */
-async function telechargeurGroupe() {
+/** Avancement de la lecture des fils du groupe, gardé entre deux passages (la lecture complète dépasse 5 minutes). */
+const REGLAGE_FILS = "reprise_groupe_fils";
+type EtatFils = { suivant: string | null; fils: Record<string, string>; fini: boolean };
+
+async function idGroupe(): Promise<string> {
   const g = await graphGet<{ value: { id: string }[] }>(`groups?$filter=${encodeURIComponent("mail eq 'recrutement@unitechsolutions.fr'")}&$select=id`);
   const gid = g.value[0]?.id;
   if (!gid) throw new Error("groupe recrutement introuvable");
-  const filDe = new Map<string, string>();
-  let url: string | undefined = `groups/${gid}/threads?$select=id&$top=50`;
-  while (url) {
-    const page: { value: { id: string }[]; "@odata.nextLink"?: string } = await graphGet(url);
-    for (const f of page.value) {
-      const posts = await graphGet<{ value: { id: string }[] }>(`groups/${gid}/threads/${f.id}/posts?$select=id`);
-      for (const p of posts.value) filDe.set(p.id, f.id);
-    }
-    url = page["@odata.nextLink"]?.replace(/^https:\/\/graph\.microsoft\.com\/v1\.0\//, "");
+  return gid;
+}
+
+/**
+ * Groupe : une pièce jointe se télécharge par son fil de discussion, qu'il faut retrouver dans la liste des fils (50 par page,
+ * messages compris). Seuls les messages attendus sont retenus ; la lecture reprend là où elle s'était arrêtée.
+ */
+async function avancerFils(supabase: SupabaseClient, gid: string, attendus: Set<string>, finAvant: number): Promise<EtatFils> {
+  const { data } = await supabase.from("reglages").select("valeur").eq("cle", REGLAGE_FILS).maybeSingle();
+  const etat: EtatFils = (data?.valeur as EtatFils | null) ?? { suivant: `groups/${gid}/threads?$select=id&$expand=posts($select=id)&$top=50`, fils: {}, fini: false };
+  const manquants = () => [...attendus].some((p) => !etat.fils[p]);
+  while (!etat.fini && etat.suivant && Date.now() < finAvant && manquants()) {
+    const page: { value: { id: string; posts?: { id: string }[] }[]; "@odata.nextLink"?: string } = await graphGet(etat.suivant);
+    for (const f of page.value) for (const p of f.posts ?? []) if (attendus.has(p.id)) etat.fils[p.id] = f.id;
+    etat.suivant = page["@odata.nextLink"]?.replace(/^https:\/\/graph\.microsoft\.com\/v1\.0\//, "") ?? null;
+    if (!etat.suivant) etat.fini = true;
+    await supabase.from("reglages").upsert({ cle: REGLAGE_FILS, valeur: etat });
   }
+  return etat;
+}
+
+function telechargeurGroupe(gid: string, fils: Record<string, string>) {
   return async (postId: string, pjId: string) => {
-    const fil = filDe.get(postId);
+    const fil = fils[postId];
     if (!fil) throw new Error("message introuvable dans le groupe");
     const pj = await graphGet<{ contentBytes?: string }>(`groups/${gid}/threads/${fil}/posts/${postId}/attachments/${pjId}`);
     if (!pj.contentBytes) throw new Error("pièce jointe vide");
     return Buffer.from(pj.contentBytes, "base64");
   };
 }
+
+const decouper = (id: string) => [id.slice(0, id.lastIndexOf("/")), id.slice(id.lastIndexOf("/") + 1)] as const;
 
 function telechargeurBoite(boite: string) {
   return async (messageId: string, pjId: string) =>
@@ -47,15 +64,30 @@ function telechargeurBoite(boite: string) {
 
 export async function recupererFichiersHistorique(
   supabase: SupabaseClient, source: keyof typeof SOURCES, options: { boite?: string; limite?: number; simulation?: boolean } = {},
-): Promise<{ aTraiter: number; ranges: number; erreurs: string[] }> {
+): Promise<{ aTraiter: number; ranges: number; erreurs: string[]; aSuivre: boolean; lecture?: string }> {
+  // Un passage s'arrête avant la limite de 5 minutes de l'hébergeur ; le bouton enchaîne les passages.
+  const debut = Date.now();
   const { driveId, sousDossier } = SOURCES[source];
   const { data } = await supabase.from("documents").select("id, consultant_id, nom_fichier, sharepoint_item_id, modifie_sharepoint_le")
-    .eq("sharepoint_drive_id", driveId).not("url_web", "ilike", "%sharepoint.com%").limit(options.limite ?? 1000);
-  const docs = (data ?? []) as Doc[];
-  const bilan = { aTraiter: docs.length, ranges: 0, erreurs: [] as string[] };
+    .eq("sharepoint_drive_id", driveId).not("url_web", "ilike", "%sharepoint.com%").limit(2000);
+  let docs = (data ?? []) as Doc[];
+  const bilan = { aTraiter: docs.length, ranges: 0, erreurs: [] as string[], aSuivre: false, lecture: undefined as string | undefined };
   if (options.simulation || !docs.length) return bilan;
   if (source === "perso" && !options.boite) throw new Error("boîte à lire non précisée");
-  const telecharger = source === "groupe" ? await telechargeurGroupe() : telechargeurBoite(options.boite!);
+
+  let telecharger: (messageId: string, pjId: string) => Promise<Buffer>;
+  if (source === "groupe") {
+    const gid = await idGroupe();
+    const etat = await avancerFils(supabase, gid, new Set(docs.map((d) => decouper(d.sharepoint_item_id)[0])), debut + 150_000);
+    const trouves = docs.filter((d) => etat.fils[decouper(d.sharepoint_item_id)[0]]);
+    // Messages pas encore retrouvés : laissés pour le passage suivant (ou signalés une fois tout le groupe lu).
+    if (!etat.fini) { bilan.aSuivre = true; bilan.lecture = `${Object.keys(etat.fils).length} message(s) retrouvé(s) sur ${docs.length}, lecture du groupe en cours`; }
+    else for (const d of docs.filter((x) => !trouves.includes(x))) bilan.erreurs.push(`${d.nom_fichier} : message introuvable dans le groupe`);
+    docs = trouves;
+    telecharger = telechargeurGroupe(gid, etat.fils);
+  } else telecharger = telechargeurBoite(options.boite!);
+  docs = docs.slice(0, options.limite ?? 1000);
+
   const ids = [...new Set(docs.map((d) => d.consultant_id).filter(Boolean))] as string[];
   const personnes = new Map<string, { prenom: string; nom: string }>();
   for (let i = 0; i < ids.length; i += 200) {
@@ -63,9 +95,10 @@ export async function recupererFichiersHistorique(
     for (const x of c ?? []) personnes.set(x.id, { prenom: x.prenom, nom: x.nom });
   }
   for (let i = 0; i < docs.length; i += 4) {
+    if (Date.now() - debut > 240_000) { bilan.aSuivre = true; break; }
     await Promise.all(docs.slice(i, i + 4).map(async (d) => {
       try {
-        const [messageId, pjId] = [d.sharepoint_item_id.slice(0, d.sharepoint_item_id.lastIndexOf("/")), d.sharepoint_item_id.slice(d.sharepoint_item_id.lastIndexOf("/") + 1)];
+        const [messageId, pjId] = decouper(d.sharepoint_item_id);
         const contenu = await telecharger(messageId, pjId);
         const personne = (d.consultant_id && personnes.get(d.consultant_id)) || { prenom: "", nom: d.nom_fichier.replace(/\.[a-z]+$/i, "") };
         await deposerCVRecu(supabase, d.id, contenu, d.nom_fichier, personne, d.modifie_sharepoint_le ?? new Date().toISOString(), sousDossier);
@@ -75,5 +108,6 @@ export async function recupererFichiersHistorique(
       }
     }));
   }
+  if (bilan.ranges && bilan.ranges < bilan.aTraiter) bilan.aSuivre = true;
   return bilan;
 }

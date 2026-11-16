@@ -231,3 +231,8 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Fait : alertes du bilan cliquables (tâche en retard → Synchronisations, secrets → Échéances, secours → Santé) ; recopie vers l'Excel limitée à 90 s (le reste la nuit suivante) ; étapes secondaires de la tâche CV reportées si le temps manque ; exécutions restées « en cours » > 15 min closes en échec.
 - Testé : 242 tests, compilation OK.
 - Suite : relancer Excel et CV depuis Synchronisations ; récupération des fichiers CV (bouton admin) ; décision sur la méthode de matching.
+
+### 16/11/2026 — Remplacer le Word Unitech + reprise du groupe recrutement@
+- Fait : bouton « Remplacer le Word Unitech » sur chaque CV généré (Word déposé à la place de l'ancien, même nom, PDF refait) ; récupération des fichiers du groupe en plusieurs passages (lecture des fils reprise là où elle s'est arrêtée, réglage `reprise_groupe_fils`, arrêt avant 5 min).
+- Testé : 242 tests, compilation, capture du bouton.
+- Suite : relancer la récupération du groupe puis de la boîte « Consultant » ; refermer les accès ensuite.

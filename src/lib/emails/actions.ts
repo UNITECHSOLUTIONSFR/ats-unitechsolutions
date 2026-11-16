@@ -46,7 +46,7 @@ export async function lancerRepriseDossier(_e: EtatReprise, formData: FormData):
   }
 }
 
-export interface EtatFichiers { message?: string; erreur?: string; ranges?: number; restants?: number }
+export interface EtatFichiers { message?: string; erreur?: string; ranges?: number; restants?: number; aSuivre?: boolean; lecture?: string }
 
 /**
  * Récupère les FICHIERS des CV déjà analysés (historique du groupe recrutement@ ou dossier « Consultant » de la boîte de
@@ -57,11 +57,11 @@ export async function recupererFichiersCV(_e: EtatFichiers, formData: FormData):
   const source = String(formData.get("source")) === "groupe" ? "groupe" : "perso";
   try {
     const { recupererFichiersHistorique } = await import("./fichiers-historique");
-    const b = await recupererFichiersHistorique(clientSupabaseAdmin(), source, { boite: utilisateur.email, limite: source === "groupe" ? 200 : 120 });
+    const b = await recupererFichiersHistorique(clientSupabaseAdmin(), source, { boite: utilisateur.email });
     const reste = Math.max(0, b.aTraiter - b.ranges);
     revalidatePath("/parametres/emails");
     return {
-      message: `${b.ranges} fichier(s) rangé(s) dans SharePoint.`, ranges: b.ranges, restants: b.ranges ? reste : 0,
+      message: `${b.ranges} fichier(s) rangé(s) dans SharePoint.`, ranges: b.ranges, restants: reste, aSuivre: b.aSuivre, lecture: b.lecture,
       erreur: b.erreurs.length ? `${b.erreurs.length} fichier(s) non récupéré(s) : ${b.erreurs.slice(0, 2).join(" ; ")}` : undefined,
     };
   } catch (e) {
