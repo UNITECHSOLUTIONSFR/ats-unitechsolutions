@@ -172,3 +172,17 @@ export async function actualiserPDFUnitech(supabase: SupabaseClient, limite = 30
   }
   return { pdfMisAJour: misAJour };
 }
+
+/**
+ * Word Unitech remplacé à la main (corrigé hors de l'outil) : déposé à la place de l'ancien, au même endroit et sous le même nom,
+ * relié à la fiche, puis le PDF est refait à partir de ce nouveau Word.
+ */
+export async function remplacerWordUnitech(supabase: SupabaseClient, generationId: string, contenu: Buffer): Promise<ResultatPDFUnitech & { word: { nom: string; url: string } }> {
+  const { data: g } = await supabase.from("cv_unitech_generes").select("drive_id, word_nom, dossier").eq("id", generationId).single();
+  if (!g?.drive_id || !g.dossier || !g.word_nom) throw new Error("CV Unitech introuvable : générez d'abord le Word.");
+  const word = await graphTeleverser(g.drive_id as string, `${g.dossier}/${g.word_nom}`, contenu,
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document", fetch, "replace");
+  await supabase.from("cv_unitech_generes").update({ word_item_id: word.id, word_url: word.webUrl, word_nom: word.name }).eq("id", generationId);
+  const pdf = await genererPDFUnitech(supabase, generationId);
+  return { ...pdf, word: { nom: word.name, url: word.webUrl } };
+}

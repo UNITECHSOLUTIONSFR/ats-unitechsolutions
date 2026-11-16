@@ -1,7 +1,7 @@
 "use server";
 
 import { exigerUtilisateur } from "@/lib/acces";
-import { genererCVUnitech, genererPDFUnitech, type ResultatCVUnitech, type ResultatPDFUnitech } from "./service";
+import { genererCVUnitech, genererPDFUnitech, remplacerWordUnitech, type ResultatCVUnitech, type ResultatPDFUnitech } from "./service";
 
 export interface EtatCVUnitech { erreur?: string; resultat?: ResultatCVUnitech }
 export interface EtatPDFUnitech { erreur?: string; resultat?: ResultatPDFUnitech }
@@ -42,6 +42,32 @@ export async function genererPDFUnitechAction(_e: EtatPDFUnitech, formData: Form
     const resultat = await genererPDFUnitech(supabase, id);
     const { data: g } = await supabase.from("cv_unitech_generes").select("consultant_id, mission_id").eq("id", id).single();
     await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "export", consultant_id: g?.consultant_id ?? null, details: { cv_unitech_pdf: resultat.pdf.nom } });
+    const { revalidatePath } = await import("next/cache");
+    if (g?.consultant_id) revalidatePath(`/consultants/${g.consultant_id}`);
+    if (g?.mission_id) revalidatePath(`/missions/${g.mission_id}`);
+    return { resultat };
+  } catch (e) {
+    return { erreur: (e as Error).message.slice(0, 300) };
+  }
+}
+
+export interface EtatRemplacementWord { erreur?: string; resultat?: ResultatPDFUnitech & { word: { nom: string; url: string } } }
+
+/** Remplace le Word Unitech par un fichier choisi (Word corrigé à la main), puis refait le PDF. */
+export async function remplacerWordUnitechAction(_e: EtatRemplacementWord, formData: FormData): Promise<EtatRemplacementWord> {
+  const { utilisateur, supabase } = await exigerUtilisateur();
+  const id = String(formData.get("generation_id"));
+  const fichier = formData.get("word");
+  if (!(fichier instanceof File) || fichier.size === 0) return { erreur: "Choisissez le Word Unitech (.docx)." };
+  if (!/\.docx$/i.test(fichier.name)) return { erreur: "Le fichier doit être un Word (.docx)." };
+  if (fichier.size > 4 * 1024 * 1024) return { erreur: "Fichier trop lourd (4 Mo maximum)." };
+  const contenu = Buffer.from(await fichier.arrayBuffer());
+  // Un .docx est une archive zip : refus d'un fichier qui n'en est pas un.
+  if (contenu[0] !== 0x50 || contenu[1] !== 0x4b) return { erreur: "Ce fichier n'est pas un Word valide." };
+  try {
+    const resultat = await remplacerWordUnitech(supabase, id, contenu);
+    const { data: g } = await supabase.from("cv_unitech_generes").select("consultant_id, mission_id").eq("id", id).single();
+    await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "modification", consultant_id: g?.consultant_id ?? null, details: { cv_unitech_word_remplace: resultat.word.nom } });
     const { revalidatePath } = await import("next/cache");
     if (g?.consultant_id) revalidatePath(`/consultants/${g.consultant_id}`);
     if (g?.mission_id) revalidatePath(`/missions/${g.mission_id}`);

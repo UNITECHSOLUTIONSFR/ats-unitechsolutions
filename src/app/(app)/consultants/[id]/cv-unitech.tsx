@@ -2,8 +2,8 @@
 
 import { AttenteVoile } from "../../attente";
 
-import { useActionState } from "react";
-import { genererCVUnitechAction, genererPDFUnitechAction, type EtatCVUnitech, type EtatPDFUnitech } from "@/lib/cv-unitech/actions";
+import { useActionState, useRef } from "react";
+import { genererCVUnitechAction, genererPDFUnitechAction, remplacerWordUnitechAction, type EtatCVUnitech, type EtatPDFUnitech, type EtatRemplacementWord } from "@/lib/cv-unitech/actions";
 
 export interface CVGenere { id: string; date: string; mission: string | null; dossier: string | null; word: { nom: string; url: string }; pdf: { nom: string; url: string } | null; pdfLe: string | null }
 
@@ -50,19 +50,35 @@ export default function BlocCVUnitech({ consultantId, missions, generes }: { con
 function LigneCV({ g }: { g: CVGenere }) {
   const [etat, action, enCours] = useActionState<EtatPDFUnitech, FormData>(genererPDFUnitechAction, {});
   const voilePDF = <AttenteVoile actif={enCours} messages={["Je convertis le Word en PDF…", "J'enregistre le PDF…"]} sousTitre="Quelques secondes." />;
-  const pdf = etat.resultat?.pdf ?? g.pdf;
+  const [etatW, actionW, enCoursW] = useActionState<EtatRemplacementWord, FormData>(remplacerWordUnitechAction, {});
+  const fichierRef = useRef<HTMLInputElement>(null);
+  const formWRef = useRef<HTMLFormElement>(null);
+  const pdf = etatW.resultat?.pdf ?? etat.resultat?.pdf ?? g.pdf;
+  const word = etatW.resultat?.word ?? g.word;
   return (
-    <form action={action} className="rounded-xl bg-slate-50 px-3 py-2.5 ring-1 ring-slate-200/70">
+    <div className="rounded-xl bg-slate-50 px-3 py-2.5 ring-1 ring-slate-200/70">
+    <AttenteVoile actif={enCoursW} messages={["J'enregistre votre Word dans SharePoint…", "Je refais le PDF à partir de votre Word…"]} sousTitre="Quelques secondes." />
+    <form ref={formWRef} action={actionW} className="hidden">
+      <input type="hidden" name="generation_id" value={g.id} />
+      <input ref={fichierRef} type="file" name="word" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        onChange={(e) => { if (e.target.files?.length) formWRef.current?.requestSubmit(); }} />
+    </form>
+    <form action={action}>
       {voilePDF}
       <input type="hidden" name="generation_id" value={g.id} />
       <div className="text-xs text-slate-400">{new Date(g.date).toLocaleDateString("fr-FR")} · {g.mission ?? "Sans mission"}{g.dossier ? ` · ${g.dossier.split("/").slice(-1)[0]}` : ""}</div>
       <div className="mt-1 flex flex-wrap items-center gap-2">
-        <a href={g.word.url} target="_blank" rel="noreferrer" className="bouton-secondaire text-xs">Word (ouvrir, corriger)</a>
+        <a href={word.url} target="_blank" rel="noreferrer" className="bouton-secondaire text-xs">Word (ouvrir, corriger)</a>
+        <button type="button" disabled={enCoursW} onClick={() => fichierRef.current?.click()} className="bouton-secondaire text-xs"
+          title="Déposer votre propre Word Unitech à la place de celui-ci (le PDF est refait)">{enCoursW ? "Remplacement…" : "Remplacer le Word Unitech"}</button>
         {pdf && <a href={pdf.url} target="_blank" rel="noreferrer" className="bouton-secondaire text-xs">PDF</a>}
         <button disabled={enCours} className="bouton-primaire py-1.5 text-xs">{enCours ? "Conversion…" : pdf ? "2. Mettre à jour le PDF" : "2. Produire le PDF"}</button>
       </div>
       {etat.erreur && <p className="mt-1 text-xs text-red-700">{etat.erreur}</p>}
       {etat.resultat && <p className="mt-1 text-xs text-emerald-700">PDF produit à partir du Word actuel ✓</p>}
+      {etatW.erreur && <p className="mt-1 text-xs text-red-700">{etatW.erreur}</p>}
+      {etatW.resultat && <p className="mt-1 text-xs text-emerald-700">Word remplacé et PDF refait ✓</p>}
     </form>
+    </div>
   );
 }
