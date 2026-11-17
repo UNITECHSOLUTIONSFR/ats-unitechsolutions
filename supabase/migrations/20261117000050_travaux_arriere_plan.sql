@@ -11,6 +11,9 @@ create table if not exists public.cache_recherches (
   cle text primary key,
   criteres jsonb not null,
   reponse text,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
+drop trigger if exists cache_recherches_maj_updated_at on public.cache_recherches;
+create trigger cache_recherches_maj_updated_at before update on public.cache_recherches for each row execute function maj_updated_at();
 alter table public.cache_recherches enable row level security; -- aucune règle : lisible par le serveur seulement
