@@ -32,7 +32,9 @@ export default async function Activite({ searchParams }: { searchParams: Promise
       <div className="grid gap-4 sm:grid-cols-3">
         <Chiffre valeur={total.r} libelle="recherches" />
         <Chiffre valeur={total.c} libelle="fiches consultées" />
-        <Chiffre valeur={total.a} libelle="fiches ajoutées" />
+        <Link href={`/parametres/activite/ajouts?periode=${choix[0]}`} className="block rounded-[inherit] transition hover:-translate-y-0.5" title="Voir les fiches ajoutées par toute l'équipe">
+          <Chiffre valeur={total.a} libelle="fiches ajoutées · voir la liste →" />
+        </Link>
       </div>
 
       <section className="carte overflow-x-auto">
@@ -46,7 +48,11 @@ export default async function Activite({ searchParams }: { searchParams: Promise
                 <td className="px-5 py-3"><span className="font-semibold text-nuit">{p.nom}</span> <span className="text-xs text-slate-400">{p.role === "admin" ? "administrateur" : "recruteur"}</span></td>
                 <td className="px-5 py-3 text-right tabular-nums font-semibold">{p.recherches}</td>
                 <td className="px-5 py-3 text-right tabular-nums">{p.fichesConsultees} <span className="text-xs text-slate-400">({p.consultations} ouvertures)</span></td>
-                <td className="px-5 py-3 text-right tabular-nums font-semibold text-emerald-700">{p.ajouts}</td>
+                <td className="px-5 py-3 text-right tabular-nums font-semibold text-emerald-700">
+                  {p.ajouts > 0
+                    ? <Link href={`/parametres/activite/ajouts?periode=${choix[0]}&personne=${p.id}`} className="underline decoration-emerald-300 underline-offset-4 hover:text-emerald-900" title={`Voir les fiches ajoutées par ${p.nom}`}>{p.ajouts} →</Link>
+                    : p.ajouts}
+                </td>
                 <td className="px-5 py-3 text-right tabular-nums">{p.modifications}</td>
               </tr>
             ))}
