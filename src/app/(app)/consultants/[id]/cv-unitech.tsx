@@ -1,6 +1,7 @@
 "use client";
 
 import { AttenteVoile } from "../../attente";
+import { LectureCVEnCours } from "./lecture-cv";
 
 import { useActionState, useRef } from "react";
 import { genererCVUnitechAction, genererPDFUnitechAction, remplacerWordUnitechAction, type EtatCVUnitech, type EtatPDFUnitech, type EtatRemplacementWord } from "@/lib/cv-unitech/actions";
@@ -12,9 +13,10 @@ export interface CVGenere { id: string; date: string; mission: string | null; do
  * 1. le Word au modèle Unitech (rangé dans le dossier métier), à relire et corriger si besoin dans SharePoint ;
  * 2. le PDF, produit à partir du Word tel qu'il est dans SharePoint (mis à jour chaque nuit si le Word change).
  */
-export default function BlocCVUnitech({ consultantId, missions, generes }: { consultantId: string; missions: { id: string; intitule: string; client: string | null }[]; generes: CVGenere[] }) {
+export default function BlocCVUnitech({ consultantId, missions, generes, enPreparation, message }: { consultantId: string; missions: { id: string; intitule: string; client: string | null }[]; generes: CVGenere[]; enPreparation?: string | null; message?: string | null }) {
   const [etat, action, enCours] = useActionState<EtatCVUnitech, FormData>(genererCVUnitechAction, {});
-  const voileCV = <AttenteVoile actif={enCours} messages={["Je lis le CV du consultant…", "Je rédige le CV au format Unitech…", "Je mets en page le Word…", "J'enregistre le document, presque fini…"]} sousTitre="Environ 30 secondes. Vous pouvez rester sur cette page." />;
+  // Le Word se prépare en arrière-plan : bandeau « en préparation », puis il apparaît dans la liste tout seul.
+  const voileCV = enPreparation ? <LectureCVEnCours depuis={enPreparation} texte="Le Word Unitech se prépare (environ 30 s) : il apparaîtra ci-dessous tout seul. Vous pouvez continuer à travailler." texteBloque="La préparation du Word semble bloquée : relancez-la." /> : null;
   return (
     <div className="carte space-y-3 p-6 text-sm">
       {voileCV}
@@ -22,14 +24,16 @@ export default function BlocCVUnitech({ consultantId, missions, generes }: { con
       <p className="text-slate-500"><b>1.</b> Générez le Word, relisez-le et corrigez-le dans SharePoint. <b>2.</b> Produisez le PDF : il reprend le Word corrigé.</p>
       <form action={action} className="space-y-3">
         <input type="hidden" name="consultant_id" value={consultantId} />
+        <input type="hidden" name="arriere_plan" value="1" />
         <label className="block font-medium text-nuit">Adéquation à la mission (facultatif)
           <select name="mission_id" defaultValue="" className="champ mt-1 w-full">
             <option value="">Sans mission (section « Profil »)</option>
             {missions.map((m) => <option key={m.id} value={m.id}>{m.intitule}{m.client ? ` · ${m.client}` : ""}</option>)}
           </select>
         </label>
-        <button disabled={enCours} className="bouton-primaire w-full justify-center">{enCours ? "Rédaction du Word… (environ 30 s)" : "1. Générer le Word Unitech"}</button>
+        <button disabled={enCours || !!enPreparation} className="bouton-primaire w-full justify-center">{enCours ? "Lancement…" : enPreparation ? "Word en préparation…" : "1. Générer le Word Unitech"}</button>
         {etat.erreur && <p className="text-red-700">{etat.erreur}</p>}
+        {!enPreparation && message && <p className="rounded-xl bg-amber-50 p-3 text-amber-800 ring-1 ring-amber-200">{message}</p>}
         {etat.resultat && (
           <p className="rounded-xl bg-emerald-50/80 p-3 text-emerald-800 ring-1 ring-emerald-200">
             Word déposé dans SharePoint · dossier <b>{etat.resultat.dossier.split("/").slice(-1)[0]}</b>. Relisez-le (les notes surlignées en jaune sont à compléter), puis produisez le PDF ci-dessous.

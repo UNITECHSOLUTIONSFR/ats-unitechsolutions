@@ -7,7 +7,8 @@ import { calculerTrigramme } from "@/lib/metier/trigramme";
 import { exigerUtilisateur } from "@/lib/acces";
 import { normaliserTelephone } from "@/lib/metier/telephone";
 import { normaliserEmail } from "@/lib/metier/dedoublonnage";
-import { enregistrerCVJoint, lireCVJoint } from "./cv-joint";
+import { enregistrerCVJoint, lireCVJoint, refusFichierCV } from "./cv-joint";
+import { lireCVEnArrierePlan } from "./cv-arriere-plan";
 
 const STATUTS = ["candidat", "consultant", "en_mission", "inactif"];
 
@@ -143,7 +144,12 @@ export async function creerConsultant(_e: EtatCreation, formData: FormData): Pro
   const saisi = (k: string) => String(formData.get(k) ?? "").trim() || null;
   // CV joint : lu d'abord ; les champs laissés vides sont remplis à partir du CV (ce que l'équipe a saisi est prioritaire).
   const fichier = formData.get("cv");
-  const lecture = fichier instanceof File && fichier.size > 0 ? await lireCVJoint(fichier) : null;
+  const avecCV = fichier instanceof File && fichier.size > 0;
+  if (avecCV) { const refus = refusFichierCV(fichier); if (refus) return { erreur: refus }; }
+  // Nom saisi : la fiche est créée tout de suite et l'IA lit le CV en arrière-plan (la fiche se complète seule).
+  // Sans nom saisi, il faut attendre la lecture du CV pour connaître le nom.
+  const enArrierePlan = avecCV && !!saisi("nom");
+  const lecture = avecCV && !enArrierePlan ? await lireCVJoint(fichier) : null;
   if (lecture && "erreur" in lecture) return { erreur: lecture.erreur };
   const p = lecture?.profil;
   const duCV: Record<string, string | null> = {
@@ -182,6 +188,7 @@ export async function creerConsultant(_e: EtatCreation, formData: FormData): Pro
   if (error || !cree) return { erreur: error?.message ?? "Fiche non créée." };
   await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "creation", consultant_id: cree.id, details: {} });
   // CV joint : rangé dans SharePoint, compétences enregistrées (lecture déjà faite) ; la fiche sort dans la recherche et le matching.
+  if (enArrierePlan) await lireCVEnArrierePlan(cree.id, fichier as File, utilisateur.id);
   const avertissement = lecture ? await enregistrerCVJoint(cree.id, lecture, { prenom: prenom ?? "—", nom }) : null;
   invaliderTableau();
   revalidatePath("/consultants");
@@ -256,30 +263,13 @@ export async function ajouterCVConsultant(_e: EtatAjoutCV, formData: FormData): 
   const id = String(formData.get("id"));
   const fichier = formData.get("cv");
   if (!(fichier instanceof File) || fichier.size === 0) return { erreur: "Choisissez le CV (PDF ou Word)." };
-  const { data: c } = await supabase.from("consultants").select("prenom, nom, email, telephone_e164, intitule_poste, localisation, linkedin").eq("id", id).maybeSingle();
+  const refus = refusFichierCV(fichier);
+  if (refus) return { erreur: refus };
+  const { data: c } = await supabase.from("consultants").select("id").eq("id", id).maybeSingle();
   if (!c) return { erreur: "Fiche introuvable." };
-  const lecture = await lireCVJoint(fichier);
-  if ("erreur" in lecture) return { erreur: lecture.erreur };
-  const avertissement = await enregistrerCVJoint(id, lecture, { prenom: c.prenom, nom: c.nom });
-  // Champs vides complétés à partir du CV.
-  const p = lecture.profil;
-  const complements: Record<string, unknown> = {};
-  if (!c.intitule_poste && p?.intitule_poste) complements.intitule_poste = p.intitule_poste;
-  if (!c.localisation && p?.localisation) complements.localisation = p.localisation;
-  if (!c.linkedin && lecture.linkedin) complements.linkedin = lecture.linkedin;
-  if (!c.email && p?.email) { const e = normaliserEmail(p.email); if (e) complements.email = e; }
-  if (!c.telephone_e164 && p?.telephone) { const t = normaliserTelephone(p.telephone); if (t.e164) complements.telephone_e164 = t.e164; }
-  if (Object.keys(complements).length) await supabase.from("consultants").update(complements).eq("id", id);
-  await supabase.from("consultants_historique").insert({
-    consultant_id: id, source: "interface", par: utilisateur.id,
-    modifications: { cv: { avant: null, apres: lecture.nom }, ...Object.fromEntries(Object.entries(complements).map(([k, v]) => [k, { avant: null, apres: v }])) },
-  });
-  await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "modification", consultant_id: id, details: { cv_ajoute: lecture.nom } });
-  invaliderTableau();
-  // CV ajouté ou remplacé : profil comparé tout de suite aux missions ouvertes.
-  const { evaluerProfilApres } = await import("@/lib/matching/profil");
-  evaluerProfilApres(id);
+  // L'IA lit le CV en arrière-plan : la fiche s'affiche tout de suite et se complète seule (champs vides, compétences, SharePoint, matching).
+  await lireCVEnArrierePlan(id, fichier, utilisateur.id);
+  await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "modification", consultant_id: id, details: { cv_ajoute: fichier.name } });
   revalidatePath(`/consultants/${id}`);
-  revalidatePath("/consultants");
-  redirect(`/consultants/${id}${avertissement ? `?cv=${encodeURIComponent(avertissement)}` : ""}`);
+  redirect(`/consultants/${id}`);
 }

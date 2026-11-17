@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LectureCVEnCours } from "./lecture-cv";
 import { BoutonWhatsApp } from "../../whatsapp";
 import { notFound, redirect } from "next/navigation";
 import { after } from "next/server";
@@ -66,6 +67,8 @@ export default async function FicheConsultant({ params, searchParams }: { params
 
   return (
     <div className="space-y-6">
+      {c.cv_en_lecture && <LectureCVEnCours depuis={c.cv_en_lecture as string} />}
+      {!c.cv_en_lecture && c.cv_lecture_message && <p className="rounded-2xl bg-amber-50 px-4 py-2.5 text-sm text-amber-800 ring-1 ring-amber-200">CV : {String(c.cv_lecture_message).slice(0, 300)}</p>}
       {avertissementCV && <p className="rounded-2xl bg-amber-50 px-4 py-2.5 text-sm text-amber-800 ring-1 ring-amber-200">{avertissementCV.slice(0, 200)}</p>}
       {/* En-tête : identité et actions rapides */}
       <div className="relative overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-marque-500 via-marque-400 to-[#7d9be0] p-4 text-white sm:rounded-[2rem] sm:p-6 shadow-[0_30px_60px_-30px_rgba(31,69,163,0.6)]">
@@ -290,7 +293,7 @@ export default async function FicheConsultant({ params, searchParams }: { params
           <p className="text-xs text-slate-500">Chaque modification est reportée partout : tableau Consultants, fichier Excel de suivi (la nuit), noms des CV dans SharePoint, matching.</p>
           <button className="bouton-primaire w-full justify-center">Enregistrer</button>
         </form>
-          <BlocCVUnitech consultantId={c.id} missions={missionsOuvertes ?? []} generes={(cvGeneres ?? []).map((g) => {
+          <BlocCVUnitech consultantId={c.id} enPreparation={c.cv_unitech_en_cours as string | null} message={c.cv_unitech_message as string | null} missions={missionsOuvertes ?? []} generes={(cvGeneres ?? []).map((g) => {
             const m = g.missions as unknown as { intitule: string; client: string | null } | null;
             return { id: g.id, date: g.created_at, mission: m ? `${m.intitule}${m.client ? ` · ${m.client}` : ""}` : null, dossier: g.dossier, word: { nom: g.word_nom, url: g.word_url }, pdf: g.pdf_url ? { nom: g.pdf_nom ?? "", url: g.pdf_url } : null, pdfLe: g.pdf_genere_le };
           })} />

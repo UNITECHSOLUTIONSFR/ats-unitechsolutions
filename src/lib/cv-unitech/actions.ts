@@ -3,7 +3,7 @@
 import { exigerUtilisateur } from "@/lib/acces";
 import { genererCVUnitech, genererPDFUnitech, remplacerWordUnitech, type ResultatCVUnitech, type ResultatPDFUnitech } from "./service";
 
-export interface EtatCVUnitech { erreur?: string; resultat?: ResultatCVUnitech }
+export interface EtatCVUnitech { erreur?: string; resultat?: ResultatCVUnitech; lance?: boolean }
 export interface EtatPDFUnitech { erreur?: string; resultat?: ResultatPDFUnitech }
 
 /** Génère le Word Unitech d'un consultant (avec l'adéquation à une mission si elle est choisie), dans le dossier métier. */
@@ -11,16 +11,37 @@ export async function genererCVUnitechAction(_e: EtatCVUnitech, formData: FormDa
   const { utilisateur, supabase } = await exigerUtilisateur();
   const consultantId = String(formData.get("consultant_id"));
   const missionId = String(formData.get("mission_id") ?? "") || null;
-  try {
-    const resultat = await genererCVUnitech(supabase, consultantId, { missionId, par: utilisateur.id });
-    await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "export", consultant_id: consultantId, details: { cv_unitech: resultat.word.nom, mission_id: missionId } });
-    const { revalidatePath } = await import("next/cache");
-    revalidatePath(`/consultants/${consultantId}`);
-    if (missionId) revalidatePath(`/missions/${missionId}`);
-    return { resultat };
-  } catch (e) {
-    return { erreur: (e as Error).message.slice(0, 300) };
+  if (formData.get("arriere_plan") !== "1") {
+    // Depuis une mission : le résultat est attendu sur place (lien du Word affiché dans la ligne du profil).
+    try {
+      const resultat = await genererCVUnitech(supabase, consultantId, { missionId, par: utilisateur.id });
+      await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "export", consultant_id: consultantId, details: { cv_unitech: resultat.word.nom, mission_id: missionId } });
+      const { revalidatePath } = await import("next/cache");
+      revalidatePath(`/consultants/${consultantId}`);
+      if (missionId) revalidatePath(`/missions/${missionId}`);
+      return { resultat };
+    } catch (e) {
+      return { erreur: (e as Error).message.slice(0, 300) };
+    }
   }
+  // Depuis la fiche : préparé en arrière-plan (≈ 20 à 30 s) ; la fiche affiche « en préparation » puis le Word apparaît tout seul.
+  const { clientSupabaseAdmin } = await import("@/lib/supabase/admin");
+  const admin = clientSupabaseAdmin();
+  await admin.from("consultants").update({ cv_unitech_en_cours: new Date().toISOString(), cv_unitech_message: null }).eq("id", consultantId);
+  const travail = async () => {
+    try {
+      const resultat = await genererCVUnitech(admin, consultantId, { missionId, par: utilisateur.id });
+      await admin.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "export", consultant_id: consultantId, details: { cv_unitech: resultat.word.nom, mission_id: missionId } });
+      await admin.from("consultants").update({ cv_unitech_en_cours: null, cv_unitech_message: resultat.avertissement ?? null }).eq("id", consultantId);
+    } catch (e) {
+      await admin.from("consultants").update({ cv_unitech_en_cours: null, cv_unitech_message: `Échec : ${(e as Error).message.slice(0, 250)}` }).eq("id", consultantId);
+    }
+  };
+  const { after } = await import("next/server");
+  try { after(travail); } catch { await travail(); }
+  const { revalidatePath } = await import("next/cache");
+  revalidatePath(`/consultants/${consultantId}`);
+  return { lance: true };
 }
 
 /** Interrupteur (administrateurs) : CV Unitech déposés dans les dossiers métier, ou dans le dossier d'essais. */

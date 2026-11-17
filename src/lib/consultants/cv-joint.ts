@@ -25,10 +25,17 @@ export interface LectureCV {
  * Lit un CV joint (une seule fois) : texte extrait, puis fiche structurée par l'IA (identité, poste, expérience, compétences ; ≈ 0,005 $).
  * Sert à remplir les champs laissés vides du formulaire, puis à enregistrer les compétences.
  */
-export async function lireCVJoint(fichier: File): Promise<LectureCV | { erreur: string }> {
+/** Fichier refusé (format ou taille) : message, sinon null. Vérifié avant toute lecture. */
+export function refusFichierCV(fichier: File): string | null {
   const ext = fichier.name.toLowerCase().split(".").pop() ?? "";
-  if (!EXTENSIONS.includes(ext)) return { erreur: "CV refusé : formats acceptés PDF ou Word." };
-  if (fichier.size > 4 * 1024 * 1024) return { erreur: "CV refusé : 4 Mo au maximum." };
+  if (!EXTENSIONS.includes(ext)) return "CV refusé : formats acceptés PDF ou Word.";
+  if (fichier.size > 4 * 1024 * 1024) return "CV refusé : 4 Mo au maximum.";
+  return null;
+}
+
+export async function lireCVJoint(fichier: File): Promise<LectureCV | { erreur: string }> {
+  const refus = refusFichierCV(fichier);
+  if (refus) return { erreur: refus };
   const contenu = Buffer.from(await fichier.arrayBuffer());
   const extrait = await extraireTexte(contenu, fichier.name).catch(() => ({ texte: "", extractible: false }));
   const linkedin = /(?:https?:\/\/)?(?:[a-z]{2,3}\.)?linkedin\.com\/in\/[A-Za-z0-9\-_%]+/i.exec(extrait.texte)?.[0] ?? null;
