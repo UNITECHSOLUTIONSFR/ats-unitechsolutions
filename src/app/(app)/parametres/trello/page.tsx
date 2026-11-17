@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { exigerAdmin } from "@/lib/acces-admin";
 import { clientSupabaseAdmin } from "@/lib/supabase/admin";
 import { trelloConfigure } from "@/lib/trello/client";
@@ -18,9 +19,21 @@ const ACTIONS: Record<PlanCarte["action"], [string, string]> = {
  * Aperçu de la lecture du tableau Trello : ce que l'outil fait de chaque carte (statut, recruteur, client, TJM interne,
  * mission reliée ou créée). Simulation : rien n'est enregistré et l'IA n'est pas appelée.
  */
-export default async function PageTrello() {
+export default async function PageTrello({ searchParams }: { searchParams: Promise<{ apercu?: string }> }) {
   await exigerAdmin();
   if (!trelloConfigure()) return <p className="carte p-6 text-sm text-red-700">Clé Trello absente : saisissez TRELLO_API_KEY et TRELLO_TOKEN dans Vercel.</p>;
+  // La lecture complète du tableau Trello prend 10 à 20 s : faite seulement sur demande, la page s'ouvre tout de suite.
+  if ((await searchParams).apercu !== "1") {
+    return (
+      <div className="carte space-y-3 p-6 text-sm">
+        <p className="text-slate-600">
+          Cet aperçu relit tout le tableau Trello et montre ce que l&apos;outil fait de chaque carte (statut, recruteur, client, mission reliée ou créée).
+          <b> Rien n&apos;est enregistré.</b> La lecture prend 10 à 20 secondes.
+        </p>
+        <Link href="/parametres/trello?apercu=1" className="bouton-primaire inline-flex">Lire le tableau Trello (aperçu)</Link>
+      </div>
+    );
+  }
   let bilan;
   try {
     bilan = await synchroniserTrello(clientSupabaseAdmin(), { simulation: true });

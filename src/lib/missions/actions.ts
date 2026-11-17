@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { revalidatePath, updateTag } from "next/cache";
 import { recalculerApres } from "@/lib/matching/recalcul";
 import { exigerUtilisateur } from "@/lib/acces";
@@ -153,23 +154,19 @@ export async function suivreProposition(formData: FormData) {
   const statut = String(formData.get("statut") ?? "propose");
   if (!STATUTS_PROPOSITION.includes(statut as (typeof STATUTS_PROPOSITION)[number])) return;
   const score = formData.get("score") ? Number(formData.get("score")) : null;
-  // Détail du score : relu dans le classement rangé (plus envoyé par la page, qui en est allégée).
-  const { data: rang } = await supabase.from("classements_mission").select("top").eq("mission_id", missionId).maybeSingle();
-  const detail = ((rang?.top ?? []) as { consultant_id: string; resultat: unknown }[]).find((l) => l.consultant_id === consultantId)?.resultat;
-
-  const { data: existante } = await supabase
-    .from("propositions").select("id").match({ mission_id: missionId, consultant_id: consultantId }).maybeSingle();
-  if (existante) {
-    await supabase.from("propositions").update({ statut }).eq("id", existante.id);
-  } else {
-    await supabase.from("propositions").insert({
-      mission_id: missionId, consultant_id: consultantId, statut, score, detail_score: detail ?? {},
-    });
+  // Mise à jour directe si le profil est déjà suivi (cas le plus courant) ; sinon création, avec le détail du score
+  // relu dans le classement rangé. Contact et journal écrits après la réponse : le bouton répond tout de suite.
+  const { data: maj } = await supabase.from("propositions").update({ statut }).match({ mission_id: missionId, consultant_id: consultantId }).select("id");
+  if (!maj?.length) {
+    const { data: rang } = await supabase.from("classements_mission").select("top").eq("mission_id", missionId).maybeSingle();
+    const detail = ((rang?.top ?? []) as { consultant_id: string; resultat: unknown }[]).find((l) => l.consultant_id === consultantId)?.resultat;
+    await supabase.from("propositions").insert({ mission_id: missionId, consultant_id: consultantId, statut, score, detail_score: detail ?? {} });
   }
-  await supabase.from("consultants").update({ dernier_contact_le: new Date().toISOString() }).eq("id", consultantId);
-  await supabase.from("journal_acces").insert({
-    utilisateur_id: utilisateur.id, action: "modification", consultant_id: consultantId,
-    details: { proposition: { mission_id: missionId, statut } },
+  after(async () => {
+    await Promise.all([
+      supabase.from("consultants").update({ dernier_contact_le: new Date().toISOString() }).eq("id", consultantId),
+      supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "modification", consultant_id: consultantId, details: { proposition: { mission_id: missionId, statut } } }),
+    ]);
   });
   revalidatePath(`/missions/${missionId}`);
   revalidatePath(`/consultants/${consultantId}`);

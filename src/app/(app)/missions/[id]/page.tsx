@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BoutonSuivi } from "./bouton-suivi";
 import { notFound } from "next/navigation";
 import { exigerUtilisateur } from "@/lib/acces";
 import { estPertinent, noteAffichee, type LigneClassement } from "@/lib/matching/classement";
@@ -196,7 +197,7 @@ function CarteCandidat({ rang, c, missionId, statut, ouvert, cv, avis }: {
           <select name="statut" defaultValue={statut ?? "propose"} aria-label="Suivi" className="rounded-full bg-transparent px-2 py-1 text-xs font-semibold text-nuit outline-none">
             {Object.entries(STATUTS_PROPOSITION).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
-          <button className="rounded-full bg-marque-600 px-3 py-1 text-xs font-semibold text-white hover:bg-marque-500">{statut ? "OK" : "Suivre"}</button>
+          <BoutonSuivi libelle={statut ? "OK" : "Suivre"} />
         </form>
         <AvisIA missionId={missionId} consultantId={c.consultant_id} initial={avis} />
       </div>
