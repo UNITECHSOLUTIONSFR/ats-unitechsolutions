@@ -9,6 +9,7 @@ import { champsParEntete } from "@/lib/import/excel";
 import { modifierConsultant } from "@/lib/consultants/actions";
 import BlocRGPD from "./rgpd";
 import AjoutCV from "./ajout-cv";
+import NotesEquipe from "./notes-equipe";
 import BlocCVUnitech from "./cv-unitech";
 import { Suspense } from "react";
 import { ApercuDuCV, EvaluationMission, MissionsPourLui } from "./blocs-mission";
@@ -35,7 +36,7 @@ export default async function FicheConsultant({ params, searchParams }: { params
   // Promesse unique (sinon la requête partirait deux fois).
   const fiche = Promise.resolve(supabase.from("consultants").select("*").eq("id", id).maybeSingle());
   // Frise lue en même temps que la fiche (plus d'attente en deux temps).
-  const [utilisateur, { data: c }, evenements, { data: profil }, { data: competences }, { data: documents }, { data: propositions }, { data: missionsOuvertes }, { data: cvGeneres }, { data: onglet }, { data: ligneExcel }] = await Promise.all([
+  const [utilisateur, { data: c }, evenements, { data: profil }, { data: competences }, { data: documents }, { data: propositions }, { data: missionsOuvertes }, { data: cvGeneres }, { data: onglet }, { data: ligneExcel }, { data: notesBrutes }, { data: equipe }] = await Promise.all([
     utilisateurConnecte(),
     fiche,
     frise(supabase, id, fiche.then((r) => r.data)),
@@ -48,7 +49,12 @@ export default async function FicheConsultant({ params, searchParams }: { params
     // Colonnes du fichier de suivi sans champ dédié : modifiables depuis la fiche.
     supabase.from("tableau_onglets").select("entetes").eq("principal", true).maybeSingle(),
     supabase.from("tableau_lignes").select("valeurs").eq("consultant_id", id).limit(1).maybeSingle(),
+    // Notes de l'équipe (datées et signées) et noms des auteurs.
+    supabase.from("notes_consultant").select("id, texte, created_at, auteur").eq("consultant_id", id).order("created_at", { ascending: false }).limit(100),
+    supabase.rpc("responsables_possibles"),
   ]);
+  const nomAuteur = new Map(((equipe ?? []) as { id: string; nom: string }[]).map((u) => [u.id, u.nom]));
+  const notesEquipe = (notesBrutes ?? []).map((n) => ({ id: n.id as string, texte: n.texte as string, date: n.created_at as string, auteur: (n.auteur && nomAuteur.get(n.auteur as string)) || "Un membre de l'équipe" }));
   if (!utilisateur) redirect("/");
   if (!c) notFound();
   // Journal d'accès écrit après l'envoi de la page.
@@ -195,6 +201,7 @@ export default async function FicheConsultant({ params, searchParams }: { params
         </section>
 
         <div className="space-y-4">
+        <NotesEquipe consultantId={c.id} notes={notesEquipe} />
         <form action={modifierConsultant} className="space-y-3 carte p-6 text-sm">
           <h2 className="titre-section">Modifier la fiche</h2>
           <input type="hidden" name="id" value={c.id} />
@@ -236,7 +243,7 @@ export default async function FicheConsultant({ params, searchParams }: { params
           <Champ nom="cv_lien" libelle="Lien du CV" valeur={c.cv_lien} />
           <Champ nom="commentaire_email" libelle="Commentaire email" valeur={c.commentaire_email} />
           <label className="block">
-            <span className="text-slate-600">Notes</span>
+            <span className="text-slate-600">Notes du fichier de suivi (colonne Excel)</span>
             <textarea name="notes" defaultValue={c.notes ?? ""} rows={4} className="champ mt-1 w-full" />
           </label>
           {/* Profil lu dans le CV : corrigeable à la main (le matching en tient compte). */}
