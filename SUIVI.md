@@ -269,3 +269,9 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Fiche : « Notes de l'équipe » datées et signées (plus d'écrasement).
 - Trello : nouvelles missions aussi par « Sourcing Anaelle » et « Sourcing Amadou » (pas M CISSE) ; import au prochain passage horaire.
 - CV Unitech : Word sans cadres flottants (bandeau et rubriques en paragraphes sur fond coloré), facile à modifier.
+
+
+## 17/11/2026 — Matching « pertinents seulement »
+- Fait : cause trouvée sur la mission UX/UI SNCF Réseau : la compétence indispensable « Audit UX » écartait 741 profils sur 746 (mot exact absent) → l'IA n'en lisait que 5. Désormais : plus d'élimination sur une compétence, l'IA lit 100 profils (28 designers UX/UI pour cette mission), seuls les profils notés ≥ 60 s'affichent ; nouvelle fiche → comparée aux missions proches.
+- Testé : 247 tests OK, build OK. Notes IA non vérifiables depuis la session (clé Anthropic seulement dans Vercel).
+- Suite : mise en ligne après accord ; recalcul automatique de toutes les missions (≈ 0,02 $ par mission).

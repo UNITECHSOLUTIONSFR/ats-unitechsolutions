@@ -32,10 +32,12 @@ describe("score de matching", () => {
     expect(r.raisons.map((x) => x.critere)).toEqual(["competences", "annees", "seniorite", "disponibilite", "semantique"]);
   });
 
-  it("compétence obligatoire absente : éliminé, avec le motif", () => {
+  it("compétence indispensable absente : pas écarté (l'IA tranche), score réduit et alerte", () => {
     const r = scorerConsultant(mission, { competences: [{ competence_id: "spring" }] }, undefined, AUJ);
-    expect(r.elimine).toBe(true);
-    expect(r.motifsElimination[0]).toContain("Java");
+    expect(r.elimine).toBe(false);
+    expect(r.alertes.join(" ")).toContain("Java");
+    const avec = scorerConsultant(mission, { competences: [{ competence_id: "spring" }, { competence_id: "java" }] }, undefined, AUJ);
+    expect(r.score).toBeLessThan(avec.score);
   });
 
   it("score partiel explicable", () => {

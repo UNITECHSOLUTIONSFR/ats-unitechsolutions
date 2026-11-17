@@ -107,8 +107,10 @@ export function scorerConsultant(
   const parId = new Map(consultant.competences.map((c) => [c.competence_id, c]));
 
   // ---- 1. Filtres éliminatoires
+  // Compétence indispensable absente de la fiche : plus jamais éliminatoire (décision du 17/11/2026). Le mot exact manque
+  // souvent alors que le profil convient (« Audit UX » absent chez un designer UX senior) : score réduit, et l'IA tranche.
   const manquantes = mission.competences.filter((e) => e.obligatoire && !parId.has(e.competence_id));
-  if (manquantes.length) motifsElimination.push(`Compétence(s) obligatoire(s) absente(s) : ${manquantes.map((m) => m.nom).join(", ")}`);
+  if (manquantes.length) alertes.push(`Compétence(s) indispensable(s) non trouvée(s) dans la fiche : ${manquantes.map((m) => m.nom).join(", ")}`);
 
   const dispo = evaluerDisponibilite(mission, consultant, aujourdHui);
   if (mission.disponibilite_obligatoire && dispo.ratio < 1) motifsElimination.push(`Disponibilité : ${dispo.texte}`);
@@ -199,6 +201,7 @@ export function scorerConsultant(
     raisons.push({ critere: c.cle, points: arrondi(points), max: arrondi((max * 100) / poidsUtiles), texte: c.texte });
   }
 
+  if (manquantes.length) score *= 0.75;
   // Métier d'après les titres : indice seulement (un titre peut être faux) ; c'est l'IA qui tranche en lisant la mission et le profil.
   if (metier === 0) {
     score *= 0.7;
