@@ -73,6 +73,10 @@ export default function TableauExcel({ vues, criteresInitiaux, premiere, ongletI
   }, [recherche]);
   const criteres = useMemo<CriteresTableau>(() => ({ filtres, recherche: rechercheEnvoyee, tri, rapides, vue: vueActive, avecCV, page }),
     [filtres, rechercheEnvoyee, tri, rapides, vueActive, avecCV, page]);
+  // Nouvelle recherche ou nouveaux filtres : les lignes cochées auparavant (plus visibles) sont décochées.
+  const cleSelection = JSON.stringify([filtres, rechercheEnvoyee, rapides, vueActive]);
+  const [derniereCle, setDerniereCle] = useState(cleSelection);
+  if (derniereCle !== cleSelection) { setDerniereCle(cleSelection); setSelection(new Map()); }
   // Nouvelle page demandée à chaque changement de critère (la première vient du serveur).
   const premierPassage = useRef(true);
   useEffect(() => {
@@ -221,12 +225,13 @@ export default function TableauExcel({ vues, criteresInitiaux, premiere, ongletI
           {colEmail && <button className="bouton-secondaire" onClick={() => copier(colEmail, "email")}><IconeCopier className="h-4 w-4" />Copier les emails</button>}
           {colTel && <button className="bouton-secondaire" onClick={() => copier(colTel, "téléphone")}><IconeCopier className="h-4 w-4" />Copier les téléphones</button>}
           {estAdmin && <FormulaireExport ongletId={ongletId} ids={[...selection.keys()]} libelle="Exporter la sélection" secondaire />}
-          {estAdmin && selection.size === 2 && (() => {
-            // Deux fiches cochées : comparaison et fusion (même écran que les « doublons possibles »).
-            const ids = lignesSelection.map((l) => l.consultant_id).filter((x): x is string => !!x);
-            return ids.length === 2 && ids[0] !== ids[1]
-              ? <Link href={`/alertes/fusion?a=${ids[0]}&b=${ids[1]}`} className="bouton-primaire"><IconeCopier className="h-4 w-4" />Fusionner ces 2 fiches</Link>
-              : null;
+          {estAdmin && (() => {
+            // Deux fiches différentes cochées : comparaison et fusion (même écran que les « doublons possibles »).
+            const ids = [...new Set(lignesSelection.map((l) => l.consultant_id).filter((x): x is string => !!x))];
+            if (ids.length === 2) return <Link href={`/alertes/fusion?a=${ids[0]}&b=${ids[1]}`} className="bouton-primaire"><IconeCopier className="h-4 w-4" />Fusionner ces 2 fiches</Link>;
+            // Deux lignes de l'Excel déjà reliées à la même fiche : rien à fusionner dans l'outil, on le dit.
+            if (ids.length === 1 && selection.size === 2) return <span className="text-xs text-slate-600">Ces 2 lignes sont déjà une seule fiche dans l&apos;outil (doublon dans l&apos;Excel seulement).</span>;
+            return null;
           })()}
           <button className="ml-auto text-marque-700 hover:underline" onClick={() => setSelection(new Map())}>Tout désélectionner</button>
         </div>
