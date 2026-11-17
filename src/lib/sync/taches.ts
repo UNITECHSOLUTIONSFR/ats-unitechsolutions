@@ -71,8 +71,17 @@ export async function executerTache(nom: NomTache, supabase: SupabaseClient, opt
       const debut = Date.now();
       const reporte = { reportee: "manque de temps, faite au prochain passage" };
       const tempsRestant = (marge: number) => Date.now() - debut < 270_000 - marge;
+      // Durée de chaque étape notée au fur et à mesure : si la tâche est coupée, on sait où.
+      const etapes: Record<string, number> = {};
+      const noter = async (nomEtape: string, t0: number) => {
+        etapes[nomEtape] = Math.round((Date.now() - t0) / 1000);
+        if (execution) await supabase.from("executions").update({ rapport: { etapes_secondes: etapes } }).eq("id", execution.id);
+      };
+      let t = Date.now();
       const resultats = await collecterAnalyse(supabase);
+      await noter("resultats_analyse", t); t = Date.now();
       const synchro = await synchroniserCV(supabase);
+      await noter("lecture_sharepoint", t);
       // CV illisibles (vieux .doc, scans) : une dizaine repris par nuit, avant l'envoi de l'analyse.
       const illisibles = tempsRestant(90_000) ? await reprendreIllisibles(supabase).catch((e) => ({ erreur: (e as Error).message })) : reporte;
       const envoi = tempsRestant(30_000) ? await envoyerAnalyse(supabase) : { message: reporte.reportee, erreur: undefined };
@@ -80,7 +89,7 @@ export async function executerTache(nom: NomTache, supabase: SupabaseClient, opt
       const cvUnitech = tempsRestant(60_000) ? await deposerCVEmails(supabase).catch((e) => ({ erreur: (e as Error).message })) : reporte;
       // Word Unitech corrigés dans SharePoint depuis leur dernier PDF : PDF mis à jour.
       const pdfUnitech = tempsRestant(60_000) ? await actualiserPDFUnitech(supabase).catch((e) => ({ erreur: (e as Error).message })) : reporte;
-      rapport = { synchro, illisibles, cvUnitech, pdfUnitech, resultatsAnalyse: resultats.message ?? resultats.erreur, envoiAnalyse: envoi.message ?? envoi.erreur };
+      rapport = { synchro, illisibles, cvUnitech, pdfUnitech, resultatsAnalyse: resultats.message ?? resultats.erreur, envoiAnalyse: envoi.message ?? envoi.erreur, etapes_secondes: { ...etapes, total: Math.round((Date.now() - debut) / 1000) } };
     }
     if (nom === "emails") rapport = { ...(await traiterEmails(supabase)) };
     if (nom === "trello") {

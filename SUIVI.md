@@ -257,3 +257,8 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - **Tests** : 245 tests ; bout en bout 42/42 (admin) et 39/39 (recruteur), fiche de test créée/modifiée/effacée.
 - **Documentation** : dossier de spécification (fonctionnalités + user stories) à jour : https://claude.ai/artifact/USNTKdcE8NzuZpFCurgeC5
 - **Reste** : jalon D et test de restauration (17/11 en journée) ; vitesse phase 3 selon les temps réels ; vider « À supprimer » (utilisatrice).
+
+### 17/11/2026 matin — Activité, tâches de nuit
+- Fait : Activité → nombre de fiches ajoutées cliquable (par personne ou équipe ; aujourd'hui / 7 / 30 jours) → liste des consultants ajoutés (saisies + imports). Tâche Excel coupée en deux (écriture 2 h 05, relecture 2 h 25) ; durées de chaque étape de la tâche CV notées au fil de l'eau.
+- Constaté : nuit du 16 au 17, tâches Excel et CV coupées par la limite de 5 minutes (Excel : 28 cases recopiées, 18 restantes). Accès Microsoft « Group.Read.All » encore présent dans le jeton à 2 h 04 malgré la révocation annoncée.
+- Suite : vérifier la nuit du 17 au 18 (Excel, relecture, CV) ; révocation de Group.Read.All à refaire (utilisatrice).
