@@ -89,14 +89,56 @@ function remplirForme(modele: string, valeurs: Record<string, string>): string {
   return s;
 }
 
+/** Couleurs du modèle (thème Office du gabarit) : bandeau bleu, rubriques grises. */
+const COULEURS_THEME: Record<string, string> = { accent1: "5B9BD5", bg1: "FFFFFF", lt1: "FFFFFF" };
+
+/** Couleur de fond d'une forme (« solidFill ») en hexadécimal, éclaircie ou assombrie comme dans Word. */
+function fondDeForme(forme: string): string {
+  const plein = forme.match(/<wps:spPr>[\s\S]*?<a:solidFill>([\s\S]*?)<\/a:solidFill>/)?.[1] ?? "";
+  const hex = plein.match(/<a:srgbClr val="([0-9A-Fa-f]{6})"/)?.[1] ?? COULEURS_THEME[plein.match(/<a:schemeClr val="(\w+)"/)?.[1] ?? ""] ?? "D9D9D9";
+  const lum = Number(plein.match(/<a:lumMod val="(\d+)"/)?.[1] ?? 100000) / 100000;
+  return [0, 2, 4].map((i) => Math.round(parseInt(hex.slice(i, i + 2), 16) * lum).toString(16).padStart(2, "0")).join("").toUpperCase();
+}
+
+/**
+ * Rend le Word facile à modifier (demande du 17/11/2026) : les cadres flottants du modèle (bandeau bleu, titres de rubrique gris)
+ * deviennent des paragraphes ordinaires sur fond coloré. Ils suivent le texte au lieu d'être posés à un endroit fixe de la page,
+ * donc ajouter ou retirer des lignes ne casse plus la mise en page. Le rendu reste le même (couleurs, polices, pleine largeur).
+ */
+export function aplatirFormes(bloc: string, margeTwips = 1417): string {
+  if (!bloc.includes("<w:txbxContent>")) return bloc;
+  const forme = bloc.match(/<mc:Choice[\s\S]*?<\/mc:Choice>/)?.[0] ?? bloc;
+  const fond = fondDeForme(forme);
+  const interieur = forme.match(/<w:txbxContent>([\s\S]*?)<\/w:txbxContent>/)?.[1] ?? "";
+  const retrait = -(margeTwips - 284); // bande sur presque toute la largeur de la page, comme le cadre d'origine
+  const deco = `<w:pBdr><w:top w:val="single" w:sz="4" w:space="4" w:color="${fond}"/><w:bottom w:val="single" w:sz="4" w:space="4" w:color="${fond}"/></w:pBdr>`
+    + `<w:shd w:val="clear" w:color="auto" w:fill="${fond}"/>`;
+  const liste = interieur.match(/<w:p[ >][\s\S]*?<\/w:p>/g) ?? [];
+  // Espace avant chaque rubrique (le cadre flottant laissait de la place) ; le bandeau, en haut de page, n'en a pas besoin.
+  const bandeau = fond === COULEURS_THEME.accent1;
+  const paragraphes = liste.map((p, i) => {
+    const avant = i === 0 && !bandeau ? 280 : 0, apres = i === liste.length - 1 ? 160 : 0;
+    const ancien = p.match(/<w:pPr>([\s\S]*?)<\/w:pPr>/)?.[1] ?? "";
+    const jc = ancien.match(/<w:jc [^>]*\/>/)?.[0] ?? "";
+    const rPr = ancien.match(/<w:rPr>[\s\S]*?<\/w:rPr>/)?.[0] ?? "";
+    // Ordre imposé par Word : keepNext, bordures, fond, espacement, retrait, alignement, propriétés du texte.
+    const pPr = `<w:pPr><w:keepNext/>${deco}<w:spacing w:before="${avant}" w:after="${apres}"/><w:ind w:left="${retrait}" w:right="${retrait}"/>${jc}${rPr}</w:pPr>`;
+    return p.replace(/<w:pPr>[\s\S]*?<\/w:pPr>/, "").replace(/^(<w:p(?: [^>]*)?>)/, `$1${pPr}`);
+  });
+  // Paragraphe qui portait le cadre : gardé seulement s'il contient aussi du texte.
+  const reste = bloc.replace(/<w:r>(?:(?!<w:r>)[\s\S])*?<mc:AlternateContent>[\s\S]*?<\/mc:AlternateContent>[\s\S]*?<\/w:r>/g, "");
+  const garde = /<w:t[ >][^<]*[^\s<][^<]*<\/w:t>/.test(reste) && !reste.includes("<mc:AlternateContent>") ? reste : "";
+  return paragraphes.join("") + garde;
+}
+
 export async function genererDocx(gabarit: Buffer | Uint8Array, cv: CVUnitech): Promise<Buffer> {
   const zip = await JSZip.loadAsync(gabarit);
   const xml = await zip.file("word/document.xml")!.async("string");
   const { debut, blocs: b, fin } = blocsDuCorps(xml);
   const out: string[] = [];
   const annees = cv.annees_experience ? `+ ${Math.round(cv.annees_experience)} ans d’expérience` : "";
-  // Le bandeau est une forme posée sur la page : trois lignes vides le séparent de la suite, comme dans le modèle.
-  out.push(remplirForme(b[B.bandeau], { TRIGRAMME: cv.trigramme, TITRE: cv.titre.toUpperCase(), ANNEES: annees }), b[B.vide], b[B.vide], b[B.vide]);
+  // Bandeau (devenu un paragraphe sur fond bleu) puis une ligne vide.
+  out.push(remplirForme(b[B.bandeau], { TRIGRAMME: cv.trigramme, TITRE: cv.titre.toUpperCase(), ANNEES: annees }), b[B.vide]);
 
   // Adéquation à la mission (ou profil général)
   out.push(remplirForme(b[B.rubriqueAdequation], { SECTION: cv.adequation.section.toUpperCase() }), b[B.videTexte]);
@@ -154,7 +196,8 @@ export async function genererDocx(gabarit: Buffer | Uint8Array, cv: CVUnitech): 
     }
   }
   out.push(b[B.section]);
-  zip.file("word/document.xml", debut + out.join("") + fin);
+  const marge = Number(xml.match(/<w:pgMar [^>]*w:left="(\d+)"/)?.[1] ?? 1417);
+  zip.file("word/document.xml", debut + out.map((bloc) => aplatirFormes(bloc, marge)).join("") + fin);
   return zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
 }
 

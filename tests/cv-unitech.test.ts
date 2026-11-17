@@ -30,6 +30,17 @@ describe("CV au format Unitech", () => {
     // Les puces losange du modèle (police Wingdings) sont reprises devant les outils, langues et formations.
     expect((xml.match(/Wingdings/g) ?? []).length).toBeGreaterThan(6);
   });
+  it("Word facile à modifier : plus aucun cadre flottant, bandeau et rubriques en paragraphes sur fond coloré", async () => {
+    const gabarit = readFileSync(path.resolve(__dirname, "../src/lib/cv-unitech/gabarit-unitech.docx"));
+    const docx = await genererDocx(gabarit, EXEMPLE);
+    const xml = await (await JSZip.loadAsync(docx)).file("word/document.xml")!.async("string");
+    expect(xml).not.toContain("<w:txbxContent>");
+    expect(xml).not.toContain("<wp:anchor");
+    expect(xml).toContain('w:fill="5B9BD5"'); // bandeau bleu
+    expect(xml).toContain('w:fill="D9D9D9"'); // rubriques grises
+    expect(xml).toMatch(/COMPETENCES METIER/);
+  });
+
   it("nomme les fichiers selon la convention", () => {
     expect(nomsFichiers("Ana", "Roux", "ARO", "Développeur Java", "RATP")).toEqual({
       word: "UNITECH SOLUTIONS - CV Ana Roux - Développeur Java - RATP.docx",
