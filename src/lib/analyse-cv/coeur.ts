@@ -65,12 +65,15 @@ export async function envoyerAnalyse(supabase: SupabaseClient): Promise<EtatAnal
 }
 
 /** Étape 2 : quand le lot est terminé, enregistre les fiches de compétences. */
-export async function collecterAnalyse(supabase: SupabaseClient): Promise<EtatAnalyse> {
+export async function collecterAnalyse(supabase: SupabaseClient, budgetMs = 150_000): Promise<EtatAnalyse> {
+  const debutCollecte = Date.now();
   const { data: execution } = await supabase
     .from("executions").select("id, rapport").eq("type", "analyse_cv").eq("statut", "en_cours")
     .order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (!execution) return { message: "Aucune analyse en cours." };
-  const rapport = execution.rapport as { lot: string };
+  // Enregistrement par morceaux (le lot complet dépassait la durée maximale d'une tâche) : on reprend là où on s'était arrêté.
+  const rapport = execution.rapport as { lot: string; faits?: string[]; enregistres?: number; echecIds?: string[] };
+  const faits = new Set(rapport.faits ?? []);
 
   const lot = await lireLotProfilsCV(rapport.lot);
   if (!lot.termine) return { message: `Analyse encore en cours (${lot.enCours} CV restants). Réessayez dans quelques minutes.` };
@@ -80,9 +83,16 @@ export async function collecterAnalyse(supabase: SupabaseClient): Promise<EtatAn
   const consultantDe = new Map((docs ?? []).map((d) => [d.id, d.consultant_id as string]));
   const correspondance = await resoudreCompetences(supabase, [...new Set(lot.resultats.flatMap((r) => r.profil?.competences.map((c) => c.nom) ?? []))]);
 
-  let enregistres = 0;
-  const echecs: string[] = [];
+  let enregistres = rapport.enregistres ?? 0;
+  const echecs: string[] = [...(rapport.echecIds ?? [])];
   for (const r of lot.resultats) {
+    if (faits.has(r.id)) continue;
+    if (Date.now() - debutCollecte > budgetMs) {
+      // Plus le temps : progression gardée, la suite au prochain passage (tâche CV suivante ou bouton).
+      await supabase.from("executions").update({ rapport: { ...rapport, faits: [...faits], enregistres, echecIds: echecs } }).eq("id", execution.id);
+      return { message: `${faits.size} résultat(s) sur ${lot.resultats.length} enregistrés ; la suite au prochain passage.` };
+    }
+    faits.add(r.id);
     const consultantId = consultantDe.get(r.id);
     if (!r.profil || !consultantId) { echecs.push(r.id); continue; }
     if (!(await enregistrerProfil(supabase, consultantId, r.id, r.profil, r.modele ?? MODELES.ficheCV, correspondance))) { echecs.push(r.id); continue; }
@@ -94,7 +104,7 @@ export async function collecterAnalyse(supabase: SupabaseClient): Promise<EtatAn
   const cout = usages.reduce((s, u) => s + u.cout_estime_usd, 0);
   await supabase.from("executions").update({
     statut: "termine", fin: new Date().toISOString(), erreurs: echecs.length,
-    rapport: { ...rapport, enregistres, echecs: echecs.length, echecIds: echecs, cout_usd: cout },
+    rapport: { ...Object.fromEntries(Object.entries(rapport).filter(([k]) => k !== "faits")), enregistres, echecs: echecs.length, echecIds: echecs, cout_usd: cout },
   }).eq("id", execution.id);
   // Second échec : signalé pour vérification à la main (CV atypique).
   const deja = await echecsRecents(supabase);
