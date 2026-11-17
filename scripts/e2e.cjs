@@ -155,7 +155,7 @@ const ko = (nom, detail = "") => { resultats.push({ ok: false, nom, detail }); c
       await page.selectOption("select[name=seniorite]", "confirme");
       await page.fill("textarea[name=resume]", "Profil de test automatique.");
       await page.fill("textarea[name=competences]", "Selenium, Jira");
-      await Promise.all([page.waitForResponse((r) => r.request().method() === "POST"), page.click("form button:has-text('Enregistrer')")]);
+      await Promise.all([page.waitForResponse((r) => r.request().method() === "POST" && !r.url().includes("/api/")), page.click("form button:has-text('Enregistrer')")]);
       await page.waitForLoadState("networkidle");
       await page.reload({ waitUntil: "networkidle" });
       const tri = await page.locator("input[name=trigramme]").inputValue();
