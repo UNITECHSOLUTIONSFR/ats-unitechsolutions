@@ -8,7 +8,7 @@ import { useEffect } from "react";
  */
 export default function MesureVitesse() {
   useEffect(() => {
-    const envoyer = (ecran: string, duree: number, type: "ouverture" | "navigation") => {
+    const envoyer = (ecran: string, duree: number, type: "ouverture" | "navigation" | "action") => {
       try {
         const corps = JSON.stringify({ ecran, duree: Math.round(duree), type });
         if (!navigator.sendBeacon?.("/api/mesures", new Blob([corps], { type: "application/json" }))) {
@@ -37,7 +37,29 @@ export default function MesureVitesse() {
       suivi = requestAnimationFrame(verifier);
     };
     document.addEventListener("click", surClic, true);
-    return () => document.removeEventListener("click", surClic, true);
+
+    // Boutons (enregistrer, changer un statut, fusionner…) : durée de l'aller-retour avec le serveur, nommée par le texte du bouton.
+    // Seul le libellé du bouton est envoyé (texte de l'interface, jamais une saisie).
+    let dernierBouton = "";
+    const surEnvoi = (e: SubmitEvent) => {
+      const b = e.submitter as HTMLElement | null;
+      dernierBouton = (b?.getAttribute("aria-label") || b?.textContent || "bouton").replace(/\s+/g, " ").trim().slice(0, 40);
+    };
+    document.addEventListener("submit", surEnvoi, true);
+    let observateur: PerformanceObserver | null = null;
+    try {
+      observateur = new PerformanceObserver((liste) => {
+        for (const r of liste.getEntries() as PerformanceResourceTiming[]) {
+          if (r.initiatorType !== "fetch") continue;
+          const u = new URL(r.name);
+          // Action serveur : envoi vers l'adresse de la page (les changements d'écran passent par « ?_rsc= », exclus).
+          if (u.origin !== location.origin || u.searchParams.has("_rsc") || u.pathname.startsWith("/api/") || u.pathname.startsWith("/_next/")) continue;
+          envoyer(`${u.pathname} · ${dernierBouton || "action"}`, r.duration, "action");
+        }
+      });
+      observateur.observe({ type: "resource", buffered: false });
+    } catch { /* navigateur ancien : pas de mesure des boutons */ }
+    return () => { document.removeEventListener("click", surClic, true); document.removeEventListener("submit", surEnvoi, true); observateur?.disconnect(); };
   }, []);
   return null;
 }

@@ -2,7 +2,6 @@ import "server-only";
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { clientSupabaseAdmin } from "@/lib/supabase/admin";
-import { lireTout } from "@/lib/supabase/pages";
 import { chargerTableau } from "./chargement";
 import { normaliserRecherche, valeurEcran } from "./modele";
 
@@ -39,7 +38,10 @@ async function construire(supabase: SupabaseClient): Promise<BilanProjection> {
     return { ...ligne, empreinte: createHash("sha1").update(JSON.stringify(ligne)).digest("base64") };
   });
 
-  const existantes = await lireTout<{ id: string; empreinte: string }>((a, b) => supabase.from("tableau_vue").select("id, empreinte").range(a, b));
+  // Empreintes actuelles en une seule lecture (fonction de la base).
+  const { data: emp, error: errEmp } = await supabase.rpc("tableau_vue_empreintes");
+  if (errEmp) throw new Error(`Projection du tableau : ${errEmp.message}`);
+  const existantes = Object.entries((emp ?? {}) as Record<string, string>).map(([id, empreinte]) => ({ id, empreinte }));
   const avant = new Map(existantes.map((e) => [e.id, e.empreinte]));
   const aEcrire = lignes.filter((l) => avant.get(l.id) !== l.empreinte);
   for (let i = 0; i < aEcrire.length; i += 400) {

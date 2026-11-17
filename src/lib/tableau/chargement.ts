@@ -26,7 +26,11 @@ export async function chargerTableau(supabase: SupabaseClient): Promise<DonneesT
     lireTout<{ consultant_id: string; type: string; url_web: string | null; sharepoint_drive_id: string }>((a, b) => supabase.from("documents").select("consultant_id, type, url_web, sharepoint_drive_id")
       .not("consultant_id", "is", null).eq("supprime_sharepoint", false).in("type", ["word_nominatif", "pdf_anonyme"])
       .order("modifie_sharepoint_le", { ascending: false }).range(a, b)),
-    lireTout<{ consultant_id: string; competences: string }>((a, b) => supabase.from("competences_par_consultant").select("consultant_id, competences").range(a, b)),
+    // Une seule lecture (fonction de la base) : la vue paginée refaisait tout le calcul à chaque page.
+    supabase.rpc("competences_consultants_json").then((r) => {
+      if (r.error) throw new Error(`Compétences des consultants : ${r.error.message}`);
+      return Object.entries((r.data ?? {}) as Record<string, string>).map(([consultant_id, competences]) => ({ consultant_id, competences }));
+    }),
     lireTout<{ id: string; disponibilite: string | null; disponible_le: string | null; disponibilite_maj_le: string | null; created_at: string; source: string }>((a, b) =>
       supabase.from("consultants").select("id, disponibilite, disponible_le, disponibilite_maj_le, created_at, source").range(a, b)),
   ]);

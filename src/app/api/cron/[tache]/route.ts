@@ -19,7 +19,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   // Classements des missions (toutes les 10 minutes) : seulement ce qui est à refaire, sans trace dans le journal des tâches.
   if (tache === "matching") {
     // Par sécurité, la projection de l'écran Consultants est aussi remise à jour (seules les lignes changées sont réécrites).
-    const projection = await actualiserProjection().catch((e) => ({ erreur: (e as Error).message }));
+    // Une fois par heure seulement (chaque modification la met déjà à jour) : elle relit tout le tableau.
+    const projection = new Date().getMinutes() < 10 ? await actualiserProjection().catch((e) => ({ erreur: (e as Error).message })) : "déjà à jour (passage horaire)";
     return NextResponse.json({ classements: await recalculerEnAttente(clientSupabaseAdmin(), 200_000), projection });
   }
   if (!(tache in TACHES)) return new NextResponse("Tâche inconnue", { status: 404 });

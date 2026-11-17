@@ -8,9 +8,9 @@ export async function POST(requete: NextRequest) {
   if (!utilisateur) return new NextResponse(null, { status: 204 });
   try {
     const m = (await requete.json()) as { ecran?: unknown; duree?: unknown; type?: unknown };
-    const ecran = String(m.ecran ?? "").replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi, "[id]").slice(0, 120);
+    const ecran = String(m.ecran ?? "").replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi, "[id]").replace(/\d{5,}/g, "#").slice(0, 120);
     const duree = Math.round(Number(m.duree));
-    const type = m.type === "ouverture" ? "ouverture" : "navigation";
+    const type = m.type === "ouverture" || m.type === "action" ? m.type : "navigation";
     if (ecran.startsWith("/") && duree >= 0 && duree <= 120_000) {
       await clientSupabaseAdmin().from("mesures_ecrans").insert({ ecran, duree_ms: duree, type, role: utilisateur.role });
     }

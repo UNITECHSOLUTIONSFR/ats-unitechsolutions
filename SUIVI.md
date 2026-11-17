@@ -275,3 +275,8 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Fait : cause trouvée sur la mission UX/UI SNCF Réseau : la compétence indispensable « Audit UX » écartait 741 profils sur 746 (mot exact absent) → l'IA n'en lisait que 5. Désormais : plus d'élimination sur une compétence, l'IA lit 100 profils (28 designers UX/UI pour cette mission), seuls les profils notés ≥ 60 s'affichent ; nouvelle fiche → comparée aux missions proches.
 - Testé : 247 tests OK, build OK. Notes IA non vérifiables depuis la session (clé Anthropic seulement dans Vercel).
 - Suite : mise en ligne après accord ; recalcul automatique de toutes les missions (≈ 0,02 $ par mission).
+
+## 17/11/2026 — Lenteurs : allègement de la base
+- Fait : cause = tâches de fond qui occupaient la base pendant la journée (copie de l'écran Consultants refaite en entier jusqu'à ~40 fois/heure avec des lectures répétées ; 22 classements refaits toutes les 10 min ; index plein texte des CV refaits toutes les heures). Désormais : lectures en un seul appel (`competences_consultants_json`, `tableau_vue_empreintes`), passage de sécurité horaire, classements refaits au plus toutes les 3 h pour des fiches modifiées (une fiche modifiée dans l'outil est comparée tout de suite à ses missions), index CV toutes les 3 h, 10 premiers profils rangés à part (`classements_mission.premiers`) : lecture de la liste des missions 200 ms → 0,1 ms dans la base. Boutons mesurés (`mesures_ecrans.type = 'action'`).
+- Testé : 247 tests, build ; projection identique (4 999 lignes, 0 différence).
+- Suite : mise en ligne après accord, puis comparaison des temps réels (Paramètres → Santé) sur une journée.

@@ -32,8 +32,11 @@ export interface ClassementStocke extends ClassementResume {
 const STATUTS_SUIVIS = ["ouverte", "chez_client"];
 /** Au-delà, un classement est refait même sans demande (disponibilités, fiches modifiées dans l'Excel…). */
 const AGE_MAX_MS = 20 * 3600_000;
-/** Fiches modifiées : un classement n'est pas refait plus souvent que cela pour cette raison. */
-const DELAI_CHANGEMENTS_MS = 10 * 60_000;
+/**
+ * Fiches modifiées : un classement n'est pas refait plus souvent que cela pour cette raison (chaque calcul relit toute la base).
+ * Une fiche créée ou modifiée dans l'outil est, elle, comparée tout de suite à ses missions proches (profil.ts).
+ */
+const DELAI_CHANGEMENTS_MS = 3 * 3600_000;
 /** Un calcul bloqué depuis plus longtemps (serveur arrêté) est considéré comme abandonné. */
 const CALCUL_ABANDONNE_MS = 6 * 60_000;
 
@@ -109,12 +112,9 @@ export async function classementSiRange(missionId: string, supabase: SupabaseCli
 /** Nombre de profils pertinents et 3 premiers profils de plusieurs missions, en une lecture (liste des missions). */
 export async function resumesMissions(supabase: SupabaseClient, missionIds: string[]): Promise<Map<string, { pertinents: number; premiers: LigneClassement[] }>> {
   if (!missionIds.length) return new Map();
-  const { data } = await supabase.from("classements_mission").select("mission_id, pertinents, premiers:top->0, deux:top->1, trois:top->2, quatre:top->3, cinq:top->4")
+  const { data } = await supabase.from("classements_mission").select("mission_id, pertinents, premiers")
     .in("mission_id", missionIds).not("calcule_le", "is", null);
-  return new Map((data ?? []).map((r) => {
-    const premiers = [r.premiers, r.deux, r.trois, r.quatre, r.cinq].filter(Boolean) as unknown as LigneClassement[];
-    return [r.mission_id as string, { pertinents: r.pertinents as number, premiers }];
-  }));
+  return new Map((data ?? []).map((r) => [r.mission_id as string, { pertinents: r.pertinents as number, premiers: ((r.premiers ?? []) as LigneClassement[]).slice(0, 5) }]));
 }
 
 /** Demande le recalcul de certaines missions, ou de toutes les missions suivies (nouvelles fiches, CV analysés…). */
@@ -171,9 +171,6 @@ export async function recalculerEnAttente(supabase: SupabaseClient, budgetMs = 2
 /** Les premiers profils (10 au plus) de plusieurs missions, en une lecture légère (tableau de bord). */
 export async function premiersProfils(supabase: SupabaseClient, missionIds: string[]): Promise<Map<string, LigneClassement[]>> {
   if (!missionIds.length) return new Map();
-  const colonnes = Array.from({ length: 10 }, (_, i) => `p${i}:top->${i}`).join(", ");
-  const { data } = await supabase.from("classements_mission").select(`mission_id, ${colonnes}`).in("mission_id", missionIds).not("calcule_le", "is", null);
-  return new Map(((data ?? []) as unknown as Record<string, unknown>[]).map((r) => [
-    r.mission_id as string, Array.from({ length: 10 }, (_, i) => r[`p${i}`]).filter(Boolean) as LigneClassement[],
-  ]));
+  const { data } = await supabase.from("classements_mission").select("mission_id, premiers").in("mission_id", missionIds).not("calcule_le", "is", null);
+  return new Map((data ?? []).map((r) => [r.mission_id as string, (r.premiers ?? []) as LigneClassement[]]));
 }
