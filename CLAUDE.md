@@ -26,7 +26,7 @@
 7. Tenir CLAUDE.md et SUIVI.md à jour à chaque fin d'étape.
 8. Un commit clair par étape, poussé. Fin de session : résumé en 3 lignes + prochaine étape.
 9. Signaler avant d'agir toute demande qui contredit le brief ou augmente nettement les coûts.
-10. **Mises en ligne** : sans redemander son accord **uniquement dans la nuit du 16 au 17/11/2026** ; **à partir du 17/11/2026 à 10 h, redemander son accord** avant chaque mise en ligne. Une capture accompagne le compte rendu des changements visuels. Ne jamais commencer un nouveau chantier sans son accord.
+10. **Mises en ligne** : carte blanche (tout faire et mettre en ligne sans redemander) **du 17/11/2026 au soir au mercredi 18/11/2026 10 h** ; **à partir du 18/11/2026 à 10 h, redemander son accord** avant chaque mise en ligne. Une capture accompagne le compte rendu des changements visuels. Ne jamais commencer un nouveau chantier sans son accord.
 11. **Quand l'utilisatrice pose une question, y répondre d'abord, littéralement, sans rien modifier.** N'agir qu'ensuite, si elle le demande.
 12. Elle veut avancer **vite** : réponses courtes, pas de détours.
 
