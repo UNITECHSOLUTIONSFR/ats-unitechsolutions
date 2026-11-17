@@ -14,6 +14,7 @@ import { trelloConfigure } from "@/lib/trello/client";
 
 export const TACHES = {
   excel: { type: "synchro_excel", libelle: "Fichier Excel de suivi" },
+  excel_lecture: { type: "synchro_excel_lecture", libelle: "Fichier Excel de suivi (relecture)" },
   cv: { type: "synchro_cv", libelle: "CV SharePoint (association, fiches, analyse)" },
   emails: { type: "synchro_emails", libelle: "Candidatures email" },
   sauvegarde: { type: "sauvegarde_hebdo", libelle: "Sauvegarde Excel dans SharePoint (chaque semaine)" },
@@ -26,7 +27,7 @@ export type NomTache = keyof typeof TACHES;
  * Deux planificateurs (GitHub et, en secours, Supabase) appellent les mêmes tâches : une tâche planifiée déjà faite
  * récemment, ou en cours, n'est pas relancée. Délai en minutes. Les lancements depuis l'application ne sont pas concernés.
  */
-const DEJA_FAITE_MINUTES: Partial<Record<NomTache, number>> = { excel: 360, cv: 360, emails: 30, sauvegarde: 3 * 24 * 60, trello: 30 };
+const DEJA_FAITE_MINUTES: Partial<Record<NomTache, number>> = { excel: 360, excel_lecture: 360, cv: 360, emails: 30, sauvegarde: 3 * 24 * 60, trello: 30 };
 
 export async function tacheDejaFaite(nom: NomTache, supabase: SupabaseClient, maintenant = Date.now()): Promise<string | null> {
   const delai = DEJA_FAITE_MINUTES[nom];
@@ -61,6 +62,8 @@ export async function executerTache(nom: NomTache, supabase: SupabaseClient, opt
   let ok = true;
   try {
     if (nom === "excel") rapport = { ...(await synchroniserExcel(supabase)) };
+    // Relecture seule (20 minutes après l'écriture) : chaque partie a ses 5 minutes.
+    if (nom === "excel_lecture") rapport = { ...(await synchroniserExcel(supabase, { lecture: "toujours" })) };
     if (nom === "cv") {
       // Résultats de l'analyse lancée la veille, puis nouveaux fichiers, puis nouvelle analyse (lot à 50 %).
       // La tâche dure souvent 3 à 5 minutes (limite de l'hébergeur : 5) : les étapes secondaires sont reportées

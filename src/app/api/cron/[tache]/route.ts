@@ -29,7 +29,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   // Nouvelles fiches possibles : accueil rafraîchi et projection de l'écran Consultants mise à jour après la réponse.
   // Les classements des missions, rangés dans la base, sont refaits par la tâche « matching ».
   if (tache !== "relance") revalidateTag("accueil", "max");
-  if (tache === "excel" || tache === "emails" || tache === "cv") after(() => actualiserProjection().then(() => undefined).catch(() => undefined));
+  if (tache === "excel" || tache === "excel_lecture" || tache === "emails" || tache === "cv") after(() => actualiserProjection().then(() => undefined).catch(() => undefined));
   // Relance lancée par un administrateur : tant qu'il reste des emails à envoyer, l'appel suivant est enchaîné.
   if (tache === "relance" && r.ok && Number(r.rapport.envoyes ?? 0) > 0) after(poursuivreEnvoi);
   return NextResponse.json(r, { status: r.ok ? 200 : 500 });
