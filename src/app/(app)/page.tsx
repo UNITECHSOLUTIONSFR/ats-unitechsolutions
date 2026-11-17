@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { exigerUtilisateur } from "@/lib/acces";
-import { classementSiRange } from "@/lib/matching/stockage";
+import { premiersProfils } from "@/lib/matching/stockage";
 import { noteAffichee } from "@/lib/matching/classement";
 import { statsAccueil } from "@/lib/accueil/stats";
 import { FILTRE_MES_MISSIONS } from "@/lib/missions/responsables";
@@ -26,6 +26,8 @@ export default async function Accueil() {
     supabase.from("missions").select("id, intitule, client, created_at, responsable_id").eq("statut", "ouverte").or(FILTRE_MES_MISSIONS(utilisateur.id))
       .order("created_at", { ascending: false }).limit(4),
   ]);
+  // Une seule lecture pour toutes les missions affichées (lancée tout de suite, attendue par chaque carte).
+  const profilsDesMissions = chargerProfilsDesMissions(supabase, (missions ?? []).map((m) => m.id as string));
   const parType = new Map<string, number>();
   // Les recruteurs ne voient que les cas qui les concernent (aucune alerte technique).
   for (const [type, n] of Object.entries(typesAlertes)) if (alerteVisible(type, estAdmin)) parType.set(type, n);
@@ -74,7 +76,7 @@ export default async function Accueil() {
                 </div>
                 {/* Calculés à part : le tableau de bord s'affiche sans attendre le classement. */}
                 <Suspense fallback={<div className="mt-3 grid gap-2 sm:grid-cols-3">{[0, 1, 2].map((k) => <div key={k} className="squelette h-14" />)}</div>}>
-                  <MeilleursProfils missionId={m.id} />
+                  <MeilleursProfils missionId={m.id} donnees={profilsDesMissions} />
                 </Suspense>
               </div>
             ))}
@@ -138,14 +140,20 @@ export default async function Accueil() {
   );
 }
 
-/** Les 3 meilleurs profils d'une mission ouverte (même calcul que l'écran de la mission, sans IA). */
-async function MeilleursProfils({ missionId }: { missionId: string }) {
-  const { supabase } = await exigerUtilisateur();
-  const [classement, { data: suivis }] = await Promise.all([
-    classementSiRange(missionId).then((r) => r?.top ?? []),
-    supabase.from("propositions").select("consultant_id").eq("mission_id", missionId),
+/** Les premiers profils et les suivis de toutes les missions affichées, en deux lectures (au lieu de deux par mission). */
+async function chargerProfilsDesMissions(supabase: Awaited<ReturnType<typeof exigerUtilisateur>>["supabase"], ids: string[]) {
+  const [premiers, { data: suivis }] = await Promise.all([
+    premiersProfils(supabase, ids),
+    ids.length ? supabase.from("propositions").select("mission_id, consultant_id").in("mission_id", ids) : Promise.resolve({ data: [] as { mission_id: string; consultant_id: string }[] }),
   ]);
-  const dejaSuivis = new Set((suivis ?? []).map((p) => p.consultant_id));
+  return { premiers, suivis: (suivis ?? []) as { mission_id: string; consultant_id: string }[] };
+}
+
+/** Les 3 meilleurs profils d'une mission ouverte (lus dans le classement rangé). */
+async function MeilleursProfils({ missionId, donnees }: { missionId: string; donnees: ReturnType<typeof chargerProfilsDesMissions> }) {
+  const { premiers, suivis } = await donnees;
+  const classement = premiers.get(missionId) ?? [];
+  const dejaSuivis = new Set(suivis.filter((p) => p.mission_id === missionId).map((p) => p.consultant_id));
   // Profils à appeler : très bien classés (80 et plus) et pas encore suivis sur cette mission.
   const aAppeler = classement.filter((c) => !c.resultat.elimine && noteAffichee(c) >= 80 && !dejaSuivis.has(c.consultant_id)).length;
   const meilleurs = classement.slice(0, 3);

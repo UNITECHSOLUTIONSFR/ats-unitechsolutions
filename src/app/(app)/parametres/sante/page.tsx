@@ -2,6 +2,7 @@ import Link from "next/link";
 import { exigerAdmin } from "@/lib/acces-admin";
 import { etatBudgetMois } from "@/lib/ai/journal";
 import { TACHES } from "@/lib/sync/taches";
+import { clientSupabaseAdmin } from "@/lib/supabase/admin";
 
 /** Délai au-delà duquel un traitement automatique est considéré « en retard ». */
 const ATTENDU_HEURES: Record<string, number> = { synchro_excel: 26, synchro_cv: 26, synchro_emails: 2, sauvegarde_hebdo: 8 * 24 };
@@ -21,9 +22,34 @@ export default async function Sante() {
     supabase.from("executions").select("id", { count: "exact", head: true }).eq("statut", "echec").gte("debut", ilYa(24)),
   ]);
   const maintenant = Date.parse(new Date().toISOString());
+  // Vitesse réelle des écrans (mesurée dans le navigateur de l'équipe), 7 derniers jours.
+  const { data: vitesse } = await clientSupabaseAdmin().rpc("vitesse_ecrans", { p_jours: 7 });
+  const ecrans = (vitesse ?? []) as { ecran: string; nombre: number; mediane_ms: number; p95_ms: number }[];
+  const secondes = (ms: number) => `${(ms / 1000).toLocaleString("fr-FR", { maximumFractionDigits: 1, minimumFractionDigits: 1 })} s`;
 
   return (
     <div className="space-y-6">
+      <section className="carte p-5">
+        <h2 className="titre-section">Vitesse des écrans (7 derniers jours)</h2>
+        <p className="mt-0.5 text-sm text-slate-500">Temps réels vus par l&apos;équipe, du clic à l&apos;écran affiché. Objectif : moins d&apos;1 seconde. « 95 % » : temps sous lequel passent 95 % des affichages.</p>
+        {ecrans.length ? (
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="text-left text-slate-500"><th className="py-1.5 pr-4 font-medium">Écran</th><th className="pr-4 font-medium">Affichages</th><th className="pr-4 font-medium">Habituel</th><th className="font-medium">95 %</th></tr></thead>
+              <tbody>
+                {ecrans.map((e) => (
+                  <tr key={e.ecran} className="border-t border-slate-100">
+                    <td className="py-1.5 pr-4 font-mono text-xs text-nuit">{e.ecran}</td>
+                    <td className="pr-4 tabular-nums">{e.nombre}</td>
+                    <td className={`pr-4 tabular-nums font-semibold ${e.mediane_ms <= 1000 ? "text-emerald-700" : "text-amber-700"}`}>{secondes(e.mediane_ms)}</td>
+                    <td className={`tabular-nums ${e.p95_ms <= 2000 ? "text-slate-600" : "text-red-700"}`}>{secondes(e.p95_ms)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : <p className="mt-3 text-sm text-slate-500">Pas encore de mesure : elles arrivent dès que l&apos;équipe utilise l&apos;outil.</p>}
+      </section>
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {derniers.map(({ type, ok }) => {
           const libelle = Object.values(TACHES).find((t) => t.type === type)?.libelle ?? type;

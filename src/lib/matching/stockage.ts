@@ -166,3 +166,13 @@ export async function recalculerEnAttente(supabase: SupabaseClient, budgetMs = 2
   }
   return { recalcules, restants: aFaire.length - recalcules - erreurs.length, erreurs };
 }
+
+/** Les premiers profils (10 au plus) de plusieurs missions, en une lecture légère (tableau de bord). */
+export async function premiersProfils(supabase: SupabaseClient, missionIds: string[]): Promise<Map<string, LigneClassement[]>> {
+  if (!missionIds.length) return new Map();
+  const colonnes = Array.from({ length: 10 }, (_, i) => `p${i}:top->${i}`).join(", ");
+  const { data } = await supabase.from("classements_mission").select(`mission_id, ${colonnes}`).in("mission_id", missionIds).not("calcule_le", "is", null);
+  return new Map(((data ?? []) as unknown as Record<string, unknown>[]).map((r) => [
+    r.mission_id as string, Array.from({ length: 10 }, (_, i) => r[`p${i}`]).filter(Boolean) as LigneClassement[],
+  ]));
+}

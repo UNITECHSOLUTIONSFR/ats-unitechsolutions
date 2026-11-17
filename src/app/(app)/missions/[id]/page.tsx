@@ -27,8 +27,10 @@ const STATUTS_PROPOSITION: Record<string, string> = {
   propose: "Proposé", appele: "Appelé", envoye_client: "Envoyé au client", retenu: "Retenu", refuse: "Refusé",
 };
 
-export default async function PageMission({ params }: { params: Promise<{ id: string }> }) {
+export default async function PageMission({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tous?: string }> }) {
   const { id } = await params;
+  // Les 20 premiers profils d'abord (page légère) ; les 30 suivants sur demande.
+  const tous = (await searchParams).tous === "1";
   const { utilisateur, supabase } = await exigerUtilisateur();
   const { data: mission } = await supabase
     .from("missions")
@@ -60,10 +62,9 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
   exigences.sort((a, b) => Number(b.obligatoire) - Number(a.obligatoire) || b.importance - a.importance);
   // Nombre de profils qui ont chaque compétence (analysée) : repère les exigences trop pointues.
   const { data: possedees } = exigences.length
-    ? await supabase.from("consultant_competences").select("competence_id").in("competence_id", exigences.map((e) => e.competence_id)).limit(20000)
+    ? await supabase.rpc("profils_par_competence", { p_ids: exigences.map((e) => e.competence_id) })
     : { data: [] };
-  const profilsParCompetence = new Map<string, number>();
-  for (const p of possedees ?? []) profilsParCompetence.set(p.competence_id, (profilsParCompetence.get(p.competence_id) ?? 0) + 1);
+  const profilsParCompetence = new Map(((possedees ?? []) as { competence_id: string; nombre: number }[]).map((p) => [p.competence_id, Number(p.nombre)]));
 
   return (
     <div className="space-y-6">
@@ -128,9 +129,12 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
           </div>
         </div>
 
-        {classement.slice(0, 50).map((c, i) => (
+        {classement.slice(0, tous ? 50 : 20).map((c, i) => (
           <CarteCandidat key={c.consultant_id} rang={i + 1} c={c} missionId={id} statut={suivi.get(c.consultant_id)} ouvert={i < 3} cv={cvParConsultant.get(c.consultant_id)} avis={avisParConsultant.get(c.consultant_id)} />
         ))}
+        {!tous && classement.length > 20 && (
+          <Link href={`/missions/${id}?tous=1`} scroll={false} className="bouton-secondaire w-full justify-center">Voir les profils suivants (jusqu&apos;au 50e)</Link>
+        )}
         {!classement.length && (
           <div className="carte p-8 text-center text-sm text-slate-500">
             <p className="font-medium text-nuit">Aucun consultant ne possède les compétences demandées.</p>

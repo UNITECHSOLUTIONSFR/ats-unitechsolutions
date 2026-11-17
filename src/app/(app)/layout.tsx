@@ -4,6 +4,7 @@ import { configSupabase } from "@/lib/supabase/config";
 import Link from "next/link";
 import { Suspense } from "react";
 import BarreNavigation from "./barre-navigation";
+import MesureVitesse from "./mesure-vitesse";
 import { redirect } from "next/navigation";
 import { clientSupabaseServeur, codeAttendu, utilisateurConnecte } from "@/lib/supabase/serveur";
 
@@ -49,6 +50,7 @@ export default async function LayoutApplication({ children }: { children: React.
         )}
         <BoutonRetour />{children}
       </main>
+      <MesureVitesse />
     </div>
   );
 }

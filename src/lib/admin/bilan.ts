@@ -39,14 +39,11 @@ export async function chargerBilanAdmin(supabase: SupabaseClient, maintenant = D
   const planifiees = (["excel", "cv", "emails", "sauvegarde"] as const);
 
   const [executions, { data: secrets }, { data: usages }, { data: reglage }, { data: secours }] = await Promise.all([
-    Promise.all(planifiees.map(async (nom) => {
-      const type = TACHES[nom].type;
-      const [ok, ko] = await Promise.all([
-        supabase.from("executions").select("debut").eq("type", type).eq("statut", "termine").order("debut", { ascending: false }).limit(1).maybeSingle(),
-        supabase.from("executions").select("debut").eq("type", type).eq("statut", "echec").order("debut", { ascending: false }).limit(1).maybeSingle(),
-      ]);
-      return { nom, reussite: (ok.data?.debut as string | undefined) ?? null, echec: (ko.data?.debut as string | undefined) ?? null };
-    })),
+    // Dernière réussite et dernier échec de chaque tâche : une seule lecture (au lieu de huit).
+    supabase.rpc("dernieres_executions").then(({ data }) => {
+      const parType = new Map(((data ?? []) as { type: string; reussite: string | null; echec: string | null }[]).map((e) => [e.type, e]));
+      return planifiees.map((nom) => ({ nom, reussite: parType.get(TACHES[nom].type)?.reussite ?? null, echec: parType.get(TACHES[nom].type)?.echec ?? null }));
+    }),
     supabase.from("echeances_secrets").select("id, nom, ou_renouveler, expire_le, note").order("expire_le", { ascending: true, nullsFirst: false }),
     supabase.from("ai_usage").select("usage, cout_estime_usd, created_at").gte("created_at", depuis).limit(20000),
     supabase.from("reglages").select("valeur").eq("cle", "plafond_ia_mensuel_usd").maybeSingle(),

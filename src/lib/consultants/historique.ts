@@ -14,7 +14,8 @@ const CHAMPS: Record<string, string> = {
 const STATUTS: Record<string, string> = { propose: "Proposé", appele: "Appelé", envoye_client: "Envoyé au client", retenu: "Retenu", refuse: "Refusé" };
 
 /** Frise d'une fiche : modifications, emails reçus, suivi des missions, CV et relances, du plus récent au plus ancien. */
-export async function frise(supabase: SupabaseClient, consultantId: string, creeLe: string, source: string): Promise<Evenement[]> {
+/** Frise de la fiche. La création (date, origine) est donnée à part : la frise peut ainsi être lue en même temps que la fiche. */
+export async function frise(supabase: SupabaseClient, consultantId: string, fiche: PromiseLike<{ created_at: string; source: string } | null>): Promise<Evenement[]> {
   const [{ data: modifs }, { data: emails }, { data: props }, { data: docs }, { data: relances }, { data: utilisateurs }, { data: notes }] = await Promise.all([
     supabase.from("consultants_historique").select("created_at, source, modifications, par").eq("consultant_id", consultantId).order("created_at", { ascending: false }).limit(50),
     supabase.from("emails_entrants").select("recu_le, objet, statut").eq("consultant_id", consultantId).order("recu_le", { ascending: false }).limit(30),
@@ -48,6 +49,7 @@ export async function frise(supabase: SupabaseClient, consultantId: string, cree
     if (r.envoye_le) ev.push({ date: r.envoye_le, type: "relance", titre: "Email envoyé", detail: objet });
     if (r.repondu_le) ev.push({ date: r.repondu_le, type: "relance", titre: "Réponse reçue", detail: (r.reponse as { texte?: string } | null)?.texte ?? undefined });
   }
-  ev.push({ date: creeLe, type: "creation", titre: "Fiche créée", detail: { import_excel: "depuis le fichier Excel", email: "depuis une candidature email", sharepoint: "depuis un CV SharePoint", manuel: "à la main" }[source] });
+  const f = await fiche;
+  if (f) ev.push({ date: f.created_at, type: "creation", titre: "Fiche créée", detail: { import_excel: "depuis le fichier Excel", email: "depuis une candidature email", sharepoint: "depuis un CV SharePoint", manuel: "à la main" }[f.source] });
   return ev.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 80);
 }
