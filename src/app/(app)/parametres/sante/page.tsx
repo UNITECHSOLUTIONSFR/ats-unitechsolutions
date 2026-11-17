@@ -23,26 +23,36 @@ export default async function Sante() {
   ]);
   const maintenant = Date.parse(new Date().toISOString());
   // Vitesse réelle des écrans (mesurée dans le navigateur de l'équipe), 7 derniers jours.
-  const { data: vitesse } = await clientSupabaseAdmin().rpc("vitesse_ecrans", { p_jours: 7 });
-  const ecrans = (vitesse ?? []) as { ecran: string; nombre: number; mediane_ms: number; p95_ms: number }[];
-  const secondes = (ms: number) => `${(ms / 1000).toLocaleString("fr-FR", { maximumFractionDigits: 1, minimumFractionDigits: 1 })} s`;
+  const { data: vitesse } = await clientSupabaseAdmin().rpc("vitesse_ecrans_detail", { p_jours: 7 });
+  const ecrans = (vitesse ?? []) as { ecran: string; type: string; nombre: number; mediane_ms: number; p90_ms: number }[];
+  // Objectifs : écran ouvert en moins de 0,3 s d'habitude et 1 s 9 fois sur 10 ; bouton : 1 s 9 fois sur 10.
+  const objectif = (e: (typeof ecrans)[number]) => (e.type === "action" ? { habituel: 1000, p90: 1000 } : { habituel: 300, p90: 1000 });
+  const horsObjectif = ecrans.filter((e) => e.nombre >= 3 && e.p90_ms > objectif(e).p90);
+  const LIBELLE_TYPE: Record<string, string> = { ouverture: "Ouverture", navigation: "Écran", action: "Bouton" };
+  const secondes = (ms: number) => ms < 1000 ? `${ms} ms` : `${(ms / 1000).toLocaleString("fr-FR", { maximumFractionDigits: 1, minimumFractionDigits: 1 })} s`;
 
   return (
     <div className="space-y-6">
       <section className="carte p-5">
         <h2 className="titre-section">Vitesse des écrans (7 derniers jours)</h2>
-        <p className="mt-0.5 text-sm text-slate-500">Temps réels vus par l&apos;équipe, du clic à l&apos;écran affiché. Objectif : moins d&apos;1 seconde. « 95 % » : temps sous lequel passent 95 % des affichages.</p>
+        <p className="mt-0.5 text-sm text-slate-500">Temps réels vus par l&apos;équipe sur 7 jours, du clic à l&apos;écran affiché. <b>Objectifs</b> : un écran s&apos;ouvre en moins de 0,3 s d&apos;habitude et en moins d&apos;1 s 9 fois sur 10 ; un bouton répond en moins d&apos;1 s 9 fois sur 10 (les travaux longs, IA ou SharePoint, se font en arrière-plan).</p>
+        {horsObjectif.length > 0 && (
+          <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-200">
+            ⚠ {horsObjectif.length} écran(s) ou bouton(s) au-dessus de l&apos;objectif : {horsObjectif.slice(0, 5).map((e) => `${e.ecran} (${secondes(e.p90_ms)})`).join(" · ")}
+          </p>
+        )}
         {ecrans.length ? (
           <div className="mt-3 overflow-x-auto">
             <table className="w-full text-sm">
-              <thead><tr className="text-left text-slate-500"><th className="py-1.5 pr-4 font-medium">Écran</th><th className="pr-4 font-medium">Affichages</th><th className="pr-4 font-medium">Habituel</th><th className="font-medium">95 %</th></tr></thead>
+              <thead><tr className="text-left text-slate-500"><th className="py-1.5 pr-4 font-medium">Écran</th><th className="pr-4 font-medium">Type</th><th className="pr-4 font-medium">Nombre</th><th className="pr-4 font-medium">Habituel</th><th className="font-medium">9 fois sur 10</th></tr></thead>
               <tbody>
                 {ecrans.map((e) => (
-                  <tr key={e.ecran} className="border-t border-slate-100">
+                  <tr key={`${e.ecran}|${e.type}`} className="border-t border-slate-100">
                     <td className="py-1.5 pr-4 font-mono text-xs text-nuit">{e.ecran}</td>
+                    <td className="pr-4 text-xs text-slate-500">{LIBELLE_TYPE[e.type] ?? e.type}</td>
                     <td className="pr-4 tabular-nums">{e.nombre}</td>
-                    <td className={`pr-4 tabular-nums font-semibold ${e.mediane_ms <= 1000 ? "text-emerald-700" : "text-amber-700"}`}>{secondes(e.mediane_ms)}</td>
-                    <td className={`tabular-nums ${e.p95_ms <= 2000 ? "text-slate-600" : "text-red-700"}`}>{secondes(e.p95_ms)}</td>
+                    <td className={`pr-4 tabular-nums font-semibold ${e.mediane_ms <= objectif(e).habituel ? "text-emerald-700" : "text-amber-700"}`}>{secondes(e.mediane_ms)}</td>
+                    <td className={`tabular-nums ${e.p90_ms <= objectif(e).p90 ? "text-slate-600" : "font-semibold text-red-700"}`}>{secondes(e.p90_ms)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -7,7 +7,16 @@ import BoutonTache from "./bouton";
 
 export const maxDuration = 300;
 
-const QUAND: Record<string, string> = { excel: "chaque nuit à 2 h", cv: "chaque nuit à 2 h 30", emails: "toutes les heures" };
+/** Horaires réels (heure de Paris), tels que planifiés dans GitHub et dans la base (planificateur de secours). */
+const QUAND: Record<string, string> = {
+  excel: "chaque nuit vers 2 h (écriture des modifications, puis relecture)",
+  excel_lecture: "chaque nuit vers 2 h 25 (relecture complète)",
+  cv: "chaque nuit vers 2 h 30",
+  emails: "toutes les heures",
+  sauvegarde: "chaque lundi vers 3 h 40",
+  relance: "jamais seule : uniquement quand un administrateur la lance",
+  trello: "toutes les heures",
+};
 
 export default async function Synchronisations() {
   const { supabase } = await exigerAdmin();
@@ -22,7 +31,7 @@ export default async function Synchronisations() {
         {(Object.keys(TACHES) as (keyof typeof TACHES)[]).filter((nom) => nom !== "relance" || envoiActif()).map((nom) => (
           <div key={nom} className="carte space-y-2 p-4">
             <div className="font-semibold">{TACHES[nom].libelle}</div>
-            <div className="text-sm text-zinc-500">Automatique : {QUAND[nom]}</div>
+            <div className="text-sm text-zinc-500">Automatique : {QUAND[nom] ?? "—"}</div>
             <BoutonTache tache={nom} />
           </div>
         ))}

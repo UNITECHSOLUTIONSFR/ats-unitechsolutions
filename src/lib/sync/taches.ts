@@ -41,7 +41,7 @@ export async function tacheDejaFaite(nom: NomTache, supabase: SupabaseClient, ma
     // Tâche CV terminée mais résultats d'analyse pas tous enregistrés : on peut la relancer.
     if (e.statut === "termine" && nom === "cv" && /la suite au prochain passage/.test(String((e.rapport as { resultatsAnalyse?: string } | null)?.resultatsAnalyse ?? ""))) continue;
     if (e.statut === "termine") return `déjà faite à ${new Date(e.debut).toISOString()}`;
-    if (e.statut === "en_cours" && maintenant - Date.parse(e.debut) < 15 * 60_000) return "déjà en cours";
+    if (e.statut === "en_cours" && maintenant - Date.parse(e.debut) < 6 * 60_000) return "déjà en cours";
   }
   return null;
 }
@@ -61,7 +61,13 @@ export async function executerTache(nom: NomTache, supabase: SupabaseClient, opt
   }
   // Exécution coupée par la limite de 5 minutes de l'hébergeur : restée « en cours », elle est close en échec.
   await supabase.from("executions").update({ fin: new Date().toISOString(), statut: "echec", erreurs: 1, rapport: { erreur: "interrompue (durée maximale dépassée)" } })
-    .eq("type", TACHES[nom].type).eq("statut", "en_cours").lt("debut", new Date(Date.now() - 15 * 60_000).toISOString());
+    .eq("type", TACHES[nom].type).eq("statut", "en_cours").lt("debut", new Date(Date.now() - 6 * 60_000).toISOString());
+  // Excel : jamais deux passages en même temps (synchronisation et relecture lisent et écrivent le même fichier).
+  if (nom === "excel" || nom === "excel_lecture") {
+    const { data: enCours } = await supabase.from("executions").select("id").in("type", [TACHES.excel.type, TACHES.excel_lecture.type])
+      .eq("statut", "en_cours").gte("debut", new Date(Date.now() - 6 * 60_000).toISOString()).limit(1);
+    if (enCours?.length) return { ok: true, rapport: { ignoree: "une synchronisation de l'Excel est déjà en cours : réessayez dans quelques minutes" } };
+  }
   const { data: execution } = await supabase.from("executions").insert({ type: TACHES[nom].type }).select("id").single();
   let rapport: Record<string, unknown> = {};
   let ok = true;

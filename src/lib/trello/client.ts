@@ -17,10 +17,22 @@ function entete(): Record<string, string> {
 }
 
 export async function trelloGet<T>(chemin: string): Promise<T> {
-  const r = await fetch(`${BASE}${chemin}`, { headers: entete(), cache: "no-store" });
-  if (!r.ok) throw new Error(`Trello ${r.status} sur ${chemin.split("?")[0]}`);
-  return (await r.json()) as T;
+  // Trello indisponible un instant (erreur 5xx, limite de débit 429, coupure réseau) : jusqu'à 3 nouveaux essais espacés.
+  for (let essai = 0; ; essai++) {
+    let r: Response;
+    try {
+      r = await fetch(`${BASE}${chemin}`, { headers: entete(), cache: "no-store" });
+    } catch (e) {
+      if (essai < 3) { await pause(essai); continue; }
+      throw new Error(`Trello injoignable sur ${chemin.split("?")[0]} (${(e as Error).message.slice(0, 80)})`);
+    }
+    if ((r.status >= 500 || r.status === 429) && essai < 3) { await pause(essai); continue; }
+    if (!r.ok) throw new Error(`Trello ${r.status} sur ${chemin.split("?")[0]}`);
+    return (await r.json()) as T;
+  }
 }
+
+const pause = (essai: number) => new Promise((ok) => setTimeout(ok, 1500 * (essai + 1)));
 
 /** Télécharge une pièce jointe déposée sur une carte (fiche de poste), 4 Mo au plus. */
 export async function telechargerPieceJointe(carteId: string, pieceId: string, nom: string): Promise<Buffer | null> {

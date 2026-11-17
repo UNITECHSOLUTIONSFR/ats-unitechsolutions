@@ -27,6 +27,7 @@ alter table public.classements_mission add column if not exists premiers jsonb
 
 -- 4. Index de recherche plein texte des CV : refaits toutes les 3 heures (au lieu de toutes les heures).
 do $$ begin
+  if not exists (select 1 from pg_extension where extname = 'pg_cron') then return; end if;
   perform cron.alter_job((select jobid from cron.job where jobname = 'ats-textes'), schedule := '50 */3 * * *');
   perform cron.alter_job((select jobid from cron.job where jobname = 'ats-competences-textes'), schedule := '55 */3 * * *');
 exception when others then null; end $$;
