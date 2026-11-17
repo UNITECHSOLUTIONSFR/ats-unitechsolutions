@@ -32,9 +32,12 @@ const DEJA_FAITE_MINUTES: Partial<Record<NomTache, number>> = { excel: 360, exce
 export async function tacheDejaFaite(nom: NomTache, supabase: SupabaseClient, maintenant = Date.now()): Promise<string | null> {
   const delai = DEJA_FAITE_MINUTES[nom];
   if (!delai) return null;
-  const { data } = await supabase.from("executions").select("debut, statut").eq("type", TACHES[nom].type)
+  const { data } = await supabase.from("executions").select("debut, statut, rapport").eq("type", TACHES[nom].type)
     .gte("debut", new Date(maintenant - Math.max(delai, 15) * 60_000).toISOString()).order("debut", { ascending: false }).limit(5);
   for (const e of data ?? []) {
+    // Tâche Excel terminée mais relecture reportée (ou cases restant à recopier) : pas « faite », on peut la relancer.
+    const r = (e.rapport ?? {}) as { relectureReportee?: boolean; disponibilites?: { restantes?: number } };
+    if (e.statut === "termine" && nom === "excel" && (r.relectureReportee || (r.disponibilites?.restantes ?? 0) > 0)) continue;
     if (e.statut === "termine") return `déjà faite à ${new Date(e.debut).toISOString()}`;
     if (e.statut === "en_cours" && maintenant - Date.parse(e.debut) < 15 * 60_000) return "déjà en cours";
   }

@@ -19,7 +19,7 @@ on:
         required: true
         default: emails
         type: choice
-        options: [excel, cv, emails, sauvegarde, trello]
+        options: [excel, excel_lecture, cv, emails, sauvegarde, trello]
 
 permissions: {}
 
