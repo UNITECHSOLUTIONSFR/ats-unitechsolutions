@@ -117,7 +117,7 @@ export async function recopierDisponibilitesDansExcel(
     if (cNom >= 0) { const k = cle(cPrenom >= 0 ? l[cPrenom] : "", l[cNom]); parNom.set(k, [...(parNom.get(k) ?? []), i + 1]); }
   });
 
-  // Une cellule = un appel Microsoft : au-delà du budget, le reste attend la nuit suivante
+  // Une ligne = un appel Microsoft : au-delà du budget, le reste attend la nuit suivante
   // (sinon la tâche dépasse 5 minutes et la relecture de l'Excel n'a jamais lieu).
   let recopiees = 0, introuvables = 0, restantes = 0;
   for (const fiche of fiches) {
@@ -128,9 +128,10 @@ export async function recopierDisponibilitesDansExcel(
     const homonymes = parNom.get(cle(fiche.prenom, fiche.nom)) ?? [];
     const ligne = (fiche.email && parEmail.get(fiche.email)) || (homonymes.length === 1 ? homonymes[0] : null);
     if (!ligne) { introuvables++; continue; }
-    const ecrire = async (c: number, v: string) =>
-      graphEnvoyer("PATCH", `${f}/range(address='${lettreColonne(c + 1)}${ligne}')`, { values: [[v]], numberFormat: [["@"]] });
-    if (attente.disponibilite && cDispo >= 0) await ecrire(cDispo, attente.disponibilite);
+    // Toutes les cases de la ligne en UNE demande à Microsoft (au lieu d'une par case) : les cases à ne pas toucher
+    // sont envoyées vides (« null »), ce que l'Excel ignore.
+    const aEcrire = new Map<number, string>();
+    if (attente.disponibilite && cDispo >= 0) aEcrire.set(cDispo, attente.disponibilite);
     for (const [entete, v] of Object.entries(attente.cellules ?? {})) {
       const c = entetes.indexOf(entete);
       if (c < 0) continue;
@@ -142,7 +143,15 @@ export async function recopierDisponibilitesDansExcel(
         if (!v) continue;
         if (actuelle !== null && actuelle !== undefined && String(actuelle).trim() !== "") continue;
       }
-      await ecrire(c, v);
+      aEcrire.set(c, v);
+    }
+    if (aEcrire.size) {
+      const premiere = Math.min(...aEcrire.keys()), derniere = Math.max(...aEcrire.keys());
+      const colonnes = Array.from({ length: derniere - premiere + 1 }, (_, i) => premiere + i);
+      await graphEnvoyer("PATCH", `${f}/range(address='${lettreColonne(premiere + 1)}${ligne}:${lettreColonne(derniere + 1)}${ligne}')`, {
+        values: [colonnes.map((c) => (aEcrire.has(c) ? aEcrire.get(c)! : null))],
+        numberFormat: [colonnes.map((c) => (aEcrire.has(c) ? "@" : null))],
+      });
     }
     await supabase.from("consultants").update({ excel_maj_en_attente: null }).eq("id", fiche.id);
     recopiees++;
