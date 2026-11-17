@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { invaliderTableau } from "@/lib/tableau/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { exigerUtilisateur } from "@/lib/acces";
@@ -112,4 +113,46 @@ async function mettreAJourFiches(
     );
   }
   return null;
+}
+
+/**
+ * Fusion de deux lignes du tableau (administrateurs) : n'importe quelles lignes, y compris deux lignes de l'Excel déjà
+ * reliées à la même fiche. La ligne gardée prend les valeurs choisies ; l'autre est retirée du tableau et vidée dans l'Excel.
+ * La fiche reliée est mise à jour pour les colonnes qui ont un champ dédié.
+ */
+export async function fusionnerLignes(formData: FormData) {
+  const { exigerAdmin } = await import("@/lib/acces-admin");
+  const { utilisateur, supabase } = await exigerAdmin();
+  const gardeId = String(formData.get("garde")), videeId = String(formData.get("videe"));
+  const { data: lignes } = await supabase.from("tableau_lignes").select("id, onglet_id, consultant_id, valeurs").in("id", [gardeId, videeId]);
+  const garde = lignes?.find((l) => l.id === gardeId), videe = lignes?.find((l) => l.id === videeId);
+  if (!garde || !videe) redirect("/consultants");
+  const finales: Record<string, string> = {};
+  for (const [k, v] of formData.entries()) if (k.startsWith("final:")) finales[k.slice(6)] = String(v).trim();
+  const valeurs = Object.fromEntries(Object.entries(finales).filter(([, v]) => v));
+  const avantGarde = garde!.valeurs as Record<string, string>, avantVidee = videe!.valeurs as Record<string, string>;
+
+  // Excel d'origine d'abord (sinon la relecture de nuit ramènerait la ligne retirée).
+  const { fusionnerLignesDansExcel } = await import("@/lib/sync/vers-excel");
+  const excel = await fusionnerLignesDansExcel(avantGarde, avantVidee, finales).catch((e) => ({ ok: false, message: `Excel non modifié : ${(e as Error).message.slice(0, 120)}` }));
+
+  await supabase.from("tableau_lignes").update({ valeurs }).eq("id", gardeId);
+  await supabase.from("tableau_lignes").delete().eq("id", videeId);
+  // Fiche reliée : colonnes avec un champ dédié recopiées sur la fiche.
+  const { data: onglet } = await supabase.from("tableau_onglets").select("entetes").eq("id", garde!.onglet_id).maybeSingle();
+  const champs = champsParEntete((onglet?.entetes as string[]) ?? [], (onglet?.entetes as string[]) ?? []);
+  const consultant = garde!.consultant_id ?? videe!.consultant_id;
+  if (consultant) {
+    const maj: Record<string, unknown> = {};
+    for (const [entete, v] of Object.entries(finales)) {
+      const champ = champs[entete];
+      if (champ && v !== (avantGarde[entete] ?? "")) Object.assign(maj, majFicheDepuisCellule(champ, v) ?? {});
+    }
+    if (Object.keys(maj).length) await supabase.from("consultants").update(maj).eq("id", consultant);
+    if (!garde!.consultant_id) await supabase.from("tableau_lignes").update({ consultant_id: consultant }).eq("id", gardeId);
+  }
+  await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "modification", consultant_id: consultant, details: { fusion_lignes: { garde: gardeId, videe: videeId }, excel: excel.message } });
+  invaliderTableau();
+  revalidatePath("/consultants");
+  redirect(`/consultants?fusion=${encodeURIComponent(excel.ok ? "Lignes fusionnées." : `Lignes fusionnées dans l'outil ; ${excel.message}.`)}`);
 }

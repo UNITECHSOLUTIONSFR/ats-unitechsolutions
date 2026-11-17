@@ -225,12 +225,17 @@ export default function TableauExcel({ vues, criteresInitiaux, premiere, ongletI
           {colEmail && <button className="bouton-secondaire" onClick={() => copier(colEmail, "email")}><IconeCopier className="h-4 w-4" />Copier les emails</button>}
           {colTel && <button className="bouton-secondaire" onClick={() => copier(colTel, "téléphone")}><IconeCopier className="h-4 w-4" />Copier les téléphones</button>}
           {estAdmin && <FormulaireExport ongletId={ongletId} ids={[...selection.keys()]} libelle="Exporter la sélection" secondaire />}
-          {estAdmin && (() => {
-            // Deux fiches différentes cochées : comparaison et fusion (même écran que les « doublons possibles »).
-            const ids = [...new Set(lignesSelection.map((l) => l.consultant_id).filter((x): x is string => !!x))];
+          {estAdmin && selection.size === 2 && (() => {
+            // Deux lignes cochées, quelles qu'elles soient : deux fiches différentes → fusion des fiches ;
+            // deux lignes de la même fiche (doublon dans l'Excel) → fusion des lignes.
+            const [l1, l2] = lignesSelection;
+            const ids = [...new Set([l1.consultant_id, l2.consultant_id].filter((x): x is string => !!x))];
+            const lignesExcel = !l1.id.startsWith("fiche:") && !l2.id.startsWith("fiche:");
             if (ids.length === 2) return <Link href={`/alertes/fusion?a=${ids[0]}&b=${ids[1]}`} className="bouton-primaire"><IconeCopier className="h-4 w-4" />Fusionner ces 2 fiches</Link>;
-            // Deux lignes de l'Excel déjà reliées à la même fiche : rien à fusionner dans l'outil, on le dit.
-            if (ids.length === 1 && selection.size === 2) return <span className="text-xs text-slate-600">Ces 2 lignes sont déjà une seule fiche dans l&apos;outil (doublon dans l&apos;Excel seulement).</span>;
+            if (lignesExcel) {
+              const [g, v] = l1.position <= l2.position ? [l1, l2] : [l2, l1];
+              return <Link href={`/consultants/fusion-lignes?a=${g.id}&b=${v.id}`} className="bouton-primaire"><IconeCopier className="h-4 w-4" />Fusionner ces 2 lignes</Link>;
+            }
             return null;
           })()}
           <button className="ml-auto text-marque-700 hover:underline" onClick={() => setSelection(new Map())}>Tout désélectionner</button>

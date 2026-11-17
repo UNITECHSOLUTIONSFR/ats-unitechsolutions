@@ -158,3 +158,41 @@ export async function recopierDisponibilitesDansExcel(
   }
   return { recopiees, introuvables, restantes };
 }
+
+/**
+ * Fusion de deux lignes du fichier de suivi (même personne en double) : la ligne gardée reçoit les valeurs choisies,
+ * l'autre est VIDÉE (pas supprimée : les numéros de ligne ne bougent pas ; la relecture de nuit l'ignore ensuite).
+ * Chaque ligne est retrouvée dans l'Excel par son contenu (email, nom, prénom, téléphone, puis le plus de cases identiques).
+ */
+export async function fusionnerLignesDansExcel(
+  garde: Record<string, string>, videe: Record<string, string>, finales: Record<string, string>,
+): Promise<{ ok: boolean; message: string }> {
+  const { f, values, entetes } = await ongletPrincipal();
+  const norm = (v: unknown) => String(v ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  const chiffres = (v: unknown) => String(v ?? "").replace(/\D/g, "").replace(/^0/, "").slice(-9);
+  const score = (ligne: unknown[], valeurs: Record<string, string>) => {
+    let s = 0;
+    entetes.forEach((e, c) => {
+      const v = valeurs[e];
+      if (!v) return;
+      if (norm(ligne[c]) === norm(v) || (chiffres(v).length >= 9 && chiffres(ligne[c]) === chiffres(v))) s++;
+    });
+    return s;
+  };
+  const meilleure = (valeurs: Record<string, string>, sauf?: number) => {
+    let best = -1, bestScore = 0;
+    values.forEach((l, i) => { if (i === 0 || i === sauf) return; const s = score(l, valeurs); if (s > bestScore) { best = i; bestScore = s; } });
+    const nonVides = Object.values(valeurs).filter(Boolean).length;
+    return bestScore >= Math.max(3, Math.ceil(nonVides * 0.6)) ? best : -1;
+  };
+  const iGarde = meilleure(garde);
+  const iVidee = iGarde >= 0 ? meilleure(videe, iGarde) : -1;
+  if (iGarde < 0 || iVidee < 0) return { ok: false, message: "lignes non retrouvées dans l'onglet principal de l'Excel : à corriger à la main dans le fichier" };
+  const derniere = lettreColonne(entetes.length);
+  await graphEnvoyer("PATCH", `${f}/range(address='A${iGarde + 1}:${derniere}${iGarde + 1}')`, {
+    values: [entetes.map((e) => (e in finales ? finales[e] : null))],
+    numberFormat: [entetes.map((e) => (e in finales ? "@" : null))],
+  });
+  await graphEnvoyer("PATCH", `${f}/range(address='A${iVidee + 1}:${derniere}${iVidee + 1}')`, { values: [entetes.map(() => "")] });
+  return { ok: true, message: `Excel : ligne ${iGarde + 1} mise à jour, ligne ${iVidee + 1} vidée` };
+}
