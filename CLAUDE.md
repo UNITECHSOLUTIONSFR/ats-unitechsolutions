@@ -9,6 +9,7 @@
 - L'utilisatrice est **elle-même administratrice Microsoft 365** : les réglages Entra ID / Exchange / SharePoint se font avec elle, en pas-à-pas.
 - **Périmètre réalisé (10/11/2026)** : import Excel, CV SharePoint, synchronisations de nuit (Excel qui fait foi pendant la transition, CV, emails), missions + matching, interface, RGPD. Emails : le groupe `recrutement@` est copié (règle Exchange) dans la boîte partagée `ats-candidatures@`, seule boîte lisible par l'outil (RBAC Exchange « Application Mail.Read »). Accès SharePoint en **lecture seule**.
 - **Vitesse (phase 1, 17/11/2026)** : les classements des missions sont **rangés dans la base** (`classements_mission`, `lib/matching/stockage.ts`) et recalculés en arrière-plan par la tâche `matching` (pg_cron toutes les 10 min) : mission modifiée, fiches ou CV changés (au plus toutes les 30 min), sinon chaque nuit ; un déploiement ne recalcule rien (`VERSION_MOTEUR`). L'écran Consultants lit une **projection** (`tableau_vue`, `lib/tableau/projection.ts`) page par page (50 lignes) : recherche, filtres et tri faits par Postgres (`tableau_page`, `tableau_valeurs`, `tableau_ids`).
+- **Vitesse (phase 2, 17/11/2026)** : temps réels des écrans mesurés dans le navigateur (`mesures_ecrans`, Paramètres → Santé) ; lectures regroupées ; empreintes en `halfvec` + index HNSW ; tests de bout en bout `scripts/e2e.cjs` (copie locale avec l'accès d'essai, jamais de boutons à effet extérieur).
 - **Tâches planifiées** : GitHub Actions (`.github/workflows/taches-planifiees.yml`, les crons Vercel bloquaient les déploiements) → `/api/cron/excel` (2 h), `/api/cron/cv` (2 h 30), `/api/cron/emails` (toutes les heures), protégées par `CRON_SECRET` (même valeur dans Vercel et GitHub). La relance des emails n'est jamais planifiée : seul un admin la lance.
 - Les CV SharePoint sont rangés **par métier** (un dossier par métier) ; CV reçus par email déposés dans le dossier métier détecté, sinon `À classer`.
 - Connexion des équipes : **lien magique** (inscription libre fermée, invitation par un admin) ; connexion Microsoft possible plus tard.
@@ -25,7 +26,7 @@
 7. Tenir CLAUDE.md et SUIVI.md à jour à chaque fin d'étape.
 8. Un commit clair par étape, poussé. Fin de session : résumé en 3 lignes + prochaine étape.
 9. Signaler avant d'agir toute demande qui contredit le brief ou augmente nettement les coûts.
-10. **Un travail demandé (go donné) se termine jusqu'à la mise en ligne, sans redemander** (décision du 17/11/2026) ; une capture accompagne le compte rendu des changements visuels. Ne jamais commencer un nouveau chantier sans son accord.
+10. **Mises en ligne** : sans redemander son accord **uniquement dans la nuit du 16 au 17/11/2026** ; **à partir du 17/11/2026 à 10 h, redemander son accord** avant chaque mise en ligne. Une capture accompagne le compte rendu des changements visuels. Ne jamais commencer un nouveau chantier sans son accord.
 11. **Quand l'utilisatrice pose une question, y répondre d'abord, littéralement, sans rien modifier.** N'agir qu'ensuite, si elle le demande.
 12. Elle veut avancer **vite** : réponses courtes, pas de détours.
 
@@ -63,6 +64,7 @@
 - **TJM** : celui de la carte Trello est une donnée interne : affiché en lecture seule (toute l'équipe), **jamais utilisé pour le classement, jamais envoyé à un consultant** (V3 : l'envoi de la fiche de poste par email ne doit jamais inclure le TJM ; le PDF joint n'en contient pas).
 - **Métier** : plus de liste de métiers fixée à l'avance (abandonnée le 17/11/2026) : l'IA juge le métier en lisant la mission et les profils.
 - **Matching** : filtres éliminatoires puis score /100 explicable, pondérations réglables (compétences pondérées, années, séniorité, disponibilité, proximité sémantique). Référentiel de compétences avec synonymes. Suivi : proposé → appelé → envoyé au client → retenu / refusé, avec historique. Nouvelle fiche = comparée aux missions ouvertes (seuil réglable).
+- **Excel sans fin de transition** (17/11/2026) : l'Excel et SharePoint restent tenus à jour. Une case modifiée dans l'outil (fiche ou tableau) est écrite dans l'Excel la nuit **en remplaçant** la valeur (`excel_maj_en_attente.ecraser`) ; un changement de nom ou de trigramme renomme les fichiers SharePoint et met à jour le CV Unitech (`lib/consultants/propagation.ts`). Toutes les cases de la fiche sont modifiables.
 - **Tableau de suivi** : copie fidèle de l'Excel (tous les onglets, en-têtes et ordre d'origine, tables `tableau_onglets`/`tableau_lignes`) ; le 1er onglet est relié aux fiches et ses modifications mettent la fiche à jour. Ne jamais fusionner prénom et nom à l'affichage.
 - **Interface** : menu latéral à gauche, charte « marque » dans `src/app/globals.css` (classes `carte`, `champ`, `bouton-primaire`, `bouton-secondaire`, `pastille`).
 - **Disponibilité** : date de mise à jour affichée ; alerte si > 3 mois.

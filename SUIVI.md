@@ -247,3 +247,13 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Fait : empreintes de sens Voyage AI (5 078 fiches calculées, gratuit) ; présélection sens + compétences fusionnée ; note /100 + raison de l'IA sur 60 profils ; apprentissage par les décisions de l'équipe ; liste de métiers abandonnée ; export mission aligné sur l'écran.
 - Testé : 244 tests (dont nouveau test du matching : profil proche par le sens lu par l'IA, notes gardées, aucune donnée personnelle envoyée), compilation. Comparaison avec l'ancienne méthode sur 3 missions (Support RATP, Testeur QA, Développeur IA) faite en ligne (la clé IA n'est que sur le site) ; copie des anciens classements gardée.
 - Suite : vérifier la comparaison ; retour à l'ancienne méthode si moins bon.
+
+### Nuit du 16 au 17/11/2026 — Vitesse phase 2, matching validé, fiche complète, tests de bout en bout, sécurité
+- **Matching** : comparaison sur 3 missions (Développeur IA, Testeur QA, Support RATP) → la nouvelle méthode (sens + compétences, note IA sur 60) classe mieux sur les trois ; gardée. Recherche par le sens accélérée (6-12 s → 0,1-0,4 s : halfvec + HNSW, délai serveur 60 s).
+- **Vitesse phase 2** : mesure des temps réels des écrans (Paramètres → Santé) ; accueil 25 → 12 lectures ; bilan 8 → 1 ; page mission 1,1 Mo → 0,5 Mo (20 profils puis les suivants, comptage en base) ; frise de la fiche lue en parallèle ; Paramètres → CV en une lecture jointe.
+- **Fiche consultant** : toutes les cases modifiables (dont profil, compétences, colonnes libres) ; répercutées sur le tableau, l'Excel d'origine (remplacement la nuit), les fichiers SharePoint et le CV Unitech, le matching. Les cellules modifiées dans le tableau partent aussi vers l'Excel.
+- **CV SharePoint** : 40 Word sans fiche (et non 118) → 14 rattachés (nom, ou trigramme + poste confirmé), 24 rangés dans « Sauvegardes ATS / À supprimer », 2 modèles laissés en place.
+- **Sécurité** : fonctions récentes retirées à public/anon ; protection des mots de passe divulgués (HIBP) non disponible sur l'offre actuelle ; accès Microsoft temporaires refermés.
+- **Tests** : 245 tests ; bout en bout 42/42 (admin) et 39/39 (recruteur), fiche de test créée/modifiée/effacée.
+- **Documentation** : dossier de spécification (fonctionnalités + user stories) à jour : https://claude.ai/artifact/USNTKdcE8NzuZpFCurgeC5
+- **Reste** : jalon D et test de restauration (17/11 en journée) ; vitesse phase 3 selon les temps réels ; vider « À supprimer » (utilisatrice).
