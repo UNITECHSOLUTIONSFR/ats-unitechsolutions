@@ -15,7 +15,7 @@ import { Suspense } from "react";
 import { ApercuDuCV, EvaluationMission, MissionsPourLui } from "./blocs-mission";
 
 // Génération du CV Unitech (IA + SharePoint) : jusqu'à 2 minutes.
-export const maxDuration = 120;
+export const maxDuration = 300;
 import { frise, type Evenement } from "@/lib/consultants/historique";
 
 const COULEUR_EVENEMENT: Record<Evenement["type"], string> = {

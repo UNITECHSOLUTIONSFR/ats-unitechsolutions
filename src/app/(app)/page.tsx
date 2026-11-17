@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { exigerUtilisateur } from "@/lib/acces";
 import { premiersProfils } from "@/lib/matching/stockage";
-import { noteAffichee } from "@/lib/matching/classement";
+import { estPertinent, noteAffichee } from "@/lib/matching/classement";
 import { statsAccueil } from "@/lib/accueil/stats";
 import { FILTRE_MES_MISSIONS } from "@/lib/missions/responsables";
 import { alerteVisible } from "@/lib/alertes/libelles";
@@ -155,8 +155,9 @@ async function MeilleursProfils({ missionId, donnees }: { missionId: string; don
   const classement = premiers.get(missionId) ?? [];
   const dejaSuivis = new Set(suivis.filter((p) => p.mission_id === missionId).map((p) => p.consultant_id));
   // Profils à appeler : très bien classés (80 et plus) et pas encore suivis sur cette mission.
-  const aAppeler = classement.filter((c) => !c.resultat.elimine && noteAffichee(c) >= 80 && !dejaSuivis.has(c.consultant_id)).length;
-  const meilleurs = classement.slice(0, 3);
+  const pertinents = classement.filter(estPertinent);
+  const aAppeler = pertinents.filter((c) => noteAffichee(c) >= 80 && !dejaSuivis.has(c.consultant_id)).length;
+  const meilleurs = pertinents.slice(0, 3);
   return (
     <>
     {aAppeler > 0 && (

@@ -11,14 +11,14 @@ import { assurerEmpreinteMission, texteMission } from "./empreintes";
  * 1. Présélection combinée : les profils les plus proches de la mission par le SENS (empreintes Voyage AI) et ceux qui ont
  *    les compétences demandées (MOTS exacts) sont fusionnés par « fusion des rangs » (méthode standard des moteurs de
  *    recherche : un profil bien placé dans l'une ou l'autre liste remonte).
- * 2. Décision par l'IA : elle lit la mission entière et les 60 premiers profils (sans nom ni coordonnées) et donne à chacun
+ * 2. Décision par l'IA : elle lit la mission entière et les 100 premiers profils (sans nom ni coordonnées) et donne à chacun
  *    une note sur 100 avec une raison. Chaque note est gardée tant que la mission ne change pas : seuls les nouveaux
  *    entrants sont lus (coût maîtrisé).
  * 3. Apprentissage : les décisions de l'équipe (appelé, envoyé au client, retenu, refusé) sont données à l'IA en exemples.
  * Les filtres éliminatoires (compétences indispensables) restent appliqués ; le score est une aide, jamais un refus.
  */
-export const PROFILS_LUS_PAR_IA = 60;
-const PAR_APPEL_IA = 30;
+export const PROFILS_LUS_PAR_IA = 100;
+const PAR_APPEL_IA = 25;
 /** Profils retenus par le sens avant fusion. */
 const PROCHES = 250;
 /** Constante de la fusion des rangs (valeur usuelle). */
@@ -101,10 +101,16 @@ async function notesIA(supabase: SupabaseClient, missionId: string, texteIA: str
       try {
         const r = await noterCandidats(texteIA, refs.map(({ ref, texte }) => ({ ref, texte })), exemples);
         usages.push(...r.usages);
-        const lignesAvis = r.donnees.notes.map((a) => ({ a, id: refs.find((x) => x.ref === a.ref)?.id })).filter((x) => x.id).map(({ a, id }) => {
+        // Référence relue avec souplesse (« C3 », « [C3] », « c3 »…) : une réponse n'est jamais perdue pour une question d'écriture.
+        const numero = (ref: string) => ref.match(/(\d+)/)?.[1];
+        const parNumero = new Map(refs.map((x) => [numero(x.ref)!, x.id]));
+        const lignesAvis = r.donnees.notes.map((a) => ({ a, id: parNumero.get(numero(a.ref) ?? "") })).filter((x) => x.id).map(({ a, id }) => {
           const note = Math.max(0, Math.min(100, Math.round(a.note)));
           return { mission_id: missionId, consultant_id: id!, empreinte, note, verdict: verdictDeNote(note), raison: a.raison.slice(0, 300), modele: r.modele, updated_at: new Date().toISOString() };
         });
+        // Profil lu mais sans note dans la réponse : l'IA ne l'a pas retenu. Noté 0 (jamais affiché) et pas renvoyé à chaque calcul.
+        const notees = new Set(lignesAvis.map((l) => l.consultant_id));
+        for (const x of refs) if (!notees.has(x.id)) lignesAvis.push({ mission_id: missionId, consultant_id: x.id, empreinte, note: 0, verdict: "hors_sujet", raison: "Non retenu par l'IA pour cette mission.", modele: r.modele, updated_at: new Date().toISOString() });
         if (lignesAvis.length) await supabase.from("avis_matching").upsert(lignesAvis);
         for (const l of lignesAvis) notes.set(l.consultant_id, { note: l.note, raison: l.raison });
       } catch (e) {

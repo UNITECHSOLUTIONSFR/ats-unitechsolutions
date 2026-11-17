@@ -90,3 +90,18 @@ export async function assurerEmpreinteMission(supabase: SupabaseClient, missionI
   if (error) throw new Error(error.message);
   return true;
 }
+
+/** Empreinte d'un seul consultant, recalculée tout de suite si son texte a changé (fiche ou CV modifié). */
+export async function assurerEmpreinteConsultant(supabase: SupabaseClient, consultantId: string): Promise<boolean> {
+  if (!voyageConfigure()) return false;
+  const { data } = await supabase.rpc("texte_empreinte_consultant", { p_id: consultantId });
+  const ligne = ((data ?? []) as { texte: string; empreinte_texte: string }[])[0];
+  if (!ligne) return false;
+  const { data: existante } = await supabase.from("empreintes_consultants").select("empreinte_texte").eq("consultant_id", consultantId).maybeSingle();
+  if (existante?.empreinte_texte === ligne.empreinte_texte) return true;
+  const r = await empreintes([ligne.texte], "document");
+  await enregistrerUsages([usageEmpreintes(r.jetons)], `empreintes:consultant:${consultantId}`).catch(() => {});
+  const { error } = await supabase.from("empreintes_consultants").upsert({ consultant_id: consultantId, empreinte: enTexte(r.vecteurs[0]), empreinte_texte: ligne.empreinte_texte, modele: EMPREINTES.modele });
+  if (error) throw new Error(error.message);
+  return true;
+}

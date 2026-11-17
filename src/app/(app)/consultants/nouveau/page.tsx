@@ -1,3 +1,4 @@
+export const maxDuration = 300;
 import { exigerUtilisateur } from "@/lib/acces";
 import Formulaire from "./formulaire";
 

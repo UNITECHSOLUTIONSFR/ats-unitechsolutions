@@ -30,7 +30,7 @@ export async function evaluationPourMission(supabase: SupabaseClient, missionId:
 export interface MissionPourLui { mission: { id: string; intitule: string; client: string | null }; score: number }
 
 /** Missions ouvertes pour lesquelles le consultant est qualifié (non écarté, score ≥ seuil), les meilleures d'abord. Lu dans les classements rangés. */
-export async function missionsPourConsultant(supabase: SupabaseClient, consultantId: string, seuil = 50): Promise<MissionPourLui[]> {
+export async function missionsPourConsultant(supabase: SupabaseClient, consultantId: string, seuil = 60): Promise<MissionPourLui[]> {
   const [{ data: missions }, { data: scores }] = await Promise.all([
     supabase.from("missions").select("id, intitule, client").eq("statut", "ouverte").order("created_at", { ascending: false }).limit(30),
     supabase.rpc("scores_consultant", { p_consultant_id: consultantId }),

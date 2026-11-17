@@ -14,7 +14,7 @@ import { classerMission } from "./hybride";
  * - Un déploiement ne recalcule rien. Changer les règles du moteur : augmenter VERSION_MOTEUR (tout est refait).
  * L'IA ne lit que les profils qui entrent dans les 30 premiers sans avis déjà rendu (voir tri-ia) : coût maîtrisé.
  */
-export const VERSION_MOTEUR = "2026-11-17.2-hybride";
+export const VERSION_MOTEUR = "2026-11-17.3-pertinents";
 
 export interface ClassementResume {
   total: number;
@@ -33,7 +33,7 @@ const STATUTS_SUIVIS = ["ouverte", "chez_client"];
 /** Au-delà, un classement est refait même sans demande (disponibilités, fiches modifiées dans l'Excel…). */
 const AGE_MAX_MS = 20 * 3600_000;
 /** Fiches modifiées : un classement n'est pas refait plus souvent que cela pour cette raison. */
-const DELAI_CHANGEMENTS_MS = 30 * 60_000;
+const DELAI_CHANGEMENTS_MS = 10 * 60_000;
 /** Un calcul bloqué depuis plus longtemps (serveur arrêté) est considéré comme abandonné. */
 const CALCUL_ABANDONNE_MS = 6 * 60_000;
 
@@ -52,8 +52,9 @@ export async function calculerEtRanger(missionId: string, supabase: SupabaseClie
   try {
     // Présélection par le sens et par les compétences, puis note de l'IA sur les 60 premiers (voir hybride.ts).
     const lignes = await classerMission(supabase, missionId);
-    const resume: ClassementResume = { total: lignes.length, pertinents: lignes.filter(estPertinent).length, top: lignes.slice(0, 60) };
-    const scores = Object.fromEntries(lignes.map((l) => [l.consultant_id, [Math.round(noteAffichee(l) * 10) / 10, l.resultat.elimine]]));
+    // Rangés : les profils pertinents (note de l'IA ≥ 60) d'abord, jusqu'à 100. Scores (fiche consultant) : notes de l'IA seulement.
+    const resume: ClassementResume = { total: lignes.length, pertinents: lignes.filter(estPertinent).length, top: lignes.slice(0, 100) };
+    const scores = Object.fromEntries(lignes.filter((l) => l.avisIA?.note != null).map((l) => [l.consultant_id, [noteAffichee(l), l.resultat.elimine]]));
     const { data: ligne } = await supabase.from("classements_mission").select("demande_le").eq("mission_id", missionId).maybeSingle();
     const redemande = !!ligne && Date.parse(ligne.demande_le) > Date.parse(demandeAvant);
     // Publication d'un bloc : le nouveau classement remplace l'ancien seulement une fois complet.

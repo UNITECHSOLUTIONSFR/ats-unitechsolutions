@@ -125,6 +125,11 @@ export async function modifierConsultant(formData: FormData) {
       .then((j) => { if (j.length) return admin.from("consultants_historique").insert({ consultant_id: id, source: "interface", modifications: { fichiers: { avant: null, apres: j } }, par: utilisateur.id }).then(() => undefined); })
       .catch((e) => console.error("Renommage des fichiers :", (e as Error).message)));
   }
+  // Matching dans les deux sens : la fiche modifiée est comparée tout de suite aux missions ouvertes.
+  if (Object.keys(modifications).some((k) => ["intitule_poste", "competences", "profil.resume", "profil.annees_experience", "profil.seniorite", "localisation", "notes"].includes(k))) {
+    const { evaluerProfilApres } = await import("@/lib/matching/profil");
+    evaluerProfilApres(id);
+  }
   revalidatePath(`/consultants/${id}`);
   invaliderTableau();
   revalidatePath("/consultants");
@@ -180,6 +185,9 @@ export async function creerConsultant(_e: EtatCreation, formData: FormData): Pro
   const avertissement = lecture ? await enregistrerCVJoint(cree.id, lecture, { prenom: prenom ?? "—", nom }) : null;
   invaliderTableau();
   revalidatePath("/consultants");
+  // Nouvelle fiche : comparée tout de suite aux missions ouvertes (matching dans les deux sens).
+  const { evaluerProfilApres } = await import("@/lib/matching/profil");
+  evaluerProfilApres(cree.id);
   redirect(`/consultants/${cree.id}${avertissement ? `?cv=${encodeURIComponent(avertissement)}` : ""}`);
 }
 
@@ -268,6 +276,9 @@ export async function ajouterCVConsultant(_e: EtatAjoutCV, formData: FormData): 
   });
   await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "modification", consultant_id: id, details: { cv_ajoute: lecture.nom } });
   invaliderTableau();
+  // CV ajouté ou remplacé : profil comparé tout de suite aux missions ouvertes.
+  const { evaluerProfilApres } = await import("@/lib/matching/profil");
+  evaluerProfilApres(id);
   revalidatePath(`/consultants/${id}`);
   revalidatePath("/consultants");
   redirect(`/consultants/${id}${avertissement ? `?cv=${encodeURIComponent(avertissement)}` : ""}`);

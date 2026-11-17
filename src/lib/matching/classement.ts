@@ -218,9 +218,10 @@ export function noteAffichee(l: LigneClassement): number {
   return l.avisIA?.note ?? l.resultat.score;
 }
 
-/** Profil pertinent : non écarté et noté 60 ou plus (par l'IA quand elle l'a lu). */
+/** Seuil d'affichage : seuls les profils lus par l'IA et notés au moins 60 sont proposés (décision du 17/11/2026). */
+export const SEUIL_PERTINENT = 60;
+
+/** Profil pertinent : non écarté, lu par l'IA et noté 60 ou plus. Un profil non lu par l'IA n'est jamais proposé. */
 export function estPertinent(l: LigneClassement): boolean {
-  if (l.resultat.elimine) return false;
-  if (l.avisIA?.note != null) return l.avisIA.note >= 60;
-  return l.avisIA?.verdict !== "hors_sujet" && l.resultat.score >= 60;
+  return !l.resultat.elimine && l.avisIA?.note != null && l.avisIA.note >= SEUIL_PERTINENT;
 }

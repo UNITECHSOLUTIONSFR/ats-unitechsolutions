@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { exigerUtilisateur } from "@/lib/acces";
-import { noteAffichee, type LigneClassement } from "@/lib/matching/classement";
+import { estPertinent, noteAffichee, type LigneClassement } from "@/lib/matching/classement";
 import { classementAAfficher } from "@/lib/matching/stockage";
 import BoutonRecalculer from "./recalculer";
 import { formaterTelephone } from "@/lib/metier/telephone";
@@ -47,6 +47,8 @@ export default async function PageMission({ params, searchParams }: { params: Pr
     supabase.from("avis_ia").select("consultant_id, contenu").eq("mission_id", id),
   ]);
   const classement = resume.top;
+  // Affichés : uniquement les profils que l'IA a lus et jugés pertinents (note ≥ 60). Les autres ne sont pas montrés.
+  const proposes = classement.filter(estPertinent);
   const avisParConsultant = new Map((avisExistants ?? []).map((a) => [a.consultant_id as string, a.contenu as AvisMission]));
   // Dernier CV Unitech généré pour cette mission, par consultant : rouvert sans nouvelle génération.
   const cvParConsultant = new Map<string, { id: string; word: string; pdf: string | null }>();
@@ -116,7 +118,7 @@ export default async function PageMission({ params, searchParams }: { params: Pr
             <h2 className="text-lg font-bold tracking-tight text-nuit">
               {resume.pertinents} profil(s) pertinent(s) pour cette mission
             </h2>
-            <p className="sous-titre">Les 50 premiers sur {resume.total.toLocaleString("fr-FR")} consultant(s) classé(s) · le score est une aide à la décision, jamais un refus automatique.</p>
+            <p className="sous-titre">Seuls les profils que l&apos;IA a lus et jugés pertinents (note de 60 et plus) sont affichés, sur {resume.total.toLocaleString("fr-FR")} consultant(s) comparé(s). La note est une aide à la décision, jamais un refus automatique.</p>
             <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
               {resume.calculeLe && <span>Classement du {new Date(resume.calculeLe).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Paris" })}</span>}
               {resume.miseAJour && <span className="pastille pastille-orange">Mise à jour en cours…</span>}
@@ -129,16 +131,16 @@ export default async function PageMission({ params, searchParams }: { params: Pr
           </div>
         </div>
 
-        {classement.slice(0, tous ? 50 : 20).map((c, i) => (
+        {proposes.slice(0, tous ? 100 : 20).map((c, i) => (
           <CarteCandidat key={c.consultant_id} rang={i + 1} c={c} missionId={id} statut={suivi.get(c.consultant_id)} ouvert={i < 3} cv={cvParConsultant.get(c.consultant_id)} avis={avisParConsultant.get(c.consultant_id)} />
         ))}
-        {!tous && classement.length > 20 && (
-          <Link href={`/missions/${id}?tous=1`} scroll={false} className="bouton-secondaire w-full justify-center">Voir les profils suivants (jusqu&apos;au 50e)</Link>
+        {!tous && proposes.length > 20 && (
+          <Link href={`/missions/${id}?tous=1`} scroll={false} className="bouton-secondaire w-full justify-center">Voir les {proposes.length - 20} autres profils pertinents</Link>
         )}
-        {!classement.length && (
+        {!proposes.length && (
           <div className="carte p-8 text-center text-sm text-slate-500">
-            <p className="font-medium text-nuit">Aucun consultant ne possède les compétences demandées.</p>
-            <p className="mt-1">Rendez certaines compétences « souhaitées » plutôt qu&apos;obligatoires, ou retirez-en une : le classement se recalcule aussitôt. La mission reste enregistrée.</p>
+            <p className="font-medium text-nuit">Aucun profil pertinent pour l&apos;instant.</p>
+            <p className="mt-1">L&apos;IA n&apos;a trouvé aucun consultant de la base vraiment adapté à cette mission. Si une compétence « indispensable » est trop stricte, rendez-la « souhaitée » : le classement se recalcule aussitôt. Un profil ajouté ensuite est comparé à la mission automatiquement.</p>
           </div>
         )}
       </section>

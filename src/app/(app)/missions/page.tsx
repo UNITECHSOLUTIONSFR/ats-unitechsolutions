@@ -4,7 +4,7 @@ import { FILTRE_MES_MISSIONS, responsablesPossibles } from "@/lib/missions/respo
 import { IconeMallette } from "../icones";
 import ListeMissions, { type CarteMission } from "./liste";
 import { resumesMissions } from "@/lib/matching/stockage";
-import { noteAffichee, type LigneClassement } from "@/lib/matching/classement";
+import { estPertinent, noteAffichee, type LigneClassement } from "@/lib/matching/classement";
 import { JaugeScore } from "./evaluation";
 import { STATUTS_MISSIONS } from "@/lib/missions/statuts";
 import { BoutonActualiserTrello } from "./trello";
@@ -78,7 +78,7 @@ export default async function Missions({ searchParams }: { searchParams: Promise
 
 /** Meilleur score de la mission (jauge) et trigrammes des 3 premiers profils : lus dans le classement rangé. */
 function MeilleurScore({ premiers: tous }: { premiers: LigneClassement[] }) {
-  const premiers = tous.filter((c) => !c.resultat.elimine && c.avisIA?.verdict !== "hors_sujet").slice(0, 3);
+  const premiers = tous.filter(estPertinent).slice(0, 3);
   if (!premiers.length) return null;
   return (
     <div className="flex flex-col items-center gap-1.5">
