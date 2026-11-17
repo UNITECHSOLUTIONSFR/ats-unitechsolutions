@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { exigerAdmin } from "@/lib/acces-admin";
 import { rattacherCV } from "@/lib/consultants/rattachement";
+import { lireTout } from "@/lib/supabase/pages";
 
 interface Doc {
   id: string;
@@ -17,28 +18,15 @@ export default async function PageCV({ searchParams }: { searchParams: Promise<{
   const { supabase } = await exigerAdmin();
   const { q = "", filtre = "tous" } = await searchParams;
 
-  const tous: (Doc & { type: string })[] = [];
-  for (let debut = 0; ; debut += 1000) {
-    const { data } = await supabase
-      .from("documents")
-      .select("id, type, consultant_id, nom_fichier, url_web, metier_dossier, document_associe_id, association_details")
-      .eq("supprime_sharepoint", false)
-      .range(debut, debut + 999);
-    tous.push(...((data ?? []) as (Doc & { type: string })[]));
-    if (!data || data.length < 1000) break;
-  }
-  const parId = new Map(tous.map((d) => [d.id, d]));
-  const ids = [...new Set(tous.map((d) => d.consultant_id).filter(Boolean))] as string[];
-  const fiches = new Map<string, { prenom: string; nom: string; trigramme: string }>();
-  for (let i = 0; i < ids.length; i += 300) {
-    const { data } = await supabase.from("consultants").select("id, prenom, nom, trigramme").in("id", ids.slice(i, i + 300));
-    for (const c of data ?? []) fiches.set(c.id, c);
-  }
+  // Une lecture (par pages en parallèle) : chaque Word avec son PDF anonymisé et sa fiche, joints par la base.
+  type Ligne = Doc & { pdf: { nom_fichier: string; url_web: string | null } | null; fiche: { prenom: string; nom: string; trigramme: string } | null };
+  const tous = await lireTout<Ligne>((a, b) => supabase.from("documents")
+    .select("id, consultant_id, nom_fichier, url_web, metier_dossier, document_associe_id, association_details, pdf:document_associe_id(nom_fichier, url_web), fiche:consultant_id(prenom, nom, trigramme)")
+    .eq("supprime_sharepoint", false).eq("type", "word_nominatif").order("id").range(a, b) as unknown as PromiseLike<{ data: Ligne[] | null; error: unknown }>);
 
   const terme = q.trim().toLowerCase();
   const lignes = tous
-    .filter((d) => d.type === "word_nominatif")
-    .map((w) => ({ w, pdf: w.document_associe_id ? parId.get(w.document_associe_id) : undefined, fiche: w.consultant_id ? fiches.get(w.consultant_id) : undefined }))
+    .map((w) => ({ w, pdf: w.pdf ?? undefined, fiche: w.fiche ?? undefined }))
     .filter((l) => (filtre === "sans_fiche" ? !l.fiche : filtre === "sans_pdf" ? !l.pdf : filtre === "versions" ? (l.w.association_details?.versions_pdf ?? 1) > 1 : true))
     .filter((l) => !terme || [l.w.nom_fichier, l.w.metier_dossier, l.fiche?.nom, l.fiche?.prenom].some((x) => x?.toLowerCase().includes(terme)))
     .sort((a, b) => (a.w.metier_dossier ?? "").localeCompare(b.w.metier_dossier ?? "") || a.w.nom_fichier.localeCompare(b.w.nom_fichier));
