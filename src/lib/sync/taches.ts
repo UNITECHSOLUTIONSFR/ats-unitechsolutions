@@ -38,6 +38,8 @@ export async function tacheDejaFaite(nom: NomTache, supabase: SupabaseClient, ma
     // Tâche Excel terminée mais relecture reportée (ou cases restant à recopier) : pas « faite », on peut la relancer.
     const r = (e.rapport ?? {}) as { relectureReportee?: boolean; disponibilites?: { restantes?: number } };
     if (e.statut === "termine" && nom === "excel" && (r.relectureReportee || (r.disponibilites?.restantes ?? 0) > 0)) continue;
+    // Tâche CV terminée mais résultats d'analyse pas tous enregistrés : on peut la relancer.
+    if (e.statut === "termine" && nom === "cv" && /la suite au prochain passage/.test(String((e.rapport as { resultatsAnalyse?: string } | null)?.resultatsAnalyse ?? ""))) continue;
     if (e.statut === "termine") return `déjà faite à ${new Date(e.debut).toISOString()}`;
     if (e.statut === "en_cours" && maintenant - Date.parse(e.debut) < 15 * 60_000) return "déjà en cours";
   }
