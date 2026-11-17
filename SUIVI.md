@@ -262,3 +262,10 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Fait : Activité → nombre de fiches ajoutées cliquable (par personne ou équipe ; aujourd'hui / 7 / 30 jours) → liste des consultants ajoutés (saisies + imports). Tâche Excel coupée en deux (écriture 2 h 05, relecture 2 h 25) ; durées de chaque étape de la tâche CV notées au fil de l'eau.
 - Constaté : nuit du 16 au 17, tâches Excel et CV coupées par la limite de 5 minutes (Excel : 28 cases recopiées, 18 restantes). Accès Microsoft « Group.Read.All » encore présent dans le jeton à 2 h 04 malgré la révocation annoncée.
 - Suite : vérifier la nuit du 17 au 18 (Excel, relecture, CV) ; révocation de Group.Read.All à refaire (utilisatrice).
+
+### 17/11/2026 matin (suite) — Tâches de nuit réparées, notes, Trello, Word
+- Excel : écriture d'une ligne en une seule demande (9 s/fiche → quelques secondes pour toutes) ; relancé à la main → terminé, 0 case en attente, Excel relu (8 fiches mises à jour, 1 créée). Relecture seule ≈ 4 min 30 : à accélérer.
+- CV : le lot d'analyse du 15/11 (196 CV) n'aboutissait jamais (tout-ou-rien > 5 min) → enregistrement par morceaux ; 4 relances → 193 enregistrés, 3 échecs (0,14 $). Nouveau lot de 199 CV envoyé (0,14 $ estimé), récupéré par morceaux la nuit.
+- Fiche : « Notes de l'équipe » datées et signées (plus d'écrasement).
+- Trello : nouvelles missions aussi par « Sourcing Anaelle » et « Sourcing Amadou » (pas M CISSE) ; import au prochain passage horaire.
+- CV Unitech : Word sans cadres flottants (bandeau et rubriques en paragraphes sur fond coloré), facile à modifier.
