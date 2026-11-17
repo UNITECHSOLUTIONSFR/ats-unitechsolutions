@@ -28,7 +28,7 @@ export default function CarteExigences({ items, onBasculer, onRetirer }: {
       <div>
         <div className="mb-2 flex items-baseline gap-2">
           <h3 className="text-sm font-bold text-nuit">Indispensables</h3>
-          <span className="text-xs text-slate-500">sans elles, le profil est écarté</span>
+          <span className="text-xs text-slate-500">comptent beaucoup dans la note ; l'IA tranche</span>
         </div>
         <div className="flex flex-wrap gap-2">
           {indispensables.map((e) => (
