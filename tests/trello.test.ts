@@ -90,3 +90,15 @@ describe("Trello : cartes d'information", () => {
     expect(carteInformation("Développeur Java - URSAFF")).toBe(false);
   });
 });
+
+describe("colonnes d'entrée des nouvelles missions (17/11/2026)", () => {
+  it("Missions en cours, Sourcing Anaelle et Sourcing Amadou font entrer une nouvelle carte ; pas Sourcing M CISSE", async () => {
+    const { lireColonne } = await import("@/lib/trello/regles");
+    expect(lireColonne("Missions en cours")?.entree).toBe(true);
+    expect(lireColonne("Sourcing Anaelle")).toMatchObject({ statut: "ouverte", recruteur: "Anaelle", entree: true });
+    expect(lireColonne("Sourcing Amadou")).toMatchObject({ statut: "ouverte", recruteur: "Amadou", entree: true });
+    expect(lireColonne("Sourcing M CISSE")).toMatchObject({ statut: "ouverte", entree: false });
+    expect(lireColonne("Positionnement")?.entree).toBe(false);
+    expect(lireColonne("Sourcing Kefi")).toBeNull();
+  });
+});

@@ -68,8 +68,8 @@ export async function synchroniserTrello(supabase: SupabaseClient, options: { si
     return (personnes ?? []).find((p) => normaliserNomPersonne("", `${p.nom_affiche ?? ""} ${p.email ?? ""}`).includes(cible))?.id ?? null;
   };
 
-  // Une nouvelle mission n'entre dans l'outil QUE par « Missions en cours » ; une carte déjà connue est suivie dans toutes les colonnes.
-  const nouvellesPossibles = cartes.filter((c) => !ignorer(c) && !c.closed && !parCarte.has(c.id) && lireColonne(nomListe.get(c.idList) ?? "")?.aRepartir);
+  // Une nouvelle mission entre par « Missions en cours », « Sourcing Anaelle » ou « Sourcing Amadou » ; une carte déjà connue est suivie partout.
+  const nouvellesPossibles = cartes.filter((c) => !ignorer(c) && !c.closed && !parCarte.has(c.id) && lireColonne(nomListe.get(c.idList) ?? "")?.entree);
   const liens = rapprocher([...sansCarte.values()], nouvellesPossibles);
   const parId = new Map([...sansCarte.values()].map((m) => [m.id, m]));
 
@@ -78,10 +78,10 @@ export async function synchroniserTrello(supabase: SupabaseClient, options: { si
 
   for (const carte of cartes) {
     if (ignorer(carte)) { bilan.ignorees++; continue; } // carte d'information ou mission supprimée par un administrateur
-    const colonne = carte.closed ? { statut: "fermee" as const, recruteur: null, aRepartir: false } : lireColonne(nomListe.get(carte.idList) ?? "");
+    const colonne = carte.closed ? { statut: "fermee" as const, recruteur: null, aRepartir: false, entree: false } : lireColonne(nomListe.get(carte.idList) ?? "");
     const existante = parCarte.get(carte.id);
     if (!colonne) { if (!existante) bilan.ignorees++; continue; } // colonne ignorée (ex. Sourcing Kefi) : rien ne change
-    if (!existante && !colonne.aRepartir) { bilan.ignorees++; continue; } // carte jamais passée par « Missions en cours » : pas importée
+    if (!existante && !colonne.entree) { bilan.ignorees++; continue; } // carte jamais passée par une colonne d'entrée : pas importée
     vues.add(carte.id);
     bilan.cartesLues++;
     const titre = lireTitre(carte.name);

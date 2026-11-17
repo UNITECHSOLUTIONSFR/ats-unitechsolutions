@@ -8,23 +8,26 @@ import { sansAccents } from "@/lib/metier/texte";
 export const TABLEAU_TRELLO = process.env.TRELLO_TABLEAU || "YI6w9P5e";
 
 export type StatutMission = "ouverte" | "chez_client" | "pourvue" | "en_pause" | "fermee";
-export interface Colonne { statut: StatutMission; recruteur: string | null; aRepartir: boolean }
+/** entree : une NOUVELLE carte de cette colonne entre dans l'outil (sinon seules les cartes déjà connues y sont suivies). */
+export interface Colonne { statut: StatutMission; recruteur: string | null; aRepartir: boolean; entree: boolean }
 
 const cle = (t: string) => sansAccents(t).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
 /** Recruteurs : seules ces colonnes « Sourcing … » sont lues (« Sourcing Kefi » est ignorée). */
 const RECRUTEURS: Record<string, string> = { "sourcing anaelle": "Anaelle", "sourcing amadou": "Amadou", "sourcing m cisse": "M. Cissé" };
+/** Colonnes de recruteurs par lesquelles une nouvelle mission entre aussi dans l'outil (décision du 17/11/2026, sans M. Cissé). */
+const ENTREE_RECRUTEURS = new Set(["sourcing anaelle", "sourcing amadou"]);
 
 /** Statut d'une carte selon sa colonne ; null = colonne ignorée (la carte n'est pas lue). */
 export function lireColonne(nom: string): Colonne | null {
   const k = cle(nom);
-  if (RECRUTEURS[k]) return { statut: "ouverte", recruteur: RECRUTEURS[k], aRepartir: false };
+  if (RECRUTEURS[k]) return { statut: "ouverte", recruteur: RECRUTEURS[k], aRepartir: false, entree: ENTREE_RECRUTEURS.has(k) };
   if (k.startsWith("sourcing")) return null; // autres colonnes de sourcing (Kefi) : ignorées
-  if (k === "missions en cours" || k === "mission en cours") return { statut: "ouverte", recruteur: null, aRepartir: true };
-  if (/^(positionnement|qualification|soutenance)/.test(k)) return { statut: "chez_client", recruteur: null, aRepartir: false };
-  if (k === "go" || k.startsWith("mission terminee") || k.startsWith("missions terminees")) return { statut: "pourvue", recruteur: null, aRepartir: false };
-  if (k.includes("hold")) return { statut: "en_pause", recruteur: null, aRepartir: false };
-  if (k.includes("no go") || k.includes("nogo") || k.includes("sans positionnement")) return { statut: "fermee", recruteur: null, aRepartir: false };
+  if (k === "missions en cours" || k === "mission en cours") return { statut: "ouverte", recruteur: null, aRepartir: true, entree: true };
+  if (/^(positionnement|qualification|soutenance)/.test(k)) return { statut: "chez_client", recruteur: null, aRepartir: false, entree: false };
+  if (k === "go" || k.startsWith("mission terminee") || k.startsWith("missions terminees")) return { statut: "pourvue", recruteur: null, aRepartir: false, entree: false };
+  if (k.includes("hold")) return { statut: "en_pause", recruteur: null, aRepartir: false, entree: false };
+  if (k.includes("no go") || k.includes("nogo") || k.includes("sans positionnement")) return { statut: "fermee", recruteur: null, aRepartir: false, entree: false };
   return null;
 }
 
