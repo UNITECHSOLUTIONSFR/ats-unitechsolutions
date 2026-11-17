@@ -122,7 +122,9 @@ export async function recopierDisponibilitesDansExcel(
   let recopiees = 0, introuvables = 0, restantes = 0;
   for (const fiche of fiches) {
     if (Date.now() - debut > budgetMs) { restantes++; continue; }
-    const attente = fiche.excel_maj_en_attente as { disponibilite?: string; cellules?: Record<string, string> };
+    const attente = fiche.excel_maj_en_attente as { disponibilite?: string; cellules?: Record<string, string>; ecraser?: string[] };
+    // Cases modifiées dans l'outil (fiche ou tableau) : elles REMPLACENT la valeur de l'Excel (décision du 17/11/2026).
+    const ecraser = new Set(attente.ecraser ?? []);
     const homonymes = parNom.get(cle(fiche.prenom, fiche.nom)) ?? [];
     const ligne = (fiche.email && parEmail.get(fiche.email)) || (homonymes.length === 1 ? homonymes[0] : null);
     if (!ligne) { introuvables++; continue; }
@@ -131,9 +133,15 @@ export async function recopierDisponibilitesDansExcel(
     if (attente.disponibilite && cDispo >= 0) await ecrire(cDispo, attente.disponibilite);
     for (const [entete, v] of Object.entries(attente.cellules ?? {})) {
       const c = entetes.indexOf(entete);
-      if (c < 0 || !v) continue;
+      if (c < 0) continue;
       const actuelle = values[ligne - 1]?.[c];
-      if (actuelle !== null && actuelle !== undefined && String(actuelle).trim() !== "") continue; // jamais d'écrasement
+      if (ecraser.has(entete)) {
+        if (String(actuelle ?? "") === v) continue; // déjà à jour
+      } else {
+        // Cases remplies par un import de fichier : jamais d'écrasement.
+        if (!v) continue;
+        if (actuelle !== null && actuelle !== undefined && String(actuelle).trim() !== "") continue;
+      }
       await ecrire(c, v);
     }
     await supabase.from("consultants").update({ excel_maj_en_attente: null }).eq("id", fiche.id);

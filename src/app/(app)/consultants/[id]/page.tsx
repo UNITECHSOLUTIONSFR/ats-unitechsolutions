@@ -5,6 +5,7 @@ import { after } from "next/server";
 import { journaliser } from "@/lib/acces";
 import { clientSupabaseServeur, utilisateurConnecte } from "@/lib/supabase/serveur";
 import { formaterTelephone } from "@/lib/metier/telephone";
+import { champsParEntete } from "@/lib/import/excel";
 import { modifierConsultant } from "@/lib/consultants/actions";
 import BlocRGPD from "./rgpd";
 import AjoutCV from "./ajout-cv";
@@ -34,7 +35,7 @@ export default async function FicheConsultant({ params, searchParams }: { params
   // Promesse unique (sinon la requête partirait deux fois).
   const fiche = Promise.resolve(supabase.from("consultants").select("*").eq("id", id).maybeSingle());
   // Frise lue en même temps que la fiche (plus d'attente en deux temps).
-  const [utilisateur, { data: c }, evenements, { data: profil }, { data: competences }, { data: documents }, { data: propositions }, { data: missionsOuvertes }, { data: cvGeneres }] = await Promise.all([
+  const [utilisateur, { data: c }, evenements, { data: profil }, { data: competences }, { data: documents }, { data: propositions }, { data: missionsOuvertes }, { data: cvGeneres }, { data: onglet }, { data: ligneExcel }] = await Promise.all([
     utilisateurConnecte(),
     fiche,
     frise(supabase, id, fiche.then((r) => r.data)),
@@ -44,6 +45,9 @@ export default async function FicheConsultant({ params, searchParams }: { params
     supabase.from("propositions").select("statut, score, updated_at, missions(id, intitule, client)").eq("consultant_id", id).order("updated_at", { ascending: false }),
     supabase.from("missions").select("id, intitule, client").eq("statut", "ouverte").order("created_at", { ascending: false }),
     supabase.from("cv_unitech_generes").select("id, created_at, word_nom, word_url, pdf_nom, pdf_url, pdf_genere_le, dossier, missions(intitule, client)").eq("consultant_id", id).order("created_at", { ascending: false }).limit(10),
+    // Colonnes du fichier de suivi sans champ dédié : modifiables depuis la fiche.
+    supabase.from("tableau_onglets").select("entetes").eq("principal", true).maybeSingle(),
+    supabase.from("tableau_lignes").select("valeurs").eq("consultant_id", id).limit(1).maybeSingle(),
   ]);
   if (!utilisateur) redirect("/");
   if (!c) notFound();
@@ -198,8 +202,12 @@ export default async function FicheConsultant({ params, searchParams }: { params
             <Champ nom="prenom" libelle="Prénom" valeur={c.prenom === "—" ? "" : c.prenom} />
             <Champ nom="nom" libelle="Nom" valeur={c.nom} />
           </div>
+          <Champ nom="trigramme" libelle="Trigramme" valeur={c.trigramme} />
           <Champ nom="telephone" libelle="Téléphone" valeur={formaterTelephone(c.telephone_e164) || c.telephone_brut} />
-          <Champ nom="email" libelle="Email" valeur={c.email} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Champ nom="email" libelle="Email" valeur={c.email} />
+            <Champ nom="email_2" libelle="Email 2" valeur={c.email_2} />
+          </div>
           <Champ nom="intitule_poste" libelle="Intitulé de poste" valeur={c.intitule_poste} />
           <Champ nom="localisation" libelle="Localisation" valeur={c.localisation} />
           <label className="block">
@@ -220,10 +228,59 @@ export default async function FicheConsultant({ params, searchParams }: { params
               <option value="inactif">Inactif</option>
             </select>
           </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Champ nom="experience" libelle="Expérience (Excel)" valeur={c.experience} />
+            <Champ nom="tjm_salaire" libelle="TJM / salaire" valeur={c.tjm_salaire} />
+          </div>
+          <Champ nom="linkedin" libelle="LinkedIn" valeur={c.linkedin} />
+          <Champ nom="cv_lien" libelle="Lien du CV" valeur={c.cv_lien} />
+          <Champ nom="commentaire_email" libelle="Commentaire email" valeur={c.commentaire_email} />
           <label className="block">
             <span className="text-slate-600">Notes</span>
             <textarea name="notes" defaultValue={c.notes ?? ""} rows={4} className="champ mt-1 w-full" />
           </label>
+          {/* Profil lu dans le CV : corrigeable à la main (le matching en tient compte). */}
+          <fieldset className="space-y-3 rounded-2xl bg-slate-50/80 p-3 ring-1 ring-slate-200/70">
+            <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Profil (CV)</legend>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Champ nom="annees_experience" libelle="Années d'expérience" valeur={profil?.annees_experience == null ? null : String(profil.annees_experience)} type="number" />
+              <label className="block">
+                <span className="text-slate-600">Séniorité</span>
+                <select name="seniorite" defaultValue={profil?.seniorite ?? ""} className="champ mt-1 w-full">
+                  <option value="">Non précisée</option><option value="junior">Junior</option><option value="confirme">Confirmé</option>
+                  <option value="senior">Senior</option><option value="expert">Expert</option>
+                </select>
+              </label>
+            </div>
+            <label className="block">
+              <span className="text-slate-600">Résumé</span>
+              <textarea name="resume" defaultValue={profil?.resume ?? ""} rows={3} className="champ mt-1 w-full" />
+            </label>
+            <label className="block">
+              <span className="text-slate-600">Compétences (séparées par des virgules)</span>
+              <textarea name="competences" defaultValue={((competences ?? []) as unknown as { competences: { nom_canonique: string } | null }[]).map((k) => k.competences?.nom_canonique).filter(Boolean).join(", ")} rows={3} className="champ mt-1 w-full" />
+            </label>
+          </fieldset>
+          {/* Autres colonnes du fichier de suivi (sans champ dédié) : modifiables ici, recopiées dans l'Excel. */}
+          {(() => {
+            const entetes = (onglet?.entetes as string[] | undefined) ?? [];
+            const lies = champsParEntete(entetes, entetes);
+            const valeurs = ((ligneExcel?.valeurs as Record<string, string> | undefined) ?? (c.colonnes_tableau as Record<string, string> | null) ?? {});
+            const libres = entetes.filter((e) => !lies[e]);
+            return libres.length ? (
+              <fieldset className="space-y-3 rounded-2xl bg-slate-50/80 p-3 ring-1 ring-slate-200/70">
+                <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Autres colonnes du fichier de suivi</legend>
+                {libres.map((e) => (
+                  <label key={e} className="block">
+                    <span className="text-slate-600">{e}</span>
+                    <input name={`col:${e}`} defaultValue={valeurs[e] ?? ""} className="champ mt-1 w-full" />
+                    <input type="hidden" name={`avant:${e}`} value={valeurs[e] ?? ""} />
+                  </label>
+                ))}
+              </fieldset>
+            ) : null;
+          })()}
+          <p className="text-xs text-slate-500">Chaque modification est reportée partout : tableau Consultants, fichier Excel de suivi (la nuit), noms des CV dans SharePoint, matching.</p>
           <button className="bouton-primaire w-full justify-center">Enregistrer</button>
         </form>
           <BlocCVUnitech consultantId={c.id} missions={missionsOuvertes ?? []} generes={(cvGeneres ?? []).map((g) => {

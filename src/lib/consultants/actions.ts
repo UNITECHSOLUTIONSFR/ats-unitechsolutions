@@ -15,11 +15,12 @@ const STATUTS = ["candidat", "consultant", "en_mission", "inactif"];
 export async function modifierConsultant(formData: FormData) {
   const { utilisateur, supabase } = await exigerUtilisateur();
   const id = String(formData.get("id"));
-  const { data: avant } = await supabase
-    .from("consultants")
-    .select("prenom, nom, trigramme, intitule_poste, disponibilite, disponible_le, telephone_e164, email, localisation, mobilite, statut, notes")
-    .eq("id", id)
-    .maybeSingle();
+  const CHAMPS_FICHE = "prenom, nom, trigramme, intitule_poste, disponibilite, disponible_le, telephone_e164, telephone_brut, email, email_2, localisation, mobilite, statut, notes, experience, tjm_salaire, linkedin, cv_lien, commentaire_email";
+  const [{ data: avant }, { data: profilAvant }, { data: compsAvant }] = await Promise.all([
+    supabase.from("consultants").select(CHAMPS_FICHE).eq("id", id).maybeSingle(),
+    supabase.from("profils").select("annees_experience, seniorite, resume").eq("consultant_id", id).maybeSingle(),
+    supabase.from("consultant_competences").select("competence_id, competences(nom_canonique)").eq("consultant_id", id),
+  ]);
   if (!avant) return;
 
   const texte = (k: string) => {
@@ -28,22 +29,31 @@ export async function modifierConsultant(formData: FormData) {
   };
   const tel = normaliserTelephone(texte("telephone"));
   const statut = String(formData.get("statut"));
-  // Prénom et nom : le nom ne peut pas être vidé ; le trigramme suit s'il était calculé (un trigramme repris de l'Excel est gardé).
+  // Prénom et nom : le nom ne peut pas être vidé. Trigramme : celui saisi, sinon recalculé s'il était calculé
+  // (un trigramme repris de l'Excel est gardé tant qu'on ne le change pas).
   const prenom = texte("prenom") ?? avant.prenom;
   const nom = texte("nom") ?? avant.nom;
   const trigrammeAuto = avant.trigramme === calculerTrigramme(avant.prenom, avant.nom);
+  const trigrammeSaisi = texte("trigramme")?.toUpperCase().slice(0, 6) ?? null;
   const apres: Record<string, unknown> = {
     prenom, nom,
-    trigramme: trigrammeAuto ? calculerTrigramme(prenom, nom) : avant.trigramme,
+    trigramme: trigrammeSaisi && trigrammeSaisi !== avant.trigramme ? trigrammeSaisi : trigrammeAuto ? calculerTrigramme(prenom, nom) : avant.trigramme,
     intitule_poste: texte("intitule_poste"),
     disponibilite: texte("disponibilite"),
     disponible_le: texte("disponible_le"),
     telephone_e164: tel.e164 ?? (tel.statut === "vide" ? null : avant.telephone_e164),
+    telephone_brut: tel.e164 ? null : tel.statut === "vide" ? null : texte("telephone"),
     email: normaliserEmail(texte("email")) ?? (texte("email") ? avant.email : null),
+    email_2: normaliserEmail(texte("email_2")) ?? texte("email_2"),
     localisation: texte("localisation"),
     mobilite: texte("mobilite"),
     statut: STATUTS.includes(statut) ? statut : avant.statut,
     notes: texte("notes"),
+    experience: texte("experience"),
+    tjm_salaire: texte("tjm_salaire"),
+    linkedin: texte("linkedin"),
+    cv_lien: texte("cv_lien"),
+    commentaire_email: texte("commentaire_email"),
   };
 
   const modifications: Record<string, { avant: unknown; apres: unknown }> = {};
@@ -51,18 +61,73 @@ export async function modifierConsultant(formData: FormData) {
     const a = (avant as Record<string, unknown>)[k] ?? null;
     if (String(a ?? "") !== String(v ?? "")) modifications[k] = { avant: a, apres: v };
   }
+
+  // Profil du CV (expérience, séniorité, résumé, compétences) : modifiable aussi.
+  const annees = texte("annees_experience");
+  const seniorite = texte("seniorite");
+  const profil = {
+    annees_experience: annees === null ? null : Math.max(0, Math.min(60, Number(annees.replace(",", ".")) || 0)),
+    seniorite: ["junior", "confirme", "senior", "expert"].includes(seniorite ?? "") ? seniorite : null,
+    resume: texte("resume"),
+  };
+  for (const [k, v] of Object.entries(profil)) {
+    const a = (profilAvant as Record<string, unknown> | null)?.[k] ?? null;
+    if (String(a ?? "") !== String(v ?? "")) modifications[`profil.${k}`] = { avant: a, apres: v };
+  }
+  const nomsAvant = ((compsAvant ?? []) as unknown as { competence_id: string; competences: { nom_canonique: string } | null }[]);
+  const saisieCompetences = formData.get("competences");
+  const nomsApres = saisieCompetences === null ? null : [...new Set(String(saisieCompetences).split(/[,;\n]/).map((n) => n.trim()).filter(Boolean))].slice(0, 80);
+  const listeAvant = nomsAvant.map((c) => c.competences?.nom_canonique ?? "").filter(Boolean);
+  const competencesChangees = nomsApres !== null && [...nomsApres].sort().join("|").toLowerCase() !== [...listeAvant].sort().join("|").toLowerCase();
+  if (competencesChangees) modifications.competences = { avant: listeAvant, apres: nomsApres };
+
+  // Colonnes du fichier de suivi sans champ dédié (« col:<titre> »).
+  const libres: Record<string, string> = {};
+  for (const [k, v] of formData.entries()) {
+    if (!k.startsWith("col:")) continue;
+    const entete = k.slice(4), valeur = String(v).trim();
+    if (formData.get(`avant:${entete}`) !== valeur) libres[entete] = valeur;
+  }
+  for (const [e, v] of Object.entries(libres)) modifications[`colonne.${e}`] = { avant: formData.get(`avant:${e}`), apres: v };
   if (!Object.keys(modifications).length) return;
   if (modifications.disponibilite || modifications.disponible_le) apres.disponibilite_maj_le = new Date().toISOString();
 
   const { error } = await supabase.from("consultants").update(apres).eq("id", id);
   if (error) throw new Error(error.message.includes("consultants_email_unique") ? "Cet email est déjà utilisé par une autre fiche." : error.message);
+  if (Object.keys(modifications).some((k) => k.startsWith("profil."))) {
+    if (profilAvant) await supabase.from("profils").update(profil).eq("consultant_id", id);
+    else await supabase.from("profils").insert({ consultant_id: id, ...profil, secteurs: [], langues: [], certifications: [] });
+  }
+  if (competencesChangees && nomsApres) {
+    const { resoudreCompetences } = await import("@/lib/matching/competences");
+    const correspondance = await resoudreCompetences(supabase, nomsApres);
+    const ids = new Set([...correspondance.values()].flat());
+    const aRetirer = nomsAvant.map((c) => c.competence_id).filter((c) => !ids.has(c));
+    if (aRetirer.length) await supabase.from("consultant_competences").delete().eq("consultant_id", id).in("competence_id", aRetirer);
+    const existants = new Set(nomsAvant.map((c) => c.competence_id));
+    const aAjouter = [...ids].filter((c) => !existants.has(c));
+    if (aAjouter.length) await supabase.from("consultant_competences").insert(aAjouter.map((competence_id) => ({ consultant_id: id, competence_id })));
+  }
   await supabase.from("consultants_historique").insert({ consultant_id: id, source: "interface", modifications, par: utilisateur.id });
   await supabase.from("journal_acces").insert({
     utilisateur_id: utilisateur.id, action: "modification", consultant_id: id, details: { champs: Object.keys(modifications) },
   });
+
+  // Répercussion partout : ligne du tableau et Excel d'origine (cette nuit, en remplaçant la case), fichiers SharePoint
+  // si le nom ou le trigramme change, matching (fiche modifiée = empreinte et classements recalculés).
+  const { clientSupabaseAdmin } = await import("@/lib/supabase/admin");
+  const { renommerFichiers, repercuterFiche } = await import("./propagation");
+  const admin = clientSupabaseAdmin();
+  await repercuterFiche(admin, id, { ...avant, ...apres }, Object.keys(modifications), libres);
+  if (modifications.prenom || modifications.nom || modifications.trigramme) {
+    const { after } = await import("next/server");
+    after(() => renommerFichiers(id, { prenom: avant.prenom, nom: avant.nom, trigramme: avant.trigramme }, { prenom: String(apres.prenom), nom: String(apres.nom), trigramme: String(apres.trigramme) })
+      .then((j) => { if (j.length) return admin.from("consultants_historique").insert({ consultant_id: id, source: "interface", modifications: { fichiers: { avant: null, apres: j } }, par: utilisateur.id }).then(() => undefined); })
+      .catch((e) => console.error("Renommage des fichiers :", (e as Error).message)));
+  }
   revalidatePath(`/consultants/${id}`);
   invaliderTableau();
-  revalidatePath("/consultants"); // le tableau gardé en mémoire dans le navigateur est rafraîchi
+  revalidatePath("/consultants");
 }
 
 export interface EtatCreation { erreur?: string }

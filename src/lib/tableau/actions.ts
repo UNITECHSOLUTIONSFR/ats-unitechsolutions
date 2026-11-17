@@ -67,6 +67,14 @@ export async function modifierCellules(ids: string[], colonne: string, valeur: s
     }
   }
 
+  // Excel d'origine : la case modifiée est écrite cette nuit (elle remplace la valeur de l'Excel), pour chaque fiche liée.
+  if (consultants.length) {
+    const { clientSupabaseAdmin } = await import("@/lib/supabase/admin");
+    const { noterPourExcel } = await import("@/lib/consultants/propagation");
+    const admin = clientSupabaseAdmin();
+    for (const c of consultants) await noterPourExcel(admin, c, { [colonne]: valeur.trim() });
+  }
+
   if (maj && consultants.length) {
     const erreur = await mettreAJourFiches(supabase, consultants, maj, colonne, utilisateur.id);
     if (erreur) return { ok: false, message: idsTableau.length ? `Tableau modifié, mais fiche non mise à jour : ${erreur}.` : `Fiche non mise à jour : ${erreur}.` };
