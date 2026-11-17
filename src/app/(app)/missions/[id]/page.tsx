@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { exigerUtilisateur } from "@/lib/acces";
-import type { LigneClassement } from "@/lib/matching/classement";
+import { noteAffichee, type LigneClassement } from "@/lib/matching/classement";
 import { classementAAfficher } from "@/lib/matching/stockage";
 import BoutonRecalculer from "./recalculer";
 import { formaterTelephone } from "@/lib/metier/telephone";
@@ -51,7 +51,7 @@ export default async function PageMission({ params }: { params: Promise<{ id: st
   for (const g of cvMission ?? []) if (!cvParConsultant.has(g.consultant_id)) cvParConsultant.set(g.consultant_id, { id: g.id, word: g.word_url, pdf: g.pdf_url });
   const suivi = new Map((propositions ?? []).map((p) => [p.consultant_id, p.statut as string]));
   const shortlist: ProfilShortlist[] = classement.filter((c) => suivi.has(c.consultant_id) && suivi.get(c.consultant_id) !== "refuse").map((c) => ({
-    trigramme: c.trigramme, poste: c.intitule_poste, annees: c.annees_experience, score: Math.round(c.resultat.score),
+    trigramme: c.trigramme, poste: c.intitule_poste, annees: c.annees_experience, score: Math.round(noteAffichee(c)),
     disponibilite: c.disponible_le ? new Date(c.disponible_le).toLocaleDateString("fr-FR") : c.disponibilite ?? "à préciser", pdf: c.pdf_anonyme_url,
   }));
   const exigences = (mission.mission_competences ?? []) as unknown as {
@@ -167,11 +167,11 @@ function CarteCandidat({ rang, c, missionId, statut, ouvert, cv, avis }: {
           <div className="truncate text-sm text-slate-500">{c.intitule_poste ?? "Poste non renseigné"} · <span className="font-mono text-xs">{c.trigramme}</span></div>
           <div className="mt-0.5 truncate text-xs text-slate-500">Disponibilité : {c.disponible_le ? new Date(c.disponible_le).toLocaleDateString("fr-FR") : c.disponibilite ?? "non renseignée"}</div>
         </div>
-        <JaugeScore score={c.resultat.score} />
+        <JaugeScore score={noteAffichee(c)} />
       </div>
       {c.avisIA && (
         <div className={`mt-3 flex items-start gap-2 rounded-xl px-3 py-2 text-sm ring-1 ${AVIS_IA[c.avisIA.verdict].classe}`}>
-          <span className="shrink-0 font-bold">IA · {AVIS_IA[c.avisIA.verdict].libelle}</span>
+          <span className="shrink-0 font-bold">IA · {c.avisIA.note != null ? `${c.avisIA.note}/100` : AVIS_IA[c.avisIA.verdict].libelle}</span>
           {c.avisIA.raison && <span className="text-slate-700">{c.avisIA.raison}</span>}
         </div>
       )}
@@ -186,7 +186,7 @@ function CarteCandidat({ rang, c, missionId, statut, ouvert, cv, avis }: {
         <form action={suivreProposition} className="flex items-center gap-1 rounded-full bg-white p-1 ring-1 ring-slate-200 ">
           <input type="hidden" name="mission_id" value={missionId} />
           <input type="hidden" name="consultant_id" value={c.consultant_id} />
-          <input type="hidden" name="score" value={c.resultat.score} />
+          <input type="hidden" name="score" value={noteAffichee(c)} />
           <select name="statut" defaultValue={statut ?? "propose"} aria-label="Suivi" className="rounded-full bg-transparent px-2 py-1 text-xs font-semibold text-nuit outline-none">
             {Object.entries(STATUTS_PROPOSITION).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
@@ -197,7 +197,7 @@ function CarteCandidat({ rang, c, missionId, statut, ouvert, cv, avis }: {
 
       <details open={ouvert} className="group mt-3 rounded-2xl bg-slate-50/80 px-4 py-3 ring-1 ring-slate-200/70">
         <summary className="flex cursor-pointer list-none flex-wrap items-center gap-3">
-          <span className="text-sm font-semibold text-nuit">Pourquoi ce score</span>
+          <span className="text-sm font-semibold text-nuit">Détail des critères (compétences, expérience, disponibilité)</span>
           <span className="ml-auto text-xs font-medium text-marque-600 group-open:hidden">Voir l&apos;explication</span>
         </summary>
         <div className="mt-3"><ExplicationScore resultat={c.resultat} /></div>

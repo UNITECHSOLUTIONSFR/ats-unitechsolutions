@@ -242,3 +242,8 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Mesures (serveur local, base de production, « froid » = sans mémoire) : accueil 9,9 s → 1,5 s ; liste des missions 16,9 s → 1,0 s ; écran Consultants : 3,9 Mo téléchargés → 50 lignes (≈ 60 Ko) ; recherche « java paris » ≈ 0,3-0,9 s ; filtre de colonne 0,2 s ; mission ≈ 0,8 s (1,2 Mo → 1,1 Mo).
 - Testé : 244 tests (dont base : migrations 42-43), compilation, parcours navigateur (recherche, filtre, page suivante, mission, liste) sans erreur.
 - Suite : mise en ligne après go ; mesurer en production ; phase 2 selon les chiffres (fiche consultant ≈ 1,5-2,5 s : aperçu du CV).
+
+### 17/11/2026 — Nouvelle méthode de matching (go de l'utilisatrice, option A : Voyage AI)
+- Fait : empreintes de sens Voyage AI (5 078 fiches calculées, gratuit) ; présélection sens + compétences fusionnée ; note /100 + raison de l'IA sur 60 profils ; apprentissage par les décisions de l'équipe ; liste de métiers abandonnée ; export mission aligné sur l'écran.
+- Testé : 244 tests (dont nouveau test du matching : profil proche par le sens lu par l'IA, notes gardées, aucune donnée personnelle envoyée), compilation. Comparaison avec l'ancienne méthode sur 3 missions (Support RATP, Testeur QA, Développeur IA) faite en ligne (la clé IA n'est que sur le site) ; copie des anciens classements gardée.
+- Suite : vérifier la comparaison ; retour à l'ancienne méthode si moins bon.

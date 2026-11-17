@@ -29,7 +29,9 @@ export interface LigneClassement {
   annees_experience: number | null;
   resultat: ResultatScore;
   /** Avis de l'IA (matching) : lecture de la mission et du profil, verdict et raison. */
-  avisIA?: { verdict: "pertinent" | "a_etudier" | "hors_sujet"; raison: string | null } | null;
+  avisIA?: { verdict: "pertinent" | "a_etudier" | "hors_sujet"; raison: string | null; note?: number | null } | null;
+  /** Proximité de sens avec la mission (0 à 1), quand les empreintes sont calculées. */
+  similarite?: number | null;
 }
 
 interface LigneCandidat {
@@ -96,7 +98,8 @@ export async function ponderationsReglees(supabase: SupabaseClient): Promise<Pon
 }
 
 /** Classement des consultants pour une mission : filtres, score, raisons. Aucun appel à l'IA. */
-export async function classementMission(supabase: SupabaseClient, missionId: string, limite = 50, inclure?: string): Promise<LigneClassement[]> {
+export async function classementMission(supabase: SupabaseClient, missionId: string, limite = 50, inclure?: string | string[]): Promise<LigneClassement[]> {
+  const inclus = inclure === undefined ? [] : Array.isArray(inclure) ? inclure : [inclure];
   const mission = await chargerMissionAScorer(supabase, missionId);
   if (!mission) return [];
   const [ponderations, { data, error }, dansLesTextes] = await Promise.all([
@@ -113,7 +116,8 @@ export async function classementMission(supabase: SupabaseClient, missionId: str
     .map(([id, k]) => [id, [...k].reduce((t, c) => t + (poids.get(c) ?? 1), 0)] as const)
     .sort((a, b) => b[1] - a[1]).slice(0, 300).map(([id]) => id);
   // Personne demandée explicitement (fiche consultant) : évaluée même si elle n'est pas candidate.
-  if (inclure && !connus.has(inclure) && !absents.includes(inclure)) absents.push(inclure);
+  // Personnes demandées explicitement (fiche consultant, profils proches par le sens) : évaluées même sans compétence citée.
+  for (const id of inclus) if (!connus.has(id) && !absents.includes(id)) absents.push(id);
   const supplementaires = absents.length ? await chargerCandidats(supabase, absents) : [];
   const lignes = [...((data ?? []) as LigneCandidat[]), ...supplementaires].map((c) => ({
     consultant_id: c.consultant_id,
@@ -138,13 +142,15 @@ export async function classementMission(supabase: SupabaseClient, missionId: str
       disponibilite_maj_le: c.disponibilite_maj_le,
       localisation: c.localisation,
       similarite: c.similarite,
-      metier: c.intitule_poste,
+      // Liste de métiers fixée à l'avance abandonnée (17/11/2026) : c'est l'IA qui juge le métier en lisant les profils.
+      metier: null,
     }, ponderations),
   }));
   const classes = classer(lignes);
   const retenus = classes.slice(0, limite);
-  if (inclure && !retenus.some((l) => l.consultant_id === inclure)) {
-    const l = classes.find((x) => x.consultant_id === inclure);
+  for (const id of inclus) {
+    if (retenus.some((l) => l.consultant_id === id)) continue;
+    const l = classes.find((x) => x.consultant_id === id);
     if (l) retenus.push(l);
   }
   // Lien Outlook écarté : on cherche alors un CV Word rangé dans SharePoint pour la même personne.
@@ -205,4 +211,16 @@ async function chargerCandidats(supabase: SupabaseClient, ids: string[]): Promis
     for (const c of (data ?? []) as (LigneCandidat & { competences: { competence_id: string; annees: number | null }[] })[]) lignes.push({ ...c, similarite: null });
   }
   return lignes;
+}
+
+/** Note affichée : celle de l'IA quand le profil a été lu, sinon le score calculé sur les compétences. */
+export function noteAffichee(l: LigneClassement): number {
+  return l.avisIA?.note ?? l.resultat.score;
+}
+
+/** Profil pertinent : non écarté et noté 60 ou plus (par l'IA quand elle l'a lu). */
+export function estPertinent(l: LigneClassement): boolean {
+  if (l.resultat.elimine) return false;
+  if (l.avisIA?.note != null) return l.avisIA.note >= 60;
+  return l.avisIA?.verdict !== "hors_sujet" && l.resultat.score >= 60;
 }

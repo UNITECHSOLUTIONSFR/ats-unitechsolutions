@@ -8,7 +8,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
 import { LONGUEUR_MAX_TEXTE, MAX_TOKENS, MODELES, estimerCoutUSD } from "./config";
-import { CONSIGNES_TRI_CANDIDATS } from "./consignes";
+import { CONSIGNES_NOTE_CANDIDATS, CONSIGNES_TRI_CANDIDATS } from "./consignes";
 import { CONSIGNES_ADEQUATION, CONSIGNES_AVIS_MISSION, CONSIGNES_CV_UNITECH, CONSIGNES_MISSION, CONSIGNES_PROFIL_CV, CONSIGNES_RECHERCHE, CONSIGNES_REPONSE_DISPO } from "./consignes";
 import {
   PROMPT_VERSION,
@@ -20,6 +20,8 @@ import {
   SchemaCriteresRecherche,
   SchemaAvisMission,
   SchemaTriCandidats,
+  SchemaNoteCandidats,
+  type NoteCandidats,
   type TriCandidats,
   borner,
   bornerMission,
@@ -37,7 +39,7 @@ export { PROMPT_VERSION };
 export type { ExigencesMission, ProfilCV, ReponseDisponibilite, CVStructure, Adequation, CriteresRecherche, AvisMission };
 
 export interface UsageIA {
-  usage: "fiche_cv" | "mission" | "tri_email" | "analyse_approfondie" | "reponse_disponibilite" | "lecture_scan" | "cv_unitech" | "adequation" | "recherche" | "avis_mission" | "tri_candidats";
+  usage: "fiche_cv" | "mission" | "tri_email" | "analyse_approfondie" | "reponse_disponibilite" | "lecture_scan" | "cv_unitech" | "adequation" | "recherche" | "avis_mission" | "tri_candidats" | "note_candidats" | "empreintes";
   modele: string;
   mode: "standard" | "batch";
   tokens_entree: number;
@@ -292,4 +294,15 @@ export async function trierCandidats(mission: string, profils: { ref: string; te
   const r = await appeler(MODELES.triCandidats, CONSIGNES_TRI_CANDIDATS, SchemaTriCandidats, texte, MAX_TOKENS.triCandidats, "tri_candidats");
   if (!r.donnees) throw Object.assign(new ErreurIA("Tri des profils impossible."), { usages: [r.usage] });
   return { donnees: r.donnees, modele: MODELES.triCandidats, promptVersion: PROMPT_VERSION, usages: [r.usage] };
+}
+
+/**
+ * Matching : note sur 100 et raison pour chaque profil présélectionné d'une mission (sans nom ni coordonnées : C1, C2…).
+ * `exemples` : décisions de l'équipe sur des profils (apprentissage), déjà anonymisées.
+ */
+export async function noterCandidats(mission: string, profils: { ref: string; texte: string }[], exemples = ""): Promise<ResultatIA<NoteCandidats>> {
+  const texte = `MISSION :\n${mission.slice(0, 9000)}\n\n${exemples ? `DÉCISIONS DE L'ÉQUIPE :\n${exemples.slice(0, 4000)}\n\n` : ""}PROFILS :\n${profils.map((p) => `[${p.ref}]\n${p.texte.slice(0, 1500)}`).join("\n\n")}`;
+  const r = await appeler(MODELES.noteCandidats, CONSIGNES_NOTE_CANDIDATS, SchemaNoteCandidats, texte, MAX_TOKENS.noteCandidats, "note_candidats");
+  if (!r.donnees) throw Object.assign(new ErreurIA("Notation des profils impossible."), { usages: [r.usage] });
+  return { donnees: r.donnees, modele: MODELES.noteCandidats, promptVersion: PROMPT_VERSION, usages: [r.usage] };
 }

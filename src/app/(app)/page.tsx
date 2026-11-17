@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { exigerUtilisateur } from "@/lib/acces";
 import { classementSiRange } from "@/lib/matching/stockage";
+import { noteAffichee } from "@/lib/matching/classement";
 import { statsAccueil } from "@/lib/accueil/stats";
 import { FILTRE_MES_MISSIONS } from "@/lib/missions/responsables";
 import { alerteVisible } from "@/lib/alertes/libelles";
@@ -146,7 +147,7 @@ async function MeilleursProfils({ missionId }: { missionId: string }) {
   ]);
   const dejaSuivis = new Set((suivis ?? []).map((p) => p.consultant_id));
   // Profils à appeler : très bien classés (80 et plus) et pas encore suivis sur cette mission.
-  const aAppeler = classement.filter((c) => !c.resultat.elimine && c.resultat.score >= 80 && !dejaSuivis.has(c.consultant_id)).length;
+  const aAppeler = classement.filter((c) => !c.resultat.elimine && noteAffichee(c) >= 80 && !dejaSuivis.has(c.consultant_id)).length;
   const meilleurs = classement.slice(0, 3);
   return (
     <>
@@ -159,7 +160,7 @@ async function MeilleursProfils({ missionId }: { missionId: string }) {
       {meilleurs.map((c) => (
         <Link key={c.consultant_id} href={`/consultants/${c.consultant_id}`}
           className="flex items-center gap-3 rounded-xl bg-slate-50 p-2.5 ring-1 ring-slate-200/70 transition hover:bg-white">
-          <Score valeur={c.resultat.score} />
+          <Score valeur={noteAffichee(c)} />
           <div className="min-w-0">
             <div className="truncate text-sm font-semibold text-nuit">{c.prenom} {c.nom}</div>
             <div className="truncate text-xs text-slate-500">{c.intitule_poste ?? "—"}</div>

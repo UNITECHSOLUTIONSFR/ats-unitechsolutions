@@ -4,7 +4,7 @@ import { FILTRE_MES_MISSIONS, responsablesPossibles } from "@/lib/missions/respo
 import { IconeMallette } from "../icones";
 import ListeMissions, { type CarteMission } from "./liste";
 import { resumesMissions } from "@/lib/matching/stockage";
-import type { LigneClassement } from "@/lib/matching/classement";
+import { noteAffichee, type LigneClassement } from "@/lib/matching/classement";
 import { JaugeScore } from "./evaluation";
 import { STATUTS_MISSIONS } from "@/lib/missions/statuts";
 import { BoutonActualiserTrello } from "./trello";
@@ -82,7 +82,7 @@ function MeilleurScore({ premiers: tous }: { premiers: LigneClassement[] }) {
   if (!premiers.length) return null;
   return (
     <div className="flex flex-col items-center gap-1.5">
-      <JaugeScore score={premiers[0].resultat.score} petite sansLibelle />
+      <JaugeScore score={noteAffichee(premiers[0])} petite sansLibelle />
       <div className="flex gap-1" title="Les 3 premiers profils">
         {premiers.map((c) => <span key={c.consultant_id} className="rounded-full bg-marque-50 px-1.5 py-0.5 text-[10px] font-bold tracking-tight text-marque-700">{c.trigramme || "?"}</span>)}
       </div>

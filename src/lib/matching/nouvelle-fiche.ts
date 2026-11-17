@@ -27,7 +27,7 @@ export async function signalerMissionsCorrespondantes(supabase: SupabaseClient, 
     const r = scorerConsultant(mission, {
       competences: (comp ?? []).map((k) => ({ competence_id: k.competence_id, annees: k.annees === null ? null : Number(k.annees) })),
       annees_experience: profil?.annees_experience ?? null, seniorite: profil?.seniorite ?? null,
-      disponible_le: c.disponible_le, disponibilite: c.disponibilite, disponibilite_maj_le: c.disponibilite_maj_le, localisation: c.localisation, metier: c.intitule_poste,
+      disponible_le: c.disponible_le, disponibilite: c.disponibilite, disponibilite_maj_le: c.disponibilite_maj_le, localisation: c.localisation, metier: null,
     }, ponderations);
     if (r.elimine || r.score < seuil) continue;
     const { error } = await supabase.from("propositions").insert({

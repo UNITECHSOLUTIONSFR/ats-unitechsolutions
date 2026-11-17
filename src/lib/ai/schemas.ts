@@ -139,3 +139,13 @@ export const SchemaTriCandidats = z.object({
   })),
 });
 export type TriCandidats = z.infer<typeof SchemaTriCandidats>;
+
+/** Matching (17/11/2026) : note de l'IA sur 100 et raison, pour chaque profil présélectionné (référence C1, C2…). */
+export const SchemaNoteCandidats = z.object({
+  notes: z.array(z.object({
+    ref: z.string(),
+    note: z.number(), // 0 à 100
+    raison: z.string(),
+  })),
+});
+export type NoteCandidats = z.infer<typeof SchemaNoteCandidats>;

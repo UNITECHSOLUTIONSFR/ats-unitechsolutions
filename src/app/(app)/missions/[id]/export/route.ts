@@ -1,7 +1,8 @@
 import ExcelJS from "exceljs";
 import { NextResponse } from "next/server";
 import { clientSupabaseServeur, utilisateurConnecte } from "@/lib/supabase/serveur";
-import { classementMission } from "@/lib/matching/classement";
+import { noteAffichee } from "@/lib/matching/classement";
+import { lireClassement } from "@/lib/matching/stockage";
 import { formaterTelephone } from "@/lib/metier/telephone";
 
 const SUIVI: Record<string, string> = { propose: "Proposé", appele: "Appelé", envoye_client: "Envoyé au client", retenu: "Retenu", refuse: "Refusé" };
@@ -14,7 +15,8 @@ export async function GET(_r: Request, { params }: { params: Promise<{ id: strin
   const { data: mission } = await supabase.from("missions").select("intitule, client").eq("id", id).maybeSingle();
   if (!mission) return new NextResponse("Mission introuvable.", { status: 404 });
   const [classement, { data: props }] = await Promise.all([
-    classementMission(supabase, id, 200),
+    // Même classement que l'écran (rangé dans la base) : les 60 premiers, avec la note et la raison de l'IA.
+    lireClassement(supabase, id).then((r) => r?.top ?? []),
     supabase.from("propositions").select("consultant_id, statut").eq("mission_id", id),
   ]);
   const suivi = new Map((props ?? []).map((p) => [p.consultant_id, p.statut as string]));
@@ -23,15 +25,15 @@ export async function GET(_r: Request, { params }: { params: Promise<{ id: strin
   const ws = wb.addWorksheet("Classement");
   ws.columns = [
     { header: "Rang", width: 6 }, { header: "Prénom", width: 16 }, { header: "Nom", width: 18 }, { header: "Trigramme", width: 10 },
-    { header: "Poste", width: 32 }, { header: "Score /100", width: 10 }, { header: "Disponibilité", width: 20 }, { header: "Téléphone", width: 16 },
-    { header: "Email", width: 30 }, { header: "Suivi", width: 16 }, { header: "Pourquoi ce score", width: 80 },
+    { header: "Poste", width: 32 }, { header: "Note /100", width: 10 }, { header: "Disponibilité", width: 20 }, { header: "Téléphone", width: 16 },
+    { header: "Email", width: 30 }, { header: "Suivi", width: 16 }, { header: "Avis de l'IA", width: 60 }, { header: "Détail des critères", width: 80 },
   ];
   ws.getRow(1).font = { bold: true };
   classement.forEach((c, i) => ws.addRow([
-    i + 1, c.prenom, c.nom, c.trigramme, c.intitule_poste ?? "", Math.round(c.resultat.score),
+    i + 1, c.prenom, c.nom, c.trigramme, c.intitule_poste ?? "", Math.round(noteAffichee(c)),
     c.disponible_le ? new Date(c.disponible_le).toLocaleDateString("fr-FR") : c.disponibilite ?? "",
     formaterTelephone(c.telephone_e164), c.email ?? "", SUIVI[suivi.get(c.consultant_id) ?? ""] ?? "",
-    c.resultat.raisons.map((r) => r.texte).join(" · "),
+    c.avisIA?.raison ?? "", c.resultat.raisons.map((r) => r.texte).join(" · "),
   ]));
   ws.getColumn(8).numFmt = "@";
   await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "export", consultant_id: null, details: { mission: id, lignes: classement.length } });

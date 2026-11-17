@@ -1,8 +1,9 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { clientSupabaseAdmin } from "@/lib/supabase/admin";
-import { classementMission, type LigneClassement } from "./classement";
-import { trierParIA } from "./tri-ia";
+import { estPertinent, noteAffichee, type LigneClassement } from "./classement";
+import { calculerEmpreintesConsultants } from "./empreintes";
+import { classerMission } from "./hybride";
 
 /**
  * Classements rangés dans la base (table classements_mission) : calculés en arrière-plan, lus instantanément.
@@ -13,7 +14,7 @@ import { trierParIA } from "./tri-ia";
  * - Un déploiement ne recalcule rien. Changer les règles du moteur : augmenter VERSION_MOTEUR (tout est refait).
  * L'IA ne lit que les profils qui entrent dans les 30 premiers sans avis déjà rendu (voir tri-ia) : coût maîtrisé.
  */
-export const VERSION_MOTEUR = "2026-11-17.1";
+export const VERSION_MOTEUR = "2026-11-17.2-hybride";
 
 export interface ClassementResume {
   total: number;
@@ -36,7 +37,6 @@ const DELAI_CHANGEMENTS_MS = 30 * 60_000;
 /** Un calcul bloqué depuis plus longtemps (serveur arrêté) est considéré comme abandonné. */
 const CALCUL_ABANDONNE_MS = 6 * 60_000;
 
-const pertinent = (l: LigneClassement) => !l.resultat.elimine && l.avisIA?.verdict !== "hors_sujet" && l.resultat.score >= 60;
 
 /** Calcule le classement d'une mission (tri de toute la base, puis avis de l'IA sur les 30 premiers) et le range. */
 export async function calculerEtRanger(missionId: string, supabase: SupabaseClient = clientSupabaseAdmin()): Promise<ClassementResume> {
@@ -50,9 +50,10 @@ export async function calculerEtRanger(missionId: string, supabase: SupabaseClie
   // Demandes arrivées pendant le calcul : gardées (le calcul suivant les prendra).
   const demandeAvant = new Date().toISOString();
   try {
-    const lignes = await trierParIA(supabase, missionId, await classementMission(supabase, missionId, 100_000));
-    const resume: ClassementResume = { total: lignes.length, pertinents: lignes.filter(pertinent).length, top: lignes.slice(0, 60) };
-    const scores = Object.fromEntries(lignes.map((l) => [l.consultant_id, [Math.round(l.resultat.score * 10) / 10, l.resultat.elimine]]));
+    // Présélection par le sens et par les compétences, puis note de l'IA sur les 60 premiers (voir hybride.ts).
+    const lignes = await classerMission(supabase, missionId);
+    const resume: ClassementResume = { total: lignes.length, pertinents: lignes.filter(estPertinent).length, top: lignes.slice(0, 60) };
+    const scores = Object.fromEntries(lignes.map((l) => [l.consultant_id, [Math.round(noteAffichee(l) * 10) / 10, l.resultat.elimine]]));
     const { data: ligne } = await supabase.from("classements_mission").select("demande_le").eq("mission_id", missionId).maybeSingle();
     const redemande = !!ligne && Date.parse(ligne.demande_le) > Date.parse(demandeAvant);
     // Publication d'un bloc : le nouveau classement remplace l'ancien seulement une fois complet.
@@ -135,6 +136,8 @@ export async function demanderRecalcul(supabase: SupabaseClient, missionIds?: st
  */
 export async function recalculerEnAttente(supabase: SupabaseClient, budgetMs = 230_000): Promise<{ recalcules: number; restants: number; erreurs: string[] }> {
   const debut = Date.now();
+  // Empreintes de sens des fiches nouvelles ou modifiées d'abord (une minute au plus par passage).
+  await calculerEmpreintesConsultants(supabase, 60_000).catch((e) => console.error("Empreintes :", (e as Error).message));
   const dernier = (table: string, colonne: string) => supabase.from(table).select(colonne).order(colonne, { ascending: false }).limit(1).maybeSingle()
     .then((r) => Date.parse(String((r.data as Record<string, string> | null)?.[colonne] ?? "1970-01-01")));
   const [{ data: missions }, { data: lignes }, ficheModifiee, profilModifie] = await Promise.all([

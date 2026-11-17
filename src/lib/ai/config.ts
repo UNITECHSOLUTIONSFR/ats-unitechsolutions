@@ -15,8 +15,15 @@ export const MODELES = {
   adequation: "claude-haiku-5-5", // section « Adéquation à la mission »
   recherche: "claude-haiku-5-5", // section « Recherche » : phrase du recruteur → critères
   avisMission: "claude-haiku-5-5", // « Avis IA » sur un consultant pour une mission (sur demande)
-  triCandidats: "claude-haiku-5-5", // matching : lecture des 30 meilleurs profils d'une mission (pertinent / à étudier / hors sujet)
+  triCandidats: "claude-haiku-5-5", // ancien matching (remplacé le 17/11/2026 par noteCandidats)
+  noteCandidats: "claude-haiku-5-5", // matching : note sur 100 et raison pour les 60 profils présélectionnés d'une mission
 } as const;
+
+/**
+ * Empreintes de sens (matching) : service Voyage AI, modèle multilingue (choisi le 17/11/2026 : meilleur service prêt à
+ * l'emploi pour le français). Clé VOYAGE_API_KEY (Vercel). 200 millions de jetons gratuits, puis 0,12 $ par million.
+ */
+export const EMPREINTES = { modele: "voyage-4-large", dimension: 1024, tarifParMillion: 0.12 } as const;
 
 export const MAX_TOKENS = {
   ficheCV: 1500,
@@ -30,6 +37,7 @@ export const MAX_TOKENS = {
   recherche: 700,
   avisMission: 700,
   triCandidats: 3500, // 30 avis courts
+  noteCandidats: 3500, // 30 notes et raisons courtes par appel (deux appels par mission)
 } as const;
 
 /** Texte envoyé à l'IA tronqué à cette longueur (règle 4 du brief). */
