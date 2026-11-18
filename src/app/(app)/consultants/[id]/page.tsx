@@ -28,8 +28,8 @@ const STATUTS_PROPOSITION: Record<string, string> = {
   propose: "Proposé", appele: "Appelé", envoye_client: "Envoyé au client", retenu: "Retenu", refuse: "Refusé",
 };
 
-export default async function FicheConsultant({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ cv?: string; mission?: string }> }) {
-  const { cv: avertissementCV, mission: missionId } = await searchParams;
+export default async function FicheConsultant({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ cv?: string; mission?: string; erreur?: string; doublon?: string }> }) {
+  const { cv: avertissementCV, mission: missionId, erreur, doublon } = await searchParams;
   const { id } = await params;
   const supabase = await clientSupabaseServeur();
   if (!supabase) redirect("/");
@@ -67,6 +67,11 @@ export default async function FicheConsultant({ params, searchParams }: { params
 
   return (
     <div className="space-y-6">
+      {erreur && (
+        <p role="alert" className="rounded-2xl bg-red-50 px-4 py-2.5 text-sm text-red-800 ring-1 ring-red-200">
+          {erreur.slice(0, 300)}{doublon && /^[0-9a-f-]{36}$/.test(doublon) && <> <Link href={`/consultants/${doublon}`} className="font-semibold underline">Ouvrir l&apos;autre fiche</Link></>}
+        </p>
+      )}
       {c.cv_en_lecture && <LectureCVEnCours depuis={c.cv_en_lecture as string} />}
       {!c.cv_en_lecture && c.cv_lecture_message && <p className="rounded-2xl bg-amber-50 px-4 py-2.5 text-sm text-amber-800 ring-1 ring-amber-200">CV : {String(c.cv_lecture_message).slice(0, 300)}</p>}
       {avertissementCV && <p className="rounded-2xl bg-amber-50 px-4 py-2.5 text-sm text-amber-800 ring-1 ring-amber-200">{avertissementCV.slice(0, 200)}</p>}

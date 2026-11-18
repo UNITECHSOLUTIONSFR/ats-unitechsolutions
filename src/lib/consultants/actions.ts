@@ -94,7 +94,16 @@ export async function modifierConsultant(formData: FormData) {
   if (modifications.disponibilite || modifications.disponible_le) apres.disponibilite_maj_le = new Date().toISOString();
 
   const { error } = await supabase.from("consultants").update(apres).eq("id", id);
-  if (error) throw new Error(error.message.includes("consultants_email_unique") ? "Cet email est déjà utilisé par une autre fiche." : error.message);
+  if (error) {
+    // Jamais de page d'erreur : la fiche se réaffiche avec un message clair (et un lien vers la fiche en double s'il y en a une).
+    if (error.message.includes("consultants_email_unique")) {
+      const { data: autre } = await supabase.from("consultants").select("id, prenom, nom").eq("email", String(apres.email)).neq("id", id).maybeSingle();
+      const qui = autre ? `${autre.prenom === "—" ? "" : autre.prenom} ${autre.nom}`.trim() : "une autre fiche";
+      redirect(`/consultants/${id}?erreur=${encodeURIComponent(`Rien n'a été enregistré : l'email ${String(apres.email)} appartient déjà à la fiche ${qui}. Ouvrez-la ou fusionnez les deux fiches.`)}${autre ? `&doublon=${autre.id}` : ""}`);
+    }
+    console.error("Modification de fiche :", error.message);
+    redirect(`/consultants/${id}?erreur=${encodeURIComponent("Rien n'a été enregistré : la base a refusé la modification. Vérifiez les champs (dates, email) et réessayez.")}`);
+  }
   if (Object.keys(modifications).some((k) => k.startsWith("profil."))) {
     if (profilAvant) await supabase.from("profils").update(profil).eq("consultant_id", id);
     else await supabase.from("profils").insert({ consultant_id: id, ...profil, secteurs: [], langues: [], certifications: [] });

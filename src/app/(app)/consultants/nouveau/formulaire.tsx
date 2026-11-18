@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import Link from "next/link";
 import { creerConsultant, type EtatCreation } from "@/lib/consultants/actions";
 import { calculerTrigramme } from "@/lib/metier/trigramme";
 
@@ -13,6 +14,18 @@ export default function Formulaire() {
   const [fichier, setFichier] = useState("");
   const aujourdHui = new Date().toISOString().slice(0, 10);
   const trigrammeAuto = calculerTrigramme(prenom, nom);
+  // Même prénom et nom déjà dans la base : prévenu avant de créer un doublon (vérifié une fois la frappe terminée).
+  const [existantes, setExistantes] = useState<{ id: string; prenom: string; nom: string; intitule_poste: string | null }[]>([]);
+  useEffect(() => {
+    if (nom.trim().length < 2) return;
+    const arret = new AbortController();
+    const t = setTimeout(() => {
+      fetch(`/api/consultants/doublons?prenom=${encodeURIComponent(prenom)}&nom=${encodeURIComponent(nom)}`, { signal: arret.signal })
+        .then((r) => (r.ok ? r.json() : [])).then(setExistantes).catch(() => undefined);
+    }, 400);
+    return () => { clearTimeout(t); arret.abort(); };
+  }, [prenom, nom]);
+  const doublons = nom.trim().length < 2 ? [] : existantes;
 
   return (
     <form action={action} className="carte grid gap-3 p-5 text-sm sm:grid-cols-2">
@@ -54,6 +67,16 @@ export default function Formulaire() {
         </span>
         <input type="file" name="cv" accept=".pdf,.docx,.doc" className="sr-only" onChange={(e) => setFichier(e.target.files?.[0]?.name ?? "")} />
       </label>
+      {doublons.length > 0 && (
+        <div role="alert" className="rounded-xl bg-amber-50 px-3 py-2.5 text-sm text-amber-900 ring-1 ring-amber-200 sm:col-span-2">
+          <b>Cette personne a peut-être déjà une fiche.</b> Ouvrez-la et ajoutez-y le CV plutôt que de créer un doublon :
+          <ul className="mt-1 list-disc pl-5">
+            {doublons.map((d) => (
+              <li key={d.id}><Link href={`/consultants/${d.id}`} className="font-semibold underline">{d.prenom === "—" ? "" : d.prenom} {d.nom}</Link>{d.intitule_poste ? ` · ${d.intitule_poste}` : ""}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       <div className="sm:col-span-2">
         <button disabled={enCours} className="bouton-primaire">{enCours ? (fichier ? "Création et lecture du CV…" : "Création…") : "Créer la fiche"}</button>
         {etat.erreur && <p className="mt-2 text-red-700">{etat.erreur}</p>}
