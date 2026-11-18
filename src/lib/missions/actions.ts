@@ -267,3 +267,29 @@ export async function recalculerMission(missionId: string) {
   await recalculerApres(supabase, missionId);
   revalidatePath(`/missions/${missionId}`);
 }
+
+/**
+ * Matching v2 : critères de la mission corrigés par l'équipe. Format d'une ligne : « libellé = synonyme, synonyme ».
+ * 1re ligne = le métier ; lignes suivantes = critères obligatoires (3 au plus). Texte vide = retour aux critères lus par l'IA.
+ */
+export async function enregistrerCriteres(formData: FormData) {
+  const { utilisateur, supabase } = await exigerUtilisateur();
+  const missionId = String(formData.get("mission_id"));
+  const lignes = String(formData.get("criteres") ?? "").split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 4);
+  const lire = (l: string) => {
+    const [libelle, reste = ""] = l.split("=");
+    return { libelle: libelle.trim().slice(0, 80), synonymes: reste.split(",").map((x) => x.trim().toLowerCase()).filter(Boolean).slice(0, 12) };
+  };
+  if (!lignes.length) {
+    await supabase.from("missions").update({ criteres_par_equipe: false, criteres_texte: null }).eq("id", missionId);
+  } else {
+    const [metier, ...autres] = lignes.map(lire);
+    const criteres = { metier, obligatoires: autres.filter((o) => o.libelle).map((o) => ({ critere: o.libelle, synonymes: o.synonymes })), souhaites: [] as string[] };
+    const { data: avant } = await supabase.from("missions").select("criteres_matching").eq("id", missionId).maybeSingle();
+    criteres.souhaites = ((avant?.criteres_matching as { souhaites?: string[] } | null)?.souhaites ?? []);
+    await supabase.from("missions").update({ criteres_matching: criteres, criteres_par_equipe: true }).eq("id", missionId);
+  }
+  await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "modification", consultant_id: null, details: { criteres_mission: missionId } });
+  await recalculerMission(missionId);
+  revalidatePath(`/missions/${missionId}`);
+}

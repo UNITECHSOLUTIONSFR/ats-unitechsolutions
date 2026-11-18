@@ -32,6 +32,10 @@ export interface LigneClassement {
   avisIA?: { verdict: "pertinent" | "a_etudier" | "hors_sujet"; raison: string | null; note?: number | null } | null;
   /** Proximité de sens avec la mission (0 à 1), quand les empreintes sont calculées. */
   similarite?: number | null;
+  /** Matching v2 : le CV contient le métier et tous les critères obligatoires de la mission (false = profil « proche » seulement). */
+  eligible?: boolean;
+  /** Matching v2 : critères obligatoires absents du CV (profils proches). */
+  manques?: string[];
 }
 
 interface LigneCandidat {
@@ -223,5 +227,5 @@ export const SEUIL_PERTINENT = 60;
 
 /** Profil pertinent : non écarté, lu par l'IA et noté 60 ou plus. Un profil non lu par l'IA n'est jamais proposé. */
 export function estPertinent(l: LigneClassement): boolean {
-  return !l.resultat.elimine && l.avisIA?.note != null && l.avisIA.note >= SEUIL_PERTINENT;
+  return !l.resultat.elimine && l.eligible !== false && l.avisIA?.note != null && l.avisIA.note >= SEUIL_PERTINENT;
 }

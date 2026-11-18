@@ -149,3 +149,11 @@ export const SchemaNoteCandidats = z.object({
   })),
 });
 export type NoteCandidats = z.infer<typeof SchemaNoteCandidats>;
+
+/** Matching v2 (18/11/2026) : ce qui décide d'une mission. Synonymes en minuscules, tels qu'ils s'écrivent dans un CV. */
+export const SchemaCriteresMission = z.object({
+  metier: z.object({ libelle: z.string(), synonymes: z.array(z.string()) }),
+  obligatoires: z.array(z.object({ critere: z.string(), synonymes: z.array(z.string()) })),
+  souhaites: z.array(z.string()),
+});
+export type CriteresMission = z.infer<typeof SchemaCriteresMission>;

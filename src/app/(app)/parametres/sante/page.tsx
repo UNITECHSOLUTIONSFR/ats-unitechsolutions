@@ -23,7 +23,11 @@ export default async function Sante() {
   ]);
   const maintenant = Date.parse(new Date().toISOString());
   // Vitesse réelle des écrans (mesurée dans le navigateur de l'équipe), 7 derniers jours.
-  const { data: vitesse } = await clientSupabaseAdmin().rpc("vitesse_ecrans_detail", { p_jours: 7 });
+  const [{ data: vitesse }, { data: qualite }] = await Promise.all([
+    clientSupabaseAdmin().rpc("vitesse_ecrans_detail", { p_jours: 7 }),
+    clientSupabaseAdmin().rpc("qualite_matching"),
+  ]);
+  const q = ((qualite ?? []) as { decisions: number; dans_top10: number; dans_top3: number }[])[0] ?? { decisions: 0, dans_top10: 0, dans_top3: 0 };
   const ecrans = (vitesse ?? []) as { ecran: string; type: string; nombre: number; mediane_ms: number; p90_ms: number }[];
   // Objectifs : écran ouvert en moins de 0,3 s d'habitude et 1 s 9 fois sur 10 ; bouton : 1 s 9 fois sur 10.
   const objectif = (e: (typeof ecrans)[number]) => (e.type === "action" ? { habituel: 1000, p90: 1000 } : { habituel: 300, p90: 1000 });
@@ -33,6 +37,15 @@ export default async function Sante() {
 
   return (
     <div className="space-y-6">
+      <section className="carte p-5">
+        <h2 className="titre-section">Qualité du matching</h2>
+        <p className="mt-0.5 text-sm text-slate-500">Les profils que l&apos;équipe a appelés, envoyés au client ou fait retenir sortent-ils en tête du classement de leur mission ? C&apos;est ce chiffre qui juge le matching.</p>
+        {Number(q.decisions) > 0 ? (
+          <p className="mt-3 text-sm text-nuit"><b className="text-2xl">{Math.round((100 * Number(q.dans_top10)) / Number(q.decisions))} %</b> dans les 10 premiers ({q.dans_top10} sur {q.decisions}) · {Math.round((100 * Number(q.dans_top3)) / Number(q.decisions))} % dans les 3 premiers</p>
+        ) : (
+          <p className="mt-3 text-sm text-slate-500">Pas encore de décision de l&apos;équipe : le chiffre apparaîtra dès qu&apos;un profil sera marqué « appelé », « envoyé au client » ou « retenu » sur une mission.</p>
+        )}
+      </section>
       <section className="carte p-5">
         <h2 className="titre-section">Vitesse des écrans (7 derniers jours)</h2>
         <p className="mt-0.5 text-sm text-slate-500">Temps réels vus par l&apos;équipe sur 7 jours, du clic à l&apos;écran affiché. <b>Objectifs</b> : un écran s&apos;ouvre en moins de 0,3 s d&apos;habitude et en moins d&apos;1 s 9 fois sur 10 ; un bouton répond en moins d&apos;1 s 9 fois sur 10 (les travaux longs, IA ou SharePoint, se font en arrière-plan).</p>

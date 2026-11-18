@@ -14,11 +14,13 @@ import { classerMission } from "./hybride";
  * - Un déploiement ne recalcule rien. Changer les règles du moteur : augmenter VERSION_MOTEUR (tout est refait).
  * L'IA ne lit que les profils qui entrent dans les 30 premiers sans avis déjà rendu (voir tri-ia) : coût maîtrisé.
  */
-export const VERSION_MOTEUR = "2026-11-17.3-pertinents";
+export const VERSION_MOTEUR = "2026-11-18.1-criteres";
 
 export interface ClassementResume {
   total: number;
   pertinents: number;
+  /** Matching v2 : profils qui remplissent le métier et tous les critères obligatoires (null : pas de critères). */
+  eligibles?: number | null;
   /** Les 60 premiers, avec le détail du score. */
   top: LigneClassement[];
 }
@@ -56,13 +58,17 @@ export async function calculerEtRanger(missionId: string, supabase: SupabaseClie
     // Présélection par le sens et par les compétences, puis note de l'IA sur les 60 premiers (voir hybride.ts).
     const lignes = await classerMission(supabase, missionId);
     // Rangés : les profils pertinents (note de l'IA ≥ 60) d'abord, jusqu'à 100. Scores (fiche consultant) : notes de l'IA seulement.
-    const resume: ClassementResume = { total: lignes.length, pertinents: lignes.filter(estPertinent).length, top: lignes.slice(0, 100) };
+    // Gardés : les 100 premiers (pertinents d'abord), et les profils « proches » montrés à part avec ce qui leur manque.
+    const proches = lignes.filter((l) => l.eligible === false && l.manques);
+    const top = [...lignes.slice(0, 100), ...proches.filter((p) => !lignes.slice(0, 100).includes(p))];
+    const eligibles = lignes.some((l) => l.eligible === false) ? lignes.filter((l) => l.eligible && !l.resultat.elimine).length : null;
+    const resume: ClassementResume = { total: lignes.length, pertinents: lignes.filter(estPertinent).length, eligibles, top };
     const scores = Object.fromEntries(lignes.filter((l) => l.avisIA?.note != null).map((l) => [l.consultant_id, [noteAffichee(l), l.resultat.elimine]]));
     const { data: ligne } = await supabase.from("classements_mission").select("demande_le").eq("mission_id", missionId).maybeSingle();
     const redemande = !!ligne && Date.parse(ligne.demande_le) > Date.parse(demandeAvant);
     // Publication d'un bloc : le nouveau classement remplace l'ancien seulement une fois complet.
     await supabase.from("classements_mission").upsert({
-      mission_id: missionId, total: resume.total, pertinents: resume.pertinents, top: resume.top, scores,
+      mission_id: missionId, total: resume.total, pertinents: resume.pertinents, eligibles: resume.eligibles ?? null, top: resume.top, scores,
       calcule_le: new Date().toISOString(), duree_ms: Date.now() - debut, version: VERSION_MOTEUR,
       a_recalculer: redemande, en_calcul_depuis: null, erreur: null,
     });
@@ -77,10 +83,10 @@ export async function calculerEtRanger(missionId: string, supabase: SupabaseClie
 /** Dernier classement rangé (sans le détail des scores). Null si la mission n'a jamais été classée. */
 export async function lireClassement(supabase: SupabaseClient, missionId: string): Promise<ClassementStocke | null> {
   const { data } = await supabase.from("classements_mission")
-    .select("total, pertinents, top, calcule_le, a_recalculer, en_calcul_depuis").eq("mission_id", missionId).maybeSingle();
+    .select("total, pertinents, eligibles, top, calcule_le, a_recalculer, en_calcul_depuis").eq("mission_id", missionId).maybeSingle();
   if (!data?.calcule_le) return null;
   return {
-    total: data.total, pertinents: data.pertinents, top: data.top as LigneClassement[], calculeLe: data.calcule_le,
+    total: data.total, pertinents: data.pertinents, eligibles: data.eligibles as number | null, top: data.top as LigneClassement[], calculeLe: data.calcule_le,
     miseAJour: data.a_recalculer || !!data.en_calcul_depuis,
   };
 }

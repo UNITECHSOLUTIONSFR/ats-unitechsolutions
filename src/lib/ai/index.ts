@@ -8,7 +8,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
 import { LONGUEUR_MAX_TEXTE, MAX_TOKENS, MODELES, estimerCoutUSD } from "./config";
-import { CONSIGNES_NOTE_CANDIDATS, CONSIGNES_TRI_CANDIDATS } from "./consignes";
+import { CONSIGNES_CRITERES_MISSION, CONSIGNES_NOTE_CANDIDATS, CONSIGNES_NOTE_CV, CONSIGNES_TRI_CANDIDATS } from "./consignes";
 import { CONSIGNES_ADEQUATION, CONSIGNES_AVIS_MISSION, CONSIGNES_CV_UNITECH, CONSIGNES_MISSION, CONSIGNES_PROFIL_CV, CONSIGNES_RECHERCHE, CONSIGNES_REPONSE_DISPO } from "./consignes";
 import {
   PROMPT_VERSION,
@@ -21,6 +21,8 @@ import {
   SchemaAvisMission,
   SchemaTriCandidats,
   SchemaNoteCandidats,
+  SchemaCriteresMission,
+  type CriteresMission,
   type NoteCandidats,
   type TriCandidats,
   borner,
@@ -36,10 +38,10 @@ import {
 } from "./schemas";
 
 export { PROMPT_VERSION };
-export type { ExigencesMission, ProfilCV, ReponseDisponibilite, CVStructure, Adequation, CriteresRecherche, AvisMission };
+export type { CriteresMission, ExigencesMission, ProfilCV, ReponseDisponibilite, CVStructure, Adequation, CriteresRecherche, AvisMission };
 
 export interface UsageIA {
-  usage: "fiche_cv" | "mission" | "tri_email" | "analyse_approfondie" | "reponse_disponibilite" | "lecture_scan" | "cv_unitech" | "adequation" | "recherche" | "avis_mission" | "tri_candidats" | "note_candidats" | "empreintes";
+  usage: "fiche_cv" | "mission" | "tri_email" | "analyse_approfondie" | "reponse_disponibilite" | "lecture_scan" | "cv_unitech" | "adequation" | "recherche" | "avis_mission" | "tri_candidats" | "note_candidats" | "criteres_mission" | "note_cv" | "empreintes";
   modele: string;
   mode: "standard" | "batch";
   tokens_entree: number;
@@ -305,4 +307,19 @@ export async function noterCandidats(mission: string, profils: { ref: string; te
   const r = await appeler(MODELES.noteCandidats, CONSIGNES_NOTE_CANDIDATS, SchemaNoteCandidats, texte, MAX_TOKENS.noteCandidats, "note_candidats");
   if (!r.donnees) throw Object.assign(new ErreurIA("Notation des profils impossible."), { usages: [r.usage] });
   return { donnees: r.donnees, modele: MODELES.noteCandidats, promptVersion: PROMPT_VERSION, usages: [r.usage] };
+}
+
+/** Matching v2 : métier et critères obligatoires d'une mission (avec synonymes), pour filtrer les CV. */
+export async function extraireCriteresMission(mission: string): Promise<ResultatIA<CriteresMission>> {
+  const r = await appeler(MODELES.criteresMission, CONSIGNES_CRITERES_MISSION, SchemaCriteresMission, mission.slice(0, 12000), MAX_TOKENS.criteresMission, "criteres_mission");
+  if (!r.donnees) throw Object.assign(new ErreurIA("Critères de la mission impossibles à extraire."), { usages: [r.usage] });
+  return { donnees: r.donnees, modele: MODELES.criteresMission, promptVersion: PROMPT_VERSION, usages: [r.usage] };
+}
+
+/** Matching v2 : note sur 100 et raison pour quelques profils, en lisant leur CV complet. */
+export async function noterCV(mission: string, criteres: string, profils: { ref: string; texte: string }[], exemples = ""): Promise<ResultatIA<NoteCandidats>> {
+  const texte = `MISSION :\n${mission.slice(0, 8000)}\n\nCRITÈRES OBLIGATOIRES :\n${criteres}\n\n${exemples ? `DÉCISIONS DE L'ÉQUIPE (exemples) :\n${exemples.slice(0, 3000)}\n\n` : ""}PROFILS :\n${profils.map((p) => `[${p.ref}]\n${p.texte.slice(0, 9000)}`).join("\n\n")}`;
+  const r = await appeler(MODELES.noteCV, CONSIGNES_NOTE_CV, SchemaNoteCandidats, texte, MAX_TOKENS.noteCV, "note_cv");
+  if (!r.donnees) throw Object.assign(new ErreurIA("Notation des CV impossible."), { usages: [r.usage] });
+  return { donnees: r.donnees, modele: MODELES.noteCV, promptVersion: PROMPT_VERSION, usages: [r.usage] };
 }

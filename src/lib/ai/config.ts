@@ -17,6 +17,8 @@ export const MODELES = {
   avisMission: "claude-haiku-5-5", // « Avis IA » sur un consultant pour une mission (sur demande)
   triCandidats: "claude-haiku-5-5", // ancien matching (remplacé le 17/11/2026 par noteCandidats)
   noteCandidats: "claude-haiku-5-5", // matching : note sur 100 et raison pour les 60 profils présélectionnés d'une mission
+  criteresMission: "claude-haiku-5-5", // matching v2 : métier et critères obligatoires d'une mission (avec synonymes)
+  noteCV: "claude-haiku-5-5", // matching v2 : note sur 100 en lisant le CV complet des profils qui remplissent les critères
 } as const;
 
 /**
@@ -38,6 +40,8 @@ export const MAX_TOKENS = {
   avisMission: 700,
   triCandidats: 3500, // 30 avis courts
   noteCandidats: 3500, // 30 notes et raisons courtes par appel (deux appels par mission)
+  criteresMission: 900,
+  noteCV: 1200, // 5 CV complets par appel : note et raison pour chacun
 } as const;
 
 /** Texte envoyé à l'IA tronqué à cette longueur (règle 4 du brief). */
