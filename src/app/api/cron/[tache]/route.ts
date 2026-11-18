@@ -21,6 +21,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Par sécurité, la projection de l'écran Consultants est aussi remise à jour (seules les lignes changées sont réécrites).
     // Une fois par heure seulement (chaque modification la met déjà à jour) : elle relit tout le tableau.
     const projection = new Date().getMinutes() < 10 ? await actualiserProjection().catch((e) => ({ erreur: (e as Error).message })) : "déjà à jour (passage horaire)";
+    // Emails relevés aussi d'ici, une fois par heure (passage de :20 à :29) : l'appel horaire direct de la tâche emails
+    // par la base échoue (erreur réseau « HTTP2 framing ») et GitHub ne lance ses tâches horaires que quelques fois par jour.
+    // Sans double passage : une relève faite il y a moins de 30 minutes n'est pas refaite.
+    const minute = new Date().getMinutes();
+    if (minute >= 20 && minute < 30) after(() => executerTache("emails", clientSupabaseAdmin(), { planifiee: true }).then(() => undefined).catch((e) => console.error("Emails :", (e as Error).message)));
     return NextResponse.json({ classements: await recalculerEnAttente(clientSupabaseAdmin(), 200_000), projection });
   }
   if (!(tache in TACHES)) return new NextResponse("Tâche inconnue", { status: 404 });
