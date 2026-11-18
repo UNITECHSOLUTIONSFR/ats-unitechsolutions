@@ -12,6 +12,9 @@ import { enregistrerUsages } from "@/lib/ai/journal";
  */
 export type { CriteresMission };
 
+/** Version des consignes de lecture des critères : la changer fait relire les critères de toutes les missions (sauf ceux corrigés par l'équipe). */
+const VERSION_CRITERES = "criteres-v2";
+
 const ACCENTS: Record<string, string> = { a: "[aàâäá]", e: "[eéèêë]", i: "[iîïí]", o: "[oôöó]", u: "[uùûüú]", c: "[cç]", y: "[yÿ]" };
 
 /** Expression d'un synonyme : sans tenir compte des accents ; début de mot ; fin de mot aussi pour les sigles courts (« ba », « sap »). */
@@ -35,7 +38,7 @@ export function motifsCriteres(c: CriteresMission): { libelle: string; motif: st
 export async function criteresDeLaMission(supabase: SupabaseClient, missionId: string, texteMission: string): Promise<CriteresMission | null> {
   const { data: m } = await supabase.from("missions").select("criteres_matching, criteres_texte, criteres_par_equipe").eq("id", missionId).maybeSingle();
   if (!m) return null;
-  const empreinte = createHash("sha256").update(texteMission).digest("hex").slice(0, 32);
+  const empreinte = createHash("sha256").update(`${VERSION_CRITERES}|${texteMission}`).digest("hex").slice(0, 32);
   if (m.criteres_matching && (m.criteres_par_equipe || m.criteres_texte === empreinte)) return m.criteres_matching as CriteresMission;
   try {
     const r = await extraireCriteresMission(texteMission);

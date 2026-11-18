@@ -66,7 +66,13 @@ export async function classerMission(supabase: SupabaseClient, missionId: string
   // Matching v2 seulement (sinon, ancienne méthode : présélection puis lecture des résumés par l'IA).
   const criteres = v2 ? await criteresDeLaMission(supabase, missionId, texteIA) : null;
   const groupes = criteres ? motifsCriteres(criteres) : [];
-  const eligibles = groupes.length ? await profilsEligibles(supabase, groupes.map((g) => g.motif)).catch((e) => { console.error((e as Error).message); return null; }) : null;
+  let eligibles = groupes.length ? await profilsEligibles(supabase, groupes.map((g) => g.motif)).catch((e) => { console.error((e as Error).message); return null; }) : null;
+  // Sécurité : moins de 3 profils avec le métier ET les critères → on garde les critères obligatoires seuls (le CV peut
+  // nommer le métier autrement) ; l'IA vérifie ensuite le métier en lisant le CV complet.
+  if (eligibles && eligibles.size < 3 && groupes.length > 1) {
+    const sansMetier = await profilsEligibles(supabase, groupes.slice(1).map((g) => g.motif)).catch(() => null);
+    if (sansMetier && sansMetier.size > eligibles.size) eligibles = sansMetier;
+  }
 
   // 3. Score explicable de tous les profils (compétences exactes), y compris ceux trouvés par le sens et par les critères.
   const lignes = await classementMission(supabase, missionId, 100_000, [...rangSens.keys(), ...(eligibles ?? [])]);
