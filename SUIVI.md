@@ -285,3 +285,8 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Fait : boutons sans attente (CV lu par l'IA en arrière-plan à la création et à l'ajout, Word Unitech préparé en arrière-plan, recherche en phrase libre mémorisée, suivi d'un profil immédiat), serveur gardé éveillé, serveur déplacé à Londres à côté de la base (requête 50-110 ms → 22-39 ms), objectifs de vitesse + alerte (Santé), tableau Excel mis à jour en place, une seule synchronisation Excel à la fois, Trello relancé en cas de panne passagère, horaires réels des synchronisations, aperçu Trello sur demande.
 - Testé : 248 tests ; bout en bout 42/42 (admin) et 39/39 (recruteur) sur la copie avec l'accès d'essai.
 - Suite : comparer les temps réels (Santé) demain ; à partir du 18/11 10 h, accord avant chaque mise en ligne.
+
+## 18/11/2026 — Matching v2 et corrections
+- Fait : corrections (message clair au lieu d'une page d'erreur sur une fiche, avertissement de doublon à la création, journal sans doublons de consultation) ; emails relevés chaque heure par la tâche matching ; matching v2 (critères obligatoires, recherche stricte dans les CV complets, IA sur CV complet, note plafonnée si critère non prouvé, profils proches, critères corrigeables, mesure de qualité) d'abord calculé en aperçu puis activé ; tri du tableau mesuré.
+- Testé : 250 tests ; bout en bout 42/42 ; aperçu sur 29 missions (18 avec profils pertinents ; 11 sans : compétences rares ou critères trop stricts à corriger). Coût : 0,39 $ pour trois calculs complets.
+- Suite : corriger les critères trop stricts (IARDT corporate, assurance construction…) ; mesurer la qualité avec les décisions de l'équipe ; mesurer le tri du tableau.
