@@ -1,6 +1,6 @@
 import { after, NextResponse, type NextRequest } from "next/server";
 import { revalidateTag } from "next/cache";
-import { recalculerEnAttente } from "@/lib/matching/stockage";
+import { calculerApercus, recalculerEnAttente } from "@/lib/matching/stockage";
 import { actualiserProjection } from "@/lib/tableau/projection";
 import { clientSupabaseAdmin } from "@/lib/supabase/admin";
 import { autorisationTachesValide } from "@/lib/securite/secret";
@@ -26,7 +26,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Sans double passage : une relève faite il y a moins de 30 minutes n'est pas refaite.
     const minute = new Date().getMinutes();
     if (minute >= 20 && minute < 30) after(() => executerTache("emails", clientSupabaseAdmin(), { planifiee: true }).then(() => undefined).catch((e) => console.error("Emails :", (e as Error).message)));
-    return NextResponse.json({ classements: await recalculerEnAttente(clientSupabaseAdmin(), 200_000), projection });
+    const classements = await recalculerEnAttente(clientSupabaseAdmin(), 150_000);
+    // Matching v2 pas encore activé : son aperçu est calculé à côté avec le temps qui reste (sans changer les écrans).
+    const apercus = classements.restants === 0 ? await calculerApercus(clientSupabaseAdmin(), 80_000).catch((e) => ({ erreur: (e as Error).message })) : "plus tard";
+    return NextResponse.json({ classements, projection, apercus });
   }
   if (!(tache in TACHES)) return new NextResponse("Tâche inconnue", { status: 404 });
   const supabase = clientSupabaseAdmin();

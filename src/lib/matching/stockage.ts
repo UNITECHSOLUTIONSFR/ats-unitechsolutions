@@ -14,7 +14,15 @@ import { classerMission } from "./hybride";
  * - Un déploiement ne recalcule rien. Changer les règles du moteur : augmenter VERSION_MOTEUR (tout est refait).
  * L'IA ne lit que les profils qui entrent dans les 30 premiers sans avis déjà rendu (voir tri-ia) : coût maîtrisé.
  */
-export const VERSION_MOTEUR = "2026-11-18.1-criteres";
+export const VERSION_MOTEUR = "2026-11-17.3-pertinents";
+/** Matching v2 (18/11/2026) : la base cherche les critères dans les CV complets, l'IA départage. Activé par le réglage « matching_v2 ». */
+export const VERSION_MOTEUR_V2 = "2026-11-18.1-criteres";
+
+/** Le matching v2 est-il activé (réglage matching_v2) ? Tant qu'il ne l'est pas, il est seulement calculé en aperçu. */
+export async function matchingV2Actif(supabase: SupabaseClient): Promise<boolean> {
+  const { data } = await supabase.from("reglages").select("valeur").eq("cle", "matching_v2").maybeSingle();
+  return data?.valeur === true;
+}
 
 export interface ClassementResume {
   total: number;
@@ -56,7 +64,8 @@ export async function calculerEtRanger(missionId: string, supabase: SupabaseClie
   const demandeAvant = new Date().toISOString();
   try {
     // Présélection par le sens et par les compétences, puis note de l'IA sur les 60 premiers (voir hybride.ts).
-    const lignes = await classerMission(supabase, missionId);
+    const v2 = await matchingV2Actif(supabase);
+    const lignes = await classerMission(supabase, missionId, { v2 });
     // Rangés : les profils pertinents (note de l'IA ≥ 60) d'abord, jusqu'à 100. Scores (fiche consultant) : notes de l'IA seulement.
     // Gardés : les 100 premiers (pertinents d'abord), et les profils « proches » montrés à part avec ce qui leur manque.
     const proches = lignes.filter((l) => l.eligible === false && l.manques);
@@ -69,7 +78,7 @@ export async function calculerEtRanger(missionId: string, supabase: SupabaseClie
     // Publication d'un bloc : le nouveau classement remplace l'ancien seulement une fois complet.
     await supabase.from("classements_mission").upsert({
       mission_id: missionId, total: resume.total, pertinents: resume.pertinents, eligibles: resume.eligibles ?? null, top: resume.top, scores,
-      calcule_le: new Date().toISOString(), duree_ms: Date.now() - debut, version: VERSION_MOTEUR,
+      calcule_le: new Date().toISOString(), duree_ms: Date.now() - debut, version: v2 ? VERSION_MOTEUR_V2 : VERSION_MOTEUR,
       a_recalculer: redemande, en_calcul_depuis: null, erreur: null,
     });
     return resume;
@@ -156,9 +165,10 @@ export async function recalculerEnAttente(supabase: SupabaseClient, budgetMs = 2
   // Fiches ajoutées ou modifiées, CV analysés depuis le dernier calcul : classement refait, au plus toutes les 30 minutes.
   const dernierChangement = Math.max(ficheModifiee, profilModifie);
   const parMission = new Map((lignes ?? []).map((l) => [l.mission_id as string, l]));
+  const version = (await matchingV2Actif(supabase)) ? VERSION_MOTEUR_V2 : VERSION_MOTEUR;
   const aFaire = (missions ?? []).map((m) => ({ id: m.id as string, l: parMission.get(m.id) }))
     .filter(({ l }) => {
-      if (!l?.calcule_le || l.a_recalculer || l.version !== VERSION_MOTEUR) return true;
+      if (!l?.calcule_le || l.a_recalculer || l.version !== version) return true;
       const calcule = Date.parse(l.calcule_le);
       return Date.now() - calcule > AGE_MAX_MS || (dernierChangement > calcule && Date.now() - calcule > DELAI_CHANGEMENTS_MS);
     })
@@ -179,4 +189,38 @@ export async function premiersProfils(supabase: SupabaseClient, missionIds: stri
   if (!missionIds.length) return new Map();
   const { data } = await supabase.from("classements_mission").select("mission_id, premiers").in("mission_id", missionIds).not("calcule_le", "is", null);
   return new Map((data ?? []).map((r) => [r.mission_id as string, (r.premiers ?? []) as LigneClassement[]]));
+}
+
+/**
+ * Aperçu du matching v2 (« mise en ligne invisible ») : calculé à côté pour les missions suivies qui n'en ont pas encore,
+ * sans toucher aux classements affichés. Rangé dans apercu_matching (critères, nombre d'éligibles, 5 premiers, profils proches).
+ */
+export async function calculerApercus(supabase: SupabaseClient, budgetMs = 90_000): Promise<{ calcules: number; restants: number }> {
+  const debut = Date.now();
+  if (await matchingV2Actif(supabase)) return { calcules: 0, restants: 0 };
+  const [{ data: missions }, { data: faits }] = await Promise.all([
+    supabase.from("missions").select("id").in("statut", STATUTS_SUIVIS),
+    supabase.from("apercu_matching").select("mission_id").not("calcule_le", "is", null),
+  ]);
+  const dejaFaits = new Set((faits ?? []).map((f) => f.mission_id as string));
+  const aFaire = (missions ?? []).map((m) => m.id as string).filter((id) => !dejaFaits.has(id));
+  let calcules = 0;
+  for (const id of aFaire) {
+    if (Date.now() - debut > budgetMs) break;
+    try {
+      const lignes = await classerMission(supabase, id, { v2: true, enregistrerAvis: false });
+      const { data: m } = await supabase.from("missions").select("criteres_matching").eq("id", id).maybeSingle();
+      const nom = (l: LigneClassement) => `${l.prenom === "—" ? "" : l.prenom} ${l.nom}`.trim();
+      await supabase.from("apercu_matching").upsert({
+        mission_id: id, criteres: m?.criteres_matching ?? null, calcule_le: new Date().toISOString(), erreur: null,
+        eligibles: lignes.filter((l) => l.eligible && !l.resultat.elimine).length,
+        premiers: lignes.filter(estPertinent).slice(0, 5).map((l) => ({ id: l.consultant_id, nom: nom(l), poste: l.intitule_poste, note: l.avisIA?.note ?? null, raison: l.avisIA?.raison ?? null })),
+        proches: lignes.filter((l) => l.eligible === false && l.manques?.length).slice(0, 5).map((l) => ({ id: l.consultant_id, nom: nom(l), poste: l.intitule_poste, manques: l.manques })),
+      });
+      calcules++;
+    } catch (e) {
+      await supabase.from("apercu_matching").upsert({ mission_id: id, erreur: (e as Error).message.slice(0, 300), calcule_le: null });
+    }
+  }
+  return { calcules, restants: aFaire.length - calcules };
 }

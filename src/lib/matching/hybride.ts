@@ -46,7 +46,8 @@ async function chargerMission(supabase: SupabaseClient, missionId: string): Prom
 }
 
 /** Classement complet d'une mission (tous les profils évalués), dans l'ordre affiché. */
-export async function classerMission(supabase: SupabaseClient, missionId: string): Promise<LigneClassement[]> {
+export async function classerMission(supabase: SupabaseClient, missionId: string, options: { v2?: boolean; enregistrerAvis?: boolean } = {}): Promise<LigneClassement[]> {
+  const v2 = options.v2 ?? false;
   const mission = await chargerMission(supabase, missionId);
   if (!mission) return [];
 
@@ -62,7 +63,8 @@ export async function classerMission(supabase: SupabaseClient, missionId: string
     mission.competences.length && `Compétences demandées : ${mission.competences.map((c) => `${c.nom}${c.obligatoire ? " (indispensable)" : ""}`).join(", ")}`,
     `Description :\n${mission.texte_besoin ?? ""}`,
   ].filter(Boolean).join("\n");
-  const criteres = await criteresDeLaMission(supabase, missionId, texteIA);
+  // Matching v2 seulement (sinon, ancienne méthode : présélection puis lecture des résumés par l'IA).
+  const criteres = v2 ? await criteresDeLaMission(supabase, missionId, texteIA) : null;
   const groupes = criteres ? motifsCriteres(criteres) : [];
   const eligibles = groupes.length ? await profilsEligibles(supabase, groupes.map((g) => g.motif)).catch((e) => { console.error((e as Error).message); return null; }) : null;
 
@@ -79,7 +81,7 @@ export async function classerMission(supabase: SupabaseClient, missionId: string
   // 4. L'IA départage : CV complet des 30 premiers éligibles (v2), ou, sans critères lisibles, l'ancienne lecture des résumés.
   const empreinte = createHash("sha256").update(`${texteIA}|${eligibles ? `${VERSION_NOTE_CV}|${JSON.stringify(criteres)}` : VERSION_NOTE}`).digest("hex").slice(0, 32);
   const notes = eligibles
-    ? await notesCV(supabase, missionId, texteIA, criteres!, empreinte, parFusion.filter((l) => l.eligible).slice(0, CV_LUS_PAR_IA))
+    ? await notesCV(supabase, missionId, texteIA, criteres!, empreinte, parFusion.filter((l) => l.eligible).slice(0, CV_LUS_PAR_IA), options.enregistrerAvis ?? true)
     : await notesIA(supabase, missionId, texteIA, empreinte, parFusion.slice(0, PROFILS_LUS_PAR_IA));
 
   // 5. Profils proches (pas tous les critères) : montrés à part, avec ce qui leur manque, jamais notés comme pertinents.
@@ -102,7 +104,7 @@ export async function classerMission(supabase: SupabaseClient, missionId: string
 }
 
 /** Matching v2 : notes de l'IA en lisant le CV COMPLET des profils éligibles (5 par appel), gardées tant que la mission et ses critères ne changent pas. */
-async function notesCV(supabase: SupabaseClient, missionId: string, texteIA: string, criteres: CriteresMission, empreinte: string, aLire: LigneClassement[]): Promise<Map<string, { note: number; raison: string | null }>> {
+async function notesCV(supabase: SupabaseClient, missionId: string, texteIA: string, criteres: CriteresMission, empreinte: string, aLire: LigneClassement[], enregistrer = true): Promise<Map<string, { note: number; raison: string | null }>> {
   const ids = aLire.map((l) => l.consultant_id);
   const notes = new Map<string, { note: number; raison: string | null }>();
   if (!ids.length) return notes;
@@ -131,7 +133,8 @@ async function notesCV(supabase: SupabaseClient, missionId: string, texteIA: str
         });
         const notees = new Set(lignesAvis.map((l) => l.consultant_id));
         for (const x of refs) if (!notees.has(x.id)) lignesAvis.push({ mission_id: missionId, consultant_id: x.id, empreinte, note: 0, verdict: "hors_sujet", raison: "Non retenu par l'IA pour cette mission.", modele: r.modele, updated_at: new Date().toISOString() });
-        if (lignesAvis.length) await supabase.from("avis_matching").upsert(lignesAvis);
+        // Aperçu (matching v2 pas encore activé) : notes non enregistrées, pour ne pas remplacer celles du classement affiché.
+        if (lignesAvis.length && enregistrer) await supabase.from("avis_matching").upsert(lignesAvis);
         for (const l of lignesAvis) notes.set(l.consultant_id, { note: l.note, raison: l.raison });
       } catch (e) {
         usages.push(...((e as { usages?: UsageIA[] }).usages ?? []));

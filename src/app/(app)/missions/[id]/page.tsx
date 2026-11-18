@@ -4,7 +4,7 @@ import { BoutonSuivi } from "./bouton-suivi";
 import { notFound } from "next/navigation";
 import { exigerUtilisateur } from "@/lib/acces";
 import { estPertinent, noteAffichee, type LigneClassement } from "@/lib/matching/classement";
-import { classementAAfficher } from "@/lib/matching/stockage";
+import { classementAAfficher, matchingV2Actif } from "@/lib/matching/stockage";
 import BoutonRecalculer from "./recalculer";
 import { formaterTelephone } from "@/lib/metier/telephone";
 import { responsablesPossibles } from "@/lib/missions/responsables";
@@ -41,12 +41,13 @@ export default async function PageMission({ params, searchParams }: { params: Pr
     .maybeSingle();
   if (!mission) notFound();
 
-  const [resume, { data: propositions }, responsables, { data: cvMission }, { data: avisExistants }] = await Promise.all([
+  const [resume, { data: propositions }, responsables, { data: cvMission }, { data: avisExistants }, v2] = await Promise.all([
     classementAAfficher(id), // rangé dans la base : lu sans calcul (recalculé en arrière-plan quand quelque chose change)
     supabase.from("propositions").select("consultant_id, statut").eq("mission_id", id),
     responsablesPossibles(supabase),
     supabase.from("cv_unitech_generes").select("id, consultant_id, word_url, pdf_url, created_at").eq("mission_id", id).order("created_at", { ascending: false }),
     supabase.from("avis_ia").select("consultant_id, contenu").eq("mission_id", id),
+    matchingV2Actif(supabase),
   ]);
   const classement = resume.top;
   // Affichés : uniquement les profils que l'IA a lus et jugés pertinents (note ≥ 60). Les autres ne sont pas montrés.
@@ -115,7 +116,7 @@ export default async function PageMission({ params, searchParams }: { params: Pr
         competence_id: e.competence_id, nom: e.competences?.nom_canonique ?? "?", obligatoire: e.obligatoire, importance: e.importance, profils: profilsParCompetence.get(e.competence_id) ?? 0,
       }))} />
 
-      <CriteresMatching missionId={id} criteres={mission.criteres_matching as Parameters<typeof CriteresMatching>[0]["criteres"]} parEquipe={!!mission.criteres_par_equipe} eligibles={resume.eligibles} />
+      {v2 && <CriteresMatching missionId={id} criteres={mission.criteres_matching as Parameters<typeof CriteresMatching>[0]["criteres"]} parEquipe={!!mission.criteres_par_equipe} eligibles={resume.eligibles} />}
 
       <section className="space-y-4">
         {/* Synthèse */}
@@ -124,7 +125,7 @@ export default async function PageMission({ params, searchParams }: { params: Pr
             <h2 className="text-lg font-bold tracking-tight text-nuit">
               {resume.pertinents} profil(s) pertinent(s) pour cette mission
             </h2>
-            <p className="sous-titre">Seuls les profils dont le CV remplit les critères ci-dessus et que l&apos;IA, après lecture du CV complet, juge pertinents (note de 60 et plus) sont affichés. La note est une aide à la décision, jamais un refus automatique.</p>
+            <p className="sous-titre">{v2 ? "Seuls les profils dont le CV remplit les critères ci-dessus et que l'IA, après lecture du CV complet, juge pertinents (note de 60 et plus) sont affichés." : "Seuls les profils que l'IA a lus et jugés pertinents (note de 60 et plus) sont affichés."} La note est une aide à la décision, jamais un refus automatique.</p>
             <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
               {resume.calculeLe && <span>Classement du {new Date(resume.calculeLe).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Paris" })}</span>}
               {resume.miseAJour && <span className="pastille pastille-orange">Mise à jour en cours…</span>}
