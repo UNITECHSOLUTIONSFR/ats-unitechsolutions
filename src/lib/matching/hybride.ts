@@ -29,7 +29,7 @@ const VERSION_NOTE = "note-v1";
 /** Matching v2 : profils éligibles dont l'IA lit le CV complet, et nombre de CV par appel. */
 export const CV_LUS_PAR_IA = 30;
 const CV_PAR_APPEL = 5;
-const VERSION_NOTE_CV = "note-cv-v1";
+const VERSION_NOTE_CV = "note-cv-v2";
 /** Profils « proches » (ne remplissent pas tous les critères) montrés à part, avec ce qui leur manque. */
 const PROCHES_MONTRES = 15;
 
@@ -134,7 +134,8 @@ async function notesCV(supabase: SupabaseClient, missionId: string, texteIA: str
         const numero = (ref: string) => ref.match(/(\d+)/)?.[1];
         const parNumero = new Map(refs.map((x) => [numero(x.ref)!, x.id]));
         const lignesAvis = r.donnees.notes.map((a) => ({ a, id: parNumero.get(numero(a.ref) ?? "") })).filter((x) => x.id).map(({ a, id }) => {
-          const note = Math.max(0, Math.min(100, Math.round(a.note)));
+          // Règle appliquée par l'outil, pas laissée à l'IA : un critère obligatoire non prouvé = jamais « pertinent » (45 au plus).
+          const note = Math.max(0, Math.min(a.criteres_prouves ? 100 : 45, Math.round(a.note)));
           return { mission_id: missionId, consultant_id: id!, empreinte, note, verdict: verdictDeNote(note), raison: a.raison.slice(0, 300), modele: r.modele, updated_at: new Date().toISOString() };
         });
         const notees = new Set(lignesAvis.map((l) => l.consultant_id));

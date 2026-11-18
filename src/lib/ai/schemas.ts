@@ -157,3 +157,14 @@ export const SchemaCriteresMission = z.object({
   souhaites: z.array(z.string()),
 });
 export type CriteresMission = z.infer<typeof SchemaCriteresMission>;
+
+/** Matching v2 : note d'un CV complet, avec la vérification explicite des critères obligatoires (règle appliquée par l'outil). */
+export const SchemaNoteCV = z.object({
+  notes: z.array(z.object({
+    ref: z.string(),
+    criteres_prouves: z.boolean(), // vrai seulement si CHAQUE critère obligatoire est prouvé par une vraie expérience
+    note: z.number(),
+    raison: z.string(),
+  })),
+});
+export type NoteCV = z.infer<typeof SchemaNoteCV>;

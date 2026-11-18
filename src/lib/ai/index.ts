@@ -22,6 +22,8 @@ import {
   SchemaTriCandidats,
   SchemaNoteCandidats,
   SchemaCriteresMission,
+  SchemaNoteCV,
+  type NoteCV,
   type CriteresMission,
   type NoteCandidats,
   type TriCandidats,
@@ -317,9 +319,9 @@ export async function extraireCriteresMission(mission: string): Promise<Resultat
 }
 
 /** Matching v2 : note sur 100 et raison pour quelques profils, en lisant leur CV complet. */
-export async function noterCV(mission: string, criteres: string, profils: { ref: string; texte: string }[], exemples = ""): Promise<ResultatIA<NoteCandidats>> {
+export async function noterCV(mission: string, criteres: string, profils: { ref: string; texte: string }[], exemples = ""): Promise<ResultatIA<NoteCV>> {
   const texte = `MISSION :\n${mission.slice(0, 8000)}\n\nCRITÈRES OBLIGATOIRES :\n${criteres}\n\n${exemples ? `DÉCISIONS DE L'ÉQUIPE (exemples) :\n${exemples.slice(0, 3000)}\n\n` : ""}PROFILS :\n${profils.map((p) => `[${p.ref}]\n${p.texte.slice(0, 9000)}`).join("\n\n")}`;
-  const r = await appeler(MODELES.noteCV, CONSIGNES_NOTE_CV, SchemaNoteCandidats, texte, MAX_TOKENS.noteCV, "note_cv");
+  const r = await appeler(MODELES.noteCV, CONSIGNES_NOTE_CV, SchemaNoteCV, texte, MAX_TOKENS.noteCV, "note_cv");
   if (!r.donnees) throw Object.assign(new ErreurIA("Notation des CV impossible."), { usages: [r.usage] });
   return { donnees: r.donnees, modele: MODELES.noteCV, promptVersion: PROMPT_VERSION, usages: [r.usage] };
 }

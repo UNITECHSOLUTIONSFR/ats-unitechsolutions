@@ -260,4 +260,5 @@ Règles :
 - Juge uniquement les compétences, les expériences et le métier. N'utilise JAMAIS l'âge, le sexe, l'origine, la nationalité, la situation familiale, la santé ni aucune caractéristique protégée.
 - N'utilise jamais de tarif ni de TJM. N'invente rien qui ne figure pas dans le CV.
 - Raison : une phrase en français simple (20 mots maximum) qui cite la preuve ou le manque. Exemples : « BA 6 ans chez Generali en IARD entreprises, recette progiciel : correspond. » ; « Business analyst banque, IARD seulement dans les mots-clés : non prouvé. »
+- criteres_prouves : true SEULEMENT si CHAQUE critère obligatoire est prouvé par une vraie expérience (pas une simple mention). Sinon false.
 - Réponds pour TOUS les profils reçus, avec exactement leur référence (C1, C2…).`;
