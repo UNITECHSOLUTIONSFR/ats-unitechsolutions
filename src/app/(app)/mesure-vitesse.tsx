@@ -55,7 +55,13 @@ export default function MesureVitesse() {
           // Action serveur : envoi vers l'adresse de la page (les changements d'écran passent par « ?_rsc= », exclus).
           if (u.origin !== location.origin) continue;
           // Écran Consultants : tri, filtres, recherche et pages (lecture d'une page de 50 lignes, liste des valeurs d'une colonne).
-          if (u.pathname === "/api/consultants/page") { envoyer("/consultants · tri, filtre ou page", r.duration, "action"); continue; }
+          if (u.pathname === "/api/consultants/page") {
+            envoyer("/consultants · tri, filtre ou page", r.duration, "action");
+            // Part du serveur (contrôle d'accès + base) : distingue une lenteur du serveur d'une lenteur du trajet ou du réveil.
+            const serveur = r.serverTiming?.find((t) => t.name === "total")?.duration;
+            if (serveur != null) envoyer("/consultants · tri, filtre ou page (serveur)", serveur, "action");
+            continue;
+          }
           if (u.pathname === "/api/consultants/valeurs") { envoyer("/consultants · menu d'une colonne", r.duration, "action"); continue; }
           if (u.searchParams.has("_rsc") || u.pathname.startsWith("/api/") || u.pathname.startsWith("/_next/")) continue;
           envoyer(`${u.pathname} · ${dernierBouton || "action"}`, r.duration, "action");

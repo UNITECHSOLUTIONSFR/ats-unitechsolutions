@@ -118,30 +118,37 @@ export async function modifierConsultant(formData: FormData) {
     const aAjouter = [...ids].filter((c) => !existants.has(c));
     if (aAjouter.length) await supabase.from("consultant_competences").insert(aAjouter.map((competence_id) => ({ consultant_id: id, competence_id })));
   }
-  await supabase.from("consultants_historique").insert({ consultant_id: id, source: "interface", modifications, par: utilisateur.id });
-  await supabase.from("journal_acces").insert({
-    utilisateur_id: utilisateur.id, action: "modification", consultant_id: id, details: { champs: Object.keys(modifications) },
-  });
-
-  // Répercussion partout : ligne du tableau et Excel d'origine (cette nuit, en remplaçant la case), fichiers SharePoint
-  // si le nom ou le trigramme change, matching (fiche modifiée = empreinte et classements recalculés).
+  // La fiche, le profil et les compétences sont enregistrés : la réponse part tout de suite. Le reste se fait juste après
+  // (audit du 19/11/2026 : « Enregistrer » attendait tout, 1,8 s d'habitude et jusqu'à 6,6 s).
   const { clientSupabaseAdmin } = await import("@/lib/supabase/admin");
   const { renommerFichiers, repercuterFiche } = await import("./propagation");
+  const { after } = await import("next/server");
   const admin = clientSupabaseAdmin();
-  await repercuterFiche(admin, id, { ...avant, ...apres }, Object.keys(modifications), libres);
+  // Historique de la fiche : écrit tout de suite (il s'affiche sur la fiche qui se réaffiche).
+  await supabase.from("consultants_historique").insert({ consultant_id: id, source: "interface", modifications, par: utilisateur.id });
+  after(async () => {
+    try {
+      await admin.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "modification", consultant_id: id, details: { champs: Object.keys(modifications) } });
+      // Répercussion partout : ligne du tableau et Excel d'origine (cette nuit, en remplaçant la case), puis écran Consultants.
+      await repercuterFiche(admin, id, { ...avant, ...apres }, Object.keys(modifications), libres);
+      const { actualiserProjection } = await import("@/lib/tableau/projection");
+      await actualiserProjection(admin).catch(() => undefined);
+    } catch (e) {
+      console.error("Suite de l'enregistrement de la fiche :", (e as Error).message);
+    }
+  });
+  // Nom ou trigramme changé : fichiers SharePoint renommés (quelques secondes, après la réponse).
   if (modifications.prenom || modifications.nom || modifications.trigramme) {
-    const { after } = await import("next/server");
     after(() => renommerFichiers(id, { prenom: avant.prenom, nom: avant.nom, trigramme: avant.trigramme }, { prenom: String(apres.prenom), nom: String(apres.nom), trigramme: String(apres.trigramme) })
       .then((j) => { if (j.length) return admin.from("consultants_historique").insert({ consultant_id: id, source: "interface", modifications: { fichiers: { avant: null, apres: j } }, par: utilisateur.id }).then(() => undefined); })
       .catch((e) => console.error("Renommage des fichiers :", (e as Error).message)));
   }
-  // Matching dans les deux sens : la fiche modifiée est comparée tout de suite aux missions ouvertes.
+  // Matching dans les deux sens : la fiche modifiée est comparée aux missions ouvertes (après la réponse).
   if (Object.keys(modifications).some((k) => ["intitule_poste", "competences", "profil.resume", "profil.annees_experience", "profil.seniorite", "localisation", "notes"].includes(k))) {
     const { evaluerProfilApres } = await import("@/lib/matching/profil");
     evaluerProfilApres(id);
   }
   revalidatePath(`/consultants/${id}`);
-  invaliderTableau();
   revalidatePath("/consultants");
 }
 

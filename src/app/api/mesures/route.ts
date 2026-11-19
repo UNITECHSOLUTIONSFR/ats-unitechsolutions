@@ -4,6 +4,8 @@ import { clientSupabaseAdmin } from "@/lib/supabase/admin";
 
 /** Temps d'affichage d'un écran, envoyé par le navigateur (personnes connectées seulement). Aucune donnée personnelle. */
 export async function POST(requete: NextRequest) {
+  // Copie de test locale branchée sur la vraie base : ses mesures ne doivent pas se mêler à celles de l'équipe.
+  if (process.env.APERCU_LOCAL === "1") return new NextResponse(null, { status: 204 });
   const utilisateur = await utilisateurConnecte();
   if (!utilisateur) return new NextResponse(null, { status: 204 });
   try {

@@ -152,8 +152,10 @@ export async function demanderRecalcul(supabase: SupabaseClient, missionIds?: st
  */
 export async function recalculerEnAttente(supabase: SupabaseClient, budgetMs = 230_000): Promise<{ recalcules: number; restants: number; erreurs: string[] }> {
   const debut = Date.now();
-  // Empreintes de sens des fiches nouvelles ou modifiées d'abord (une minute au plus par passage).
-  await calculerEmpreintesConsultants(supabase, 60_000).catch((e) => console.error("Empreintes :", (e as Error).message));
+  // Empreintes de sens des fiches nouvelles ou modifiées d'abord (une minute au plus par passage), mais seulement si
+  // une fiche, un profil, une compétence ou un document a changé depuis la dernière vérification : la recherche des
+  // textes à refaire coûte ≈ 5 s à la base, elle était faite toutes les 10 minutes pour rien (audit du 19/11/2026).
+  await empreintesSiChangement(supabase).catch((e) => console.error("Empreintes :", (e as Error).message));
   const dernier = (table: string, colonne: string) => supabase.from(table).select(colonne).order(colonne, { ascending: false }).limit(1).maybeSingle()
     .then((r) => Date.parse(String((r.data as Record<string, string> | null)?.[colonne] ?? "1970-01-01")));
   const [{ data: missions }, { data: lignes }, ficheModifiee, profilModifie] = await Promise.all([
@@ -223,4 +225,20 @@ export async function calculerApercus(supabase: SupabaseClient, budgetMs = 90_00
     }
   }
   return { calcules, restants: aFaire.length - calcules };
+}
+
+/** Empreintes de sens des consultants, recalculées seulement quand quelque chose a changé depuis la dernière vérification. */
+async function empreintesSiChangement(supabase: SupabaseClient): Promise<void> {
+  const dernier = (table: string) => supabase.from(table).select("updated_at").order("updated_at", { ascending: false }).limit(1).maybeSingle()
+    .then((r) => Date.parse(String((r.data as { updated_at?: string } | null)?.updated_at ?? "1970-01-01")));
+  const [changement, { data: marque }] = await Promise.all([
+    Promise.all(["consultants", "profils", "consultant_competences", "documents", "tableau_lignes"].map(dernier)).then((t) => Math.max(...t)),
+    supabase.from("reglages").select("valeur").eq("cle", "empreintes_verifiees_le").maybeSingle(),
+  ]);
+  const verifie = Date.parse(String(marque?.valeur ?? "1970-01-01"));
+  if (changement <= verifie) return;
+  const debutVerification = new Date().toISOString();
+  const r = await calculerEmpreintesConsultants(supabase, 60_000);
+  // Tout est à jour : la vérification suivante n'aura lieu qu'après un nouveau changement.
+  if (!r.restantes) await supabase.from("reglages").upsert({ cle: "empreintes_verifiees_le", valeur: debutVerification });
 }
