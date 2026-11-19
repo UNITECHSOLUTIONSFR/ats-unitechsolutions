@@ -294,4 +294,4 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 ## 19/11/2026 — Audit vitesse et recherche
 - Fait : empreintes vérifiées seulement après un changement (5 s toutes les 10 min supprimées) + index de détection ; tri du tableau sur lignes étroites (résultat identique) ; « Enregistrer » répond avant la suite ; temps serveur du tableau mesuré ; mesures de la copie de test ignorées ; recherche dans les CV : fonctions en droits du propriétaire avec contrôle « utilisateur actif » (6,2 s → 0,02 s sous RLS, cause des coupures à 8 s) ; écran Consultants : recherche uniquement dans les colonnes (plus de CV).
 - Testé : 250 tests ; résultats identiques avant/après (tri, recherche CV : 656 pour « java ») ; accès anonyme refusé.
-- Suite : vérifier les temps réels demain (Santé) ; à partir du 20/11 10 h, accord avant chaque mise en ligne.
+- Suite : vérifier les temps réels demain (Santé) ; à partir du 19/11 10 h, accord avant chaque mise en ligne.
