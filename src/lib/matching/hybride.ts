@@ -27,9 +27,9 @@ const K_FUSION = 60;
 /** Version des consignes de notation : la changer fait relire tous les profils. */
 const VERSION_NOTE = "note-v1";
 /** Matching v2 : profils éligibles dont l'IA lit le CV complet, et nombre de CV par appel. */
-export const CV_LUS_PAR_IA = 30;
+export const CV_LUS_PAR_IA = 60;
 const CV_PAR_APPEL = 4;
-const VERSION_NOTE_CV = "note-cv-v3";
+const VERSION_NOTE_CV = "note-cv-v4";
 /** Profils « proches » (ne remplissent pas tous les critères) montrés à part, avec ce qui leur manque. */
 const PROCHES_MONTRES = 15;
 
@@ -66,13 +66,12 @@ export async function classerMission(supabase: SupabaseClient, missionId: string
   // Matching v2 seulement (sinon, ancienne méthode : présélection puis lecture des résumés par l'IA).
   const criteres = v2 ? await criteresDeLaMission(supabase, missionId, texteIA) : null;
   const groupes = criteres ? motifsCriteres(criteres) : [];
-  let eligibles = groupes.length ? await profilsEligibles(supabase, groupes.map((g) => g.motif)).catch((e) => { console.error((e as Error).message); return null; }) : null;
-  // Sécurité : moins de 3 profils avec le métier ET les critères → on garde les critères obligatoires seuls (le CV peut
-  // nommer le métier autrement) ; l'IA vérifie ensuite le métier en lisant le CV complet.
-  if (eligibles && eligibles.size < 3 && groupes.length > 1) {
-    const sansMetier = await profilsEligibles(supabase, groupes.slice(1).map((g) => g.motif)).catch(() => null);
-    if (sansMetier && sansMetier.size > eligibles.size) eligibles = sansMetier;
-  }
+  // Filtre strict = critères obligatoires seulement (19/11/2026). Le métier n'élimine plus : un CV le nomme de mille façons
+  // (« Full-Stack », « Ingénieur études et développement », « Tech Lead »…) ; il sert à placer en tête ceux qui le nomment,
+  // et l'IA vérifie le vrai métier en lisant le CV complet. Sans critère obligatoire, le métier sert de filtre.
+  const filtre = groupes.length > 1 ? groupes.slice(1) : groupes;
+  const eligibles = filtre.length ? await profilsEligibles(supabase, filtre.map((g) => g.motif)).catch((e) => { console.error((e as Error).message); return null; }) : null;
+  const avecMetier = groupes.length > 1 && eligibles ? await profilsEligibles(supabase, groupes.map((g) => g.motif)).catch(() => new Set<string>()) : new Set<string>();
 
   // 3. Score explicable de tous les profils (compétences exactes), y compris ceux trouvés par le sens et par les critères.
   const lignes = await classementMission(supabase, missionId, 100_000, [...rangSens.keys(), ...(eligibles ?? [])]);
@@ -87,7 +86,10 @@ export async function classerMission(supabase: SupabaseClient, missionId: string
   // 4. L'IA départage : CV complet des 30 premiers éligibles (v2), ou, sans critères lisibles, l'ancienne lecture des résumés.
   const empreinte = createHash("sha256").update(`${texteIA}|${eligibles ? `${VERSION_NOTE_CV}|${JSON.stringify(criteres)}` : VERSION_NOTE}`).digest("hex").slice(0, 32);
   const notes = eligibles
-    ? await notesCV(supabase, missionId, texteIA, criteres!, empreinte, parFusion.filter((l) => l.eligible).slice(0, CV_LUS_PAR_IA), options.enregistrerAvis ?? true)
+    ? await notesCV(supabase, missionId, texteIA, criteres!, empreinte,
+        // Profils qui nomment aussi le métier d'abord, puis les autres éligibles, dans l'ordre de la présélection.
+        [...parFusion.filter((l) => l.eligible && avecMetier.has(l.consultant_id)), ...parFusion.filter((l) => l.eligible && !avecMetier.has(l.consultant_id))].slice(0, CV_LUS_PAR_IA),
+        options.enregistrerAvis ?? true)
     : await notesIA(supabase, missionId, texteIA, empreinte, parFusion.slice(0, PROFILS_LUS_PAR_IA));
 
   // 5. Profils proches (pas tous les critères) : montrés à part, avec ce qui leur manque, jamais notés comme pertinents.

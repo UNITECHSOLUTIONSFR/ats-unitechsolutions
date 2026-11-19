@@ -27,7 +27,7 @@ export default function CriteresMatching({ missionId, criteres, parEquipe, eligi
         <h2 className="titre-section">Ce qui décide de cette mission</h2>
         <span className="text-xs text-slate-500">{parEquipe ? "Corrigé par l'équipe" : "Lu par l'IA dans la mission"}{eligibles != null && ` · ${eligibles} profil(s) de la base remplissent tout`}</span>
       </div>
-      <p className="text-slate-500">Un profil n&apos;est proposé que si son CV contient <b>le métier et chaque critère obligatoire</b> (ou un de leurs synonymes). L&apos;IA lit ensuite le CV complet des 30 premiers et les note.</p>
+      <p className="text-slate-500">Un profil n&apos;est proposé que si son CV contient <b>chaque critère obligatoire</b> (ou un de ses synonymes). L&apos;IA lit ensuite le CV complet des 60 premiers, vérifie le métier et les note.</p>
       <div className="flex flex-wrap gap-2">
         <span className="pastille" title={criteres.metier.synonymes.join(", ")}>Métier : <b className="ml-1">{criteres.metier.libelle}</b></span>
         {criteres.obligatoires.map((o) => (

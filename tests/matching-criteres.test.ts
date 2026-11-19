@@ -10,7 +10,8 @@ describe("matching v2 : motifs de recherche des critères", () => {
     expect(motifSynonyme("Développeur")).toBe("\\md[eéèêë]v[eéèêë]l[oôöó]pp[eéèêë][uùûüú]r");
     expect(motifSynonyme("BA")).toBe("\\mb[aàâäá]\\M");
     expect(motifSynonyme("p&c")).toBe("\\mp\\&[cç]\\M");
-    expect(motifSynonyme("assurance dommages")).toContain("[\\s\\-_/]+");
+    expect(motifSynonyme("assurance dommages")).toContain("[\\s\\-_/]*");
+    expect(motifSynonyme("full-stack")).toBe(motifSynonyme("full stack"));
     expect(motifSynonyme(" ")).toBeNull();
   });
   it("un groupe par critère : métier d'abord, synonymes réunis", () => {

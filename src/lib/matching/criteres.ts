@@ -21,7 +21,8 @@ const ACCENTS: Record<string, string> = { a: "[aàâäá]", e: "[eéèêë]", i:
 export function motifSynonyme(synonyme: string): string | null {
   const s = synonyme.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
   if (s.length < 2) return null;
-  const echappe = [...s].map((ch) => ACCENTS[ch] ?? (/[a-z0-9 ]/.test(ch) ? ch : `\\${ch}`)).join("").replace(/ /g, "[\\s\\-_/]+");
+  // Séparateurs facultatifs : « full stack » trouve aussi « fullstack » et « full-stack ».
+  const echappe = [...s.replace(/[\s\-_/]+/g, " ")].map((ch) => ACCENTS[ch] ?? (/[a-z0-9 ]/.test(ch) ? ch : `\\${ch}`)).join("").replace(/ /g, "[\\s\\-_/]*");
   return `\\m${echappe}${s.length <= 4 ? "\\M" : ""}`;
 }
 
