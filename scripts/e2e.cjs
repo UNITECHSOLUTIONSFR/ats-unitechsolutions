@@ -95,9 +95,13 @@ const ko = (nom, detail = "") => { resultats.push({ ok: false, nom, detail }); c
     await ouvrir("/consultants");
     const lien = await page.locator("tbody a[href^='/consultants/'], tbody button[title='Ouvrir la fiche']").count();
     await page.goto(BASE + "/missions?vue=toutes", { waitUntil: "networkidle" });
-    const m = await page.locator("a[href^='/missions/']").first().getAttribute("href");
-    await ouvrir(m);
-    ficheUrl = await page.locator("article a[href^='/consultants/']").first().getAttribute("href");
+    // Première mission qui affiche au moins un profil (seuls les profils pertinents sont affichés).
+    const liens = await page.locator("a[href^='/missions/']:not([href='/missions/kanban'])").evaluateAll((as) => [...new Set(as.map((a) => a.getAttribute("href")))].slice(0, 8));
+    for (const m of liens) {
+      await ouvrir(m);
+      if (await page.locator("article a[href^='/consultants/']").count()) { ficheUrl = await page.locator("article a[href^='/consultants/']").first().getAttribute("href"); break; }
+    }
+    if (!ficheUrl) throw new Error("aucune mission avec un profil affiché parmi les 8 premières");
     const t = await ouvrir(ficheUrl.split("?")[0]);
     await capture("fiche");
     return `${t} (${lien} liens dans le tableau)`;
@@ -113,7 +117,7 @@ const ko = (nom, detail = "") => { resultats.push({ ok: false, nom, detail }); c
   });
   await etape("Mission : classement, profils suivants, bouton Recalculer", async () => {
     await page.goto(BASE + "/missions?vue=toutes", { waitUntil: "networkidle" });
-    const m = await page.locator("a[href^='/missions/']").first().getAttribute("href");
+    const m = await page.locator("a[href^='/missions/']:not([href='/missions/kanban'])").first().getAttribute("href");
     const t = await ouvrir(m);
     await capture("mission");
     if (await page.locator("text=Voir les profils suivants").count()) { await page.click("text=Voir les profils suivants"); await page.waitForLoadState("networkidle"); }
