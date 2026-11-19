@@ -16,7 +16,7 @@ import { classerMission } from "./hybride";
  */
 export const VERSION_MOTEUR = "2026-11-17.3-pertinents";
 /** Matching v2 (18/11/2026) : la base cherche les critères dans les CV complets, l'IA départage. Activé par le réglage « matching_v2 ». */
-export const VERSION_MOTEUR_V2 = "2026-11-18.1-criteres";
+export const VERSION_MOTEUR_V2 = "2026-11-19.1-ordre";
 
 /** Le matching v2 est-il activé (réglage matching_v2) ? Tant qu'il ne l'est pas, il est seulement calculé en aperçu. */
 export async function matchingV2Actif(supabase: SupabaseClient): Promise<boolean> {
@@ -72,12 +72,20 @@ export async function calculerEtRanger(missionId: string, supabase: SupabaseClie
     const top = [...lignes.slice(0, 100), ...proches.filter((p) => !lignes.slice(0, 100).includes(p))];
     const eligibles = lignes.some((l) => l.eligible === false) ? lignes.filter((l) => l.eligible && !l.resultat.elimine).length : null;
     const resume: ClassementResume = { total: lignes.length, pertinents: lignes.filter(estPertinent).length, eligibles, top };
+    // Classement complet : profils lus par l'IA (meilleure note d'abord), puis tous les autres par score calculé.
+    const comparables = lignes.filter((l) => !l.resultat.elimine);
+    // Ordre : 1) profils lus par l'IA et jugés pertinents (note ≥ 60) ; 2) profils pas encore lus, par score calculé ;
+    // 3) profils lus et écartés par l'IA (critère non prouvé), en dernier.
+    const lus = comparables.filter((l) => l.avisIA?.note != null).sort((a, b) => (b.avisIA!.note! - a.avisIA!.note!));
+    const autres = comparables.filter((l) => l.avisIA?.note == null).sort((a, b) => b.resultat.score - a.resultat.score);
+    const entree = (l: LigneClassement, lu: number) => [l.consultant_id, Math.round(lu ? l.avisIA!.note! : l.resultat.score), lu];
+    const ordre = [...lus.filter(estPertinent).map((l) => entree(l, 1)), ...autres.map((l) => entree(l, 0)), ...lus.filter((l) => !estPertinent(l)).map((l) => entree(l, 1))];
     const scores = Object.fromEntries(lignes.filter((l) => l.avisIA?.note != null).map((l) => [l.consultant_id, [noteAffichee(l), l.resultat.elimine]]));
     const { data: ligne } = await supabase.from("classements_mission").select("demande_le").eq("mission_id", missionId).maybeSingle();
     const redemande = !!ligne && Date.parse(ligne.demande_le) > Date.parse(demandeAvant);
     // Publication d'un bloc : le nouveau classement remplace l'ancien seulement une fois complet.
     await supabase.from("classements_mission").upsert({
-      mission_id: missionId, total: resume.total, pertinents: resume.pertinents, eligibles: resume.eligibles ?? null, top: resume.top, scores,
+      mission_id: missionId, total: resume.total, pertinents: resume.pertinents, eligibles: resume.eligibles ?? null, top: resume.top, scores, ordre,
       calcule_le: new Date().toISOString(), duree_ms: Date.now() - debut, version: v2 ? VERSION_MOTEUR_V2 : VERSION_MOTEUR,
       a_recalculer: redemande, en_calcul_depuis: null, erreur: null,
     });
@@ -241,4 +249,24 @@ async function empreintesSiChangement(supabase: SupabaseClient): Promise<void> {
   const r = await calculerEmpreintesConsultants(supabase, 60_000);
   // Tout est à jour : la vérification suivante n'aura lieu qu'après un nouveau changement.
   if (!r.restantes) await supabase.from("reglages").upsert({ cle: "empreintes_verifiees_le", valeur: debutVerification });
+}
+
+/** Une page du classement complet d'une mission (50 profils), avec le nom, le poste et la disponibilité. */
+export async function pageClassementComplet(supabase: SupabaseClient, missionId: string, page: number, parPage = 50): Promise<{
+  total: number; lignes: { rang: number; id: string; pourcentage: number; lu: boolean; prenom: string; nom: string; poste: string | null; disponibilite: string | null }[];
+}> {
+  const debut = page * parPage;
+  const { data } = await supabase.from("classements_mission").select("ordre").eq("mission_id", missionId).maybeSingle();
+  const ordre = ((data?.ordre ?? []) as [string, number, number][]);
+  const tranche = ordre.slice(debut, debut + parPage);
+  if (!tranche.length) return { total: ordre.length, lignes: [] };
+  const { data: fiches } = await supabase.from("consultants").select("id, prenom, nom, intitule_poste, disponibilite").in("id", tranche.map((t) => t[0]));
+  const parId = new Map((fiches ?? []).map((f) => [f.id as string, f]));
+  return {
+    total: ordre.length,
+    lignes: tranche.map(([id, pourcentage, lu], i) => {
+      const f = parId.get(id);
+      return { rang: debut + i + 1, id, pourcentage, lu: lu === 1, prenom: f?.prenom ?? "", nom: f?.nom ?? "", poste: (f?.intitule_poste as string | null) ?? null, disponibilite: (f?.disponibilite as string | null) ?? null };
+    }).filter((l) => l.nom),
+  };
 }

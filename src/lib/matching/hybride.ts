@@ -28,8 +28,8 @@ const K_FUSION = 60;
 const VERSION_NOTE = "note-v1";
 /** Matching v2 : profils éligibles dont l'IA lit le CV complet, et nombre de CV par appel. */
 export const CV_LUS_PAR_IA = 30;
-const CV_PAR_APPEL = 5;
-const VERSION_NOTE_CV = "note-cv-v2";
+const CV_PAR_APPEL = 4;
+const VERSION_NOTE_CV = "note-cv-v3";
 /** Profils « proches » (ne remplissent pas tous les critères) montrés à part, avec ce qui leur manque. */
 const PROCHES_MONTRES = 15;
 
@@ -138,8 +138,7 @@ async function notesCV(supabase: SupabaseClient, missionId: string, texteIA: str
           const note = Math.max(0, Math.min(a.criteres_prouves ? 100 : 45, Math.round(a.note)));
           return { mission_id: missionId, consultant_id: id!, empreinte, note, verdict: verdictDeNote(note), raison: a.raison.slice(0, 300), modele: r.modele, updated_at: new Date().toISOString() };
         });
-        const notees = new Set(lignesAvis.map((l) => l.consultant_id));
-        for (const x of refs) if (!notees.has(x.id)) lignesAvis.push({ mission_id: missionId, consultant_id: x.id, empreinte, note: 0, verdict: "hors_sujet", raison: "Non retenu par l'IA pour cette mission.", modele: r.modele, updated_at: new Date().toISOString() });
+        // Profil sans réponse de l'IA (réponse coupée, référence oubliée) : PAS noté 0 ; il sera relu au prochain calcul.
         // Aperçu (matching v2 pas encore activé) : notes non enregistrées, pour ne pas remplacer celles du classement affiché.
         if (lignesAvis.length && enregistrer) await supabase.from("avis_matching").upsert(lignesAvis);
         for (const l of lignesAvis) notes.set(l.consultant_id, { note: l.note, raison: l.raison });

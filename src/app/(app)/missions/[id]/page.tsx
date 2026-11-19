@@ -4,7 +4,8 @@ import { BoutonSuivi } from "./bouton-suivi";
 import { notFound } from "next/navigation";
 import { exigerUtilisateur } from "@/lib/acces";
 import { estPertinent, noteAffichee, type LigneClassement } from "@/lib/matching/classement";
-import { classementAAfficher, matchingV2Actif } from "@/lib/matching/stockage";
+import { classementAAfficher, matchingV2Actif, pageClassementComplet } from "@/lib/matching/stockage";
+import { clientSupabaseAdmin } from "@/lib/supabase/admin";
 import BoutonRecalculer from "./recalculer";
 import { formaterTelephone } from "@/lib/metier/telephone";
 import { responsablesPossibles } from "@/lib/missions/responsables";
@@ -22,17 +23,19 @@ export const maxDuration = 120;
 import { suivreProposition } from "@/lib/missions/actions";
 import ChoixStatut from "../statut";
 import { EtiquetteTrello } from "../trello";
-import GestionMission from "./gestion";
 import { LIBELLE_STATUT } from "@/lib/missions/statuts";
 
 const STATUTS_PROPOSITION: Record<string, string> = {
   propose: "Proposé", appele: "Appelé", envoye_client: "Envoyé au client", retenu: "Retenu", refuse: "Refusé",
 };
 
-export default async function PageMission({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tous?: string }> }) {
+export default async function PageMission({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tous?: string; p?: string }> }) {
   const { id } = await params;
   // Les 20 premiers profils d'abord (page légère) ; les 30 suivants sur demande.
-  const tous = (await searchParams).tous === "1";
+  const sp = await searchParams;
+  const tous = sp.tous === "1";
+  // Classement complet (toute la base comparée), 50 profils par page.
+  const pageListe = Math.max(0, Number.parseInt(sp.p ?? "0", 10) || 0);
   const { utilisateur, supabase } = await exigerUtilisateur();
   const { data: mission } = await supabase
     .from("missions")
@@ -49,6 +52,7 @@ export default async function PageMission({ params, searchParams }: { params: Pr
     supabase.from("avis_ia").select("consultant_id, contenu").eq("mission_id", id),
     matchingV2Actif(supabase),
   ]);
+  const complet = await pageClassementComplet(clientSupabaseAdmin(), id, pageListe);
   const classement = resume.top;
   // Affichés : uniquement les profils que l'IA a lus et jugés pertinents (note ≥ 60). Les autres ne sont pas montrés.
   const proposes = classement.filter(estPertinent);
@@ -106,9 +110,7 @@ export default async function PageMission({ params, searchParams }: { params: Pr
         </div>
       </div>
 
-      <GestionMission estAdmin={utilisateur.role === "admin"} mission={{
-        id, intitule: mission.intitule, client: mission.client, localisation: mission.localisation, texte_besoin: mission.texte_besoin, trello: !!mission.trello_carte_id,
-      }} />
+      {/* Suppression d'une mission retirée de l'écran (19/11/2026) : Trello fait foi pour les missions. */}
 
       <Exigences missionId={id} texteBesoin={mission.texte_besoin} exigences={exigences.map((e) => ({
         competence_id: e.competence_id, nom: e.competences?.nom_canonique ?? "?", obligatoire: e.obligatoire, importance: e.importance, profils: profilsParCompetence.get(e.competence_id) ?? 0,
@@ -146,6 +148,34 @@ export default async function PageMission({ params, searchParams }: { params: Pr
           <div className="carte p-8 text-center text-sm text-slate-500">
             <p className="font-medium text-nuit">Aucun profil pertinent pour l&apos;instant.</p>
             <p className="mt-1">Aucun CV de la base ne remplit tous les critères avec une expérience prouvée. Si un critère est trop strict, corrigez-le ci-dessus : le classement se recalcule aussitôt. Un profil ajouté ensuite est comparé à la mission automatiquement.</p>
+          </div>
+        )}
+        {complet.total > 0 && (
+          <div id="classement-complet" className="carte overflow-hidden text-sm">
+            <div className="flex flex-wrap items-baseline justify-between gap-2 p-5 pb-3">
+              <h3 className="font-semibold text-nuit">Tous les profils classés ({complet.total.toLocaleString("fr-FR")})</h3>
+              <span className="text-xs text-slate-500">« Lu par l&apos;IA » : note après lecture du CV complet · sinon score calculé sur les compétences</span>
+            </div>
+            <table className="w-full">
+              <tbody>
+                {complet.lignes.map((l) => (
+                  <tr key={l.id} className="border-t border-slate-100">
+                    <td className="w-12 py-2 pl-5 text-xs tabular-nums text-slate-400">{l.rang}</td>
+                    <td className="py-2 pr-3"><Link href={`/consultants/${l.id}?mission=${id}`} className="lien font-medium">{l.prenom === "—" ? "" : l.prenom} {l.nom}</Link></td>
+                    <td className="hidden py-2 pr-3 text-slate-500 sm:table-cell">{l.poste ?? ""}</td>
+                    <td className="hidden py-2 pr-3 text-xs text-slate-500 md:table-cell">{l.disponibilite ?? ""}</td>
+                    <td className="py-2 pr-5 text-right">
+                      <span className={`pastille ${l.pourcentage >= 75 ? "pastille-vert" : ""}`}>{l.pourcentage} %{l.lu ? " · lu par l'IA" : ""}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="flex items-center justify-between gap-2 border-t border-slate-100 p-3 text-xs">
+              {pageListe > 0 ? <Link href={`/missions/${id}?p=${pageListe - 1}#classement-complet`} scroll={false} className="bouton-secondaire">← 50 précédents</Link> : <span />}
+              <span className="text-slate-500">Profils {pageListe * 50 + 1} à {Math.min(complet.total, (pageListe + 1) * 50)} sur {complet.total.toLocaleString("fr-FR")}</span>
+              {(pageListe + 1) * 50 < complet.total ? <Link href={`/missions/${id}?p=${pageListe + 1}#classement-complet`} scroll={false} className="bouton-secondaire">50 suivants →</Link> : <span />}
+            </div>
           </div>
         )}
       </section>
