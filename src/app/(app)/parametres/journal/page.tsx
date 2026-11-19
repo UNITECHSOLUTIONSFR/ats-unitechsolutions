@@ -50,7 +50,7 @@ export default async function Journal({ searchParams }: { searchParams: Promise<
               const supprimee = l.action === "suppression" ? `${d.prenom ?? ""} ${d.nom ?? ""}`.trim() : "";
               return (
                 <tr key={l.id} className="border-t border-white/70 align-top">
-                  <td className="whitespace-nowrap p-3 tabular-nums text-slate-500">{new Date(l.created_at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}</td>
+                  <td className="whitespace-nowrap p-3 tabular-nums text-slate-500">{new Date(l.created_at).toLocaleString("fr-FR", { timeZone: "Europe/Paris", dateStyle: "short", timeStyle: "short" })}</td>
                   <td className="p-3"><span className={ACTIONS[l.action]?.classe ?? "pastille"}>{ACTIONS[l.action]?.libelle ?? l.action}</span></td>
                   <td className="p-3 text-nuit">{l.utilisateur_id ? nomUtilisateur.get(l.utilisateur_id) ?? "Ancien compte" : "Automatique"}</td>
                   <td className="p-3">

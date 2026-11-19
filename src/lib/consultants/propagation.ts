@@ -27,7 +27,7 @@ export function valeurPourCase(champ: ChampFiche, f: Record<string, unknown>): s
     case "telephone": return formaterTelephone(f.telephone_e164 as string | null) || t(f.telephone_brut);
     case "disponibilite": {
       const d = f.disponible_le as string | null;
-      return d ? new Date(`${d}T12:00:00`).toLocaleDateString("fr-FR") : t(f.disponibilite);
+      return d ? new Date(`${d}T12:00:00`).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" }) : t(f.disponibilite);
     }
     case "intitule_poste": return t(f.intitule_poste);
     case "localisation": return t(f.localisation);

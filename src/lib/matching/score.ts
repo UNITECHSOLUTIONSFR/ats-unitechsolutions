@@ -253,7 +253,7 @@ function expliquer(mission: MissionAScorer, c: ConsultantAScorer, parId: Map<str
   if (c.disponible_le) {
     const debut = mission.date_debut ? new Date(mission.date_debut) : new Date();
     const d = new Date(c.disponible_le);
-    (d <= debut ? atouts : manques).push(`Disponible le ${d.toLocaleDateString("fr-FR")}${d <= debut ? "" : " (après le démarrage)"}`);
+    (d <= debut ? atouts : manques).push(`Disponible le ${d.toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })}${d <= debut ? "" : " (après le démarrage)"}`);
   } else if (estDisponibleImmediatement(c.disponibilite)) atouts.push(`Disponibilité : ${c.disponibilite}`);
   else aVerifier.push(c.disponibilite ? `Disponibilité à préciser : « ${c.disponibilite} »` : "Disponibilité inconnue : à demander");
   for (const al of alertes) aVerifier.push(al);

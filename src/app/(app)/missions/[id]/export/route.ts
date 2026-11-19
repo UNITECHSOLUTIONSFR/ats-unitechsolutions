@@ -31,7 +31,7 @@ export async function GET(_r: Request, { params }: { params: Promise<{ id: strin
   ws.getRow(1).font = { bold: true };
   classement.forEach((c, i) => ws.addRow([
     i + 1, c.prenom, c.nom, c.trigramme, c.intitule_poste ?? "", Math.round(noteAffichee(c)),
-    c.disponible_le ? new Date(c.disponible_le).toLocaleDateString("fr-FR") : c.disponibilite ?? "",
+    c.disponible_le ? new Date(c.disponible_le).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" }) : c.disponibilite ?? "",
     formaterTelephone(c.telephone_e164), c.email ?? "", SUIVI[suivi.get(c.consultant_id) ?? ""] ?? "",
     c.avisIA?.raison ?? "", c.resultat.raisons.map((r) => r.texte).join(" · "),
   ]));

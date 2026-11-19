@@ -11,5 +11,5 @@ export default function Rafraichir() {
     const t = setInterval(() => { router.refresh(); setHeure(new Date()); }, 60_000);
     return () => clearInterval(t);
   }, [router]);
-  return <span className="text-xs text-slate-500">Mis à jour à {heure.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })} · actualisation chaque minute</span>;
+  return <span className="text-xs text-slate-500">Mis à jour à {heure.toLocaleTimeString("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" })} · actualisation chaque minute</span>;
 }

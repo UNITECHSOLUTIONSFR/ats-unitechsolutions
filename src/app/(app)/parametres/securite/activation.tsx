@@ -28,7 +28,7 @@ export default function Activation() {
     const supabase = clientNavigateur();
     // Un essai précédent non terminé est retiré avant d'en commencer un nouveau.
     for (const f of (facteurs ?? []).filter((x) => x.status !== "verified")) await supabase.auth.mfa.unenroll({ factorId: f.id });
-    const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: `ATS ${new Date().toLocaleDateString("fr-FR")}` });
+    const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: `ATS ${new Date().toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })}` });
     if (error || !data) { setMessage({ ok: false, texte: "Activation impossible pour le moment." }); return; }
     setEnrolement({ id: data.id, qr: data.totp.qr_code, secret: data.totp.secret });
   }
@@ -58,7 +58,7 @@ export default function Activation() {
         </div>
         {actifs.map((f) => (
           <div key={f.id} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-2 ring-1 ring-slate-200/70">
-            <span className="text-nuit">{f.friendly_name ?? "Application d'authentification"} · ajoutée le {new Date(f.created_at).toLocaleDateString("fr-FR")}</span>
+            <span className="text-nuit">{f.friendly_name ?? "Application d'authentification"} · ajoutée le {new Date(f.created_at).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })}</span>
             <button type="button" onClick={() => retirer(f.id)} className="text-xs text-slate-400 hover:text-red-700">Retirer</button>
           </div>
         ))}

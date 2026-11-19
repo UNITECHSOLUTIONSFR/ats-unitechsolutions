@@ -295,3 +295,8 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Fait : empreintes vérifiées seulement après un changement (5 s toutes les 10 min supprimées) + index de détection ; tri du tableau sur lignes étroites (résultat identique) ; « Enregistrer » répond avant la suite ; temps serveur du tableau mesuré ; mesures de la copie de test ignorées ; recherche dans les CV : fonctions en droits du propriétaire avec contrôle « utilisateur actif » (6,2 s → 0,02 s sous RLS, cause des coupures à 8 s) ; écran Consultants : recherche uniquement dans les colonnes (plus de CV).
 - Testé : 250 tests ; résultats identiques avant/après (tri, recherche CV : 656 pour « java ») ; accès anonyme refusé.
 - Suite : vérifier les temps réels demain (Santé) ; à partir du 19/11 10 h, accord avant chaque mise en ligne.
+
+## 19/11/2026 — Retours d'une collaboratrice après une semaine
+- Fait : dates et heures affichées à l'heure de Paris partout (le serveur à Londres décalait l'historique d'une heure) ; lecture des CV par l'IA : réponse jusqu'à 4 000 jetons (1 500 coupait les CV longs → « lecture impossible ») ; « la fiche existe déjà » : la fiche existante est nommée avec un lien, et un double envoi rouvre la fiche qui vient d'être créée ; message clair « CV bien enregistré ✓ » quand l'IA n'a pas pu le lire ; écran d'une mission jamais bloqué par un calcul (classement préparé en arrière-plan) et chargement en parallèle ; évaluation IA détaillée par profil (récapitulatif + analyse point par point), une seule note partout.
+- Testé : 250 tests, construction ; tests de bout en bout à refaire hors des heures de travail.
+- Suite : suivre les temps réels de l'écran d'une mission ; vérifier qu'aucune fiche créée avec CV ne reste sans document.

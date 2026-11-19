@@ -88,7 +88,7 @@ export default async function PageEmails({ searchParams }: { searchParams: Promi
               <div className="min-w-0 flex-1">
                 <div className="font-semibold text-nuit">{c.objet}</div>
                 <div className="mt-0.5 flex flex-wrap items-center gap-2 text-slate-500">
-                  {new Date(c.created_at).toLocaleDateString("fr-FR")} · {c.nb_destinataires} destinataire(s)
+                  {new Date(c.created_at).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })} · {c.nb_destinataires} destinataire(s)
                   <span className="pastille">{LIBELLES[c.statut]}</span>
                   <span className="pastille">{c.type === "libre" ? "Email libre" : "Disponibilité"}</span>
                 </div>

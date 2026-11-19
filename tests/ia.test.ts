@@ -21,7 +21,7 @@ describe("module IA (sans appel réseau)", () => {
     expect(p.output_config.effort).toBe("low");
     expect(p.output_config.format.type).toBe("json_schema");
     expect(p.system[0].cache_control).toEqual({ type: "ephemeral" });
-    expect(p.max_tokens).toBe(1500);
+    expect(p.max_tokens).toBe(4000); // fiche CV : 1 500 coupait les CV longs (19/11/2026)
   });
 
   it("Sonnet : mode « between_tools » (Sonnet 5.5 refuse « disabled »)", () => {

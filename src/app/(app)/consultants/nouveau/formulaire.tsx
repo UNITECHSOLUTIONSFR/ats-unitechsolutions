@@ -79,7 +79,7 @@ export default function Formulaire() {
       )}
       <div className="sm:col-span-2">
         <button disabled={enCours} className="bouton-primaire">{enCours ? (fichier ? "Création et lecture du CV…" : "Création…") : "Créer la fiche"}</button>
-        {etat.erreur && <p className="mt-2 text-red-700">{etat.erreur}</p>}
+        {etat.erreur && <p className="mt-2 text-red-700">{etat.erreur}{etat.doublon && <> <Link href={`/consultants/${etat.doublon.id}`} className="font-semibold underline">Ouvrir la fiche de {etat.doublon.nom}</Link></>}</p>}
       </div>
     </form>
   );

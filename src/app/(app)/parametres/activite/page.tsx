@@ -65,7 +65,7 @@ export default async function Activite({ searchParams }: { searchParams: Promise
           <h2 className="titre-section">Jour par jour</h2>
           {jours.map((j) => (
             <div key={j.jour} className="flex items-center gap-3 text-sm">
-              <span className="w-24 shrink-0 text-slate-500">{new Date(`${j.jour}T12:00:00`).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}</span>
+              <span className="w-24 shrink-0 text-slate-500">{new Date(`${j.jour}T12:00:00`).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris", weekday: "short", day: "numeric", month: "short" })}</span>
               <div className="flex h-3 flex-1 overflow-hidden rounded-full bg-slate-100">
                 <div className="bg-marque-500" style={{ width: `${(j.recherches / max) * 100}%` }} title={`${j.recherches} recherches`} />
                 <div className="bg-sky-300" style={{ width: `${(j.consultations / max) * 100}%` }} title={`${j.consultations} consultations`} />

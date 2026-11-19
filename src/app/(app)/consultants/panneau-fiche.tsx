@@ -125,7 +125,7 @@ export default function PanneauFiche({ id, apercu, onFermer }: { id: string; ape
               <p className="font-medium text-nuit">{fiche.disponibilite ?? "Non renseignée"}</p>
               {fiche.partiel ? <div className="squelette h-4 w-40" /> : <>
               <p className={ancienne ? "text-amber-700" : "text-slate-500"}>
-                {fiche.disponibilite_maj_le ? `Mise à jour le ${new Date(fiche.disponibilite_maj_le).toLocaleDateString("fr-FR")}` : "Jamais mise à jour"}
+                {fiche.disponibilite_maj_le ? `Mise à jour le ${new Date(fiche.disponibilite_maj_le).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })}` : "Jamais mise à jour"}
                 {ancienne && " — à vérifier"}
               </p>
               {!pdf && !fiche.cvUnitech && <span className="pastille pastille-orange mt-1">PDF anonymisé manquant</span>}
@@ -176,7 +176,7 @@ export default function PanneauFiche({ id, apercu, onFermer }: { id: string; ape
               </form>
               {fiche.notesEquipe.map((n) => (
                 <div key={n.id} className="rounded-xl bg-slate-50 px-3 py-2 ring-1 ring-slate-200/70">
-                  <div className="text-xs text-slate-400">{n.auteur} · {new Date(n.date).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}</div>
+                  <div className="text-xs text-slate-400">{n.auteur} · {new Date(n.date).toLocaleString("fr-FR", { timeZone: "Europe/Paris", dateStyle: "short", timeStyle: "short" })}</div>
                   <div className="whitespace-pre-line text-nuit">{n.texte}</div>
                 </div>
               ))}

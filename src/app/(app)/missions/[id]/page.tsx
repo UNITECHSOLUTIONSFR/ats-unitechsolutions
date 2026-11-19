@@ -48,6 +48,10 @@ export default async function PageMission({ params, searchParams }: { params: Pr
     supabase.from("avis_ia").select("consultant_id, contenu").eq("mission_id", id),
     matchingV2Actif(supabase),
   ]);
+  // Lancé en même temps que le reste de la page (au lieu d'après) : nombre de profils par compétence demandée.
+  const possedeesP = ((mission.mission_competences ?? []) as unknown as { competence_id: string }[]).length
+    ? supabase.rpc("profils_par_competence", { p_ids: ((mission.mission_competences ?? []) as unknown as { competence_id: string }[]).map((e) => e.competence_id) })
+    : Promise.resolve({ data: [] as unknown[] });
   const classement = resume.top;
   // Affichés : uniquement les profils que l'IA a lus et jugés pertinents (note ≥ 60). Les autres ne sont pas montrés.
   const proposes = classement.filter(estPertinent);
@@ -58,16 +62,14 @@ export default async function PageMission({ params, searchParams }: { params: Pr
   const suivi = new Map((propositions ?? []).map((p) => [p.consultant_id, p.statut as string]));
   const shortlist: ProfilShortlist[] = classement.filter((c) => suivi.has(c.consultant_id) && suivi.get(c.consultant_id) !== "refuse").map((c) => ({
     trigramme: c.trigramme, poste: c.intitule_poste, annees: c.annees_experience, score: Math.round(noteAffichee(c)),
-    disponibilite: c.disponible_le ? new Date(c.disponible_le).toLocaleDateString("fr-FR") : c.disponibilite ?? "à préciser", pdf: c.pdf_anonyme_url,
+    disponibilite: c.disponible_le ? new Date(c.disponible_le).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" }) : c.disponibilite ?? "à préciser", pdf: c.pdf_anonyme_url,
   }));
   const exigences = (mission.mission_competences ?? []) as unknown as {
     competence_id: string; obligatoire: boolean; importance: number; annees_min: number | null; competences: { nom_canonique: string } | null;
   }[];
   exigences.sort((a, b) => Number(b.obligatoire) - Number(a.obligatoire) || b.importance - a.importance);
   // Nombre de profils qui ont chaque compétence (analysée) : repère les exigences trop pointues.
-  const { data: possedees } = exigences.length
-    ? await supabase.rpc("profils_par_competence", { p_ids: exigences.map((e) => e.competence_id) })
-    : { data: [] };
+  const { data: possedees } = await possedeesP;
   const profilsParCompetence = new Map(((possedees ?? []) as { competence_id: string; nombre: number }[]).map((p) => [p.competence_id, Number(p.nombre)]));
 
   return (
@@ -80,7 +82,7 @@ export default async function PageMission({ params, searchParams }: { params: Pr
             {mission.trello_carte_id && <EtiquetteTrello colonne={mission.trello_colonne} recruteur={mission.trello_recruteur} url={mission.trello_url} />}
             {mission.tjm && <span className="rounded-full bg-amber-50 px-3 py-1 font-medium text-amber-800 ring-1 ring-amber-200" title="Information interne : jamais utilisée pour classer les candidats, jamais envoyée à un consultant">💶 {mission.tjm} <span className="text-xs font-normal">(interne)</span></span>}
             {mission.localisation && <span className="rounded-full bg-white px-3 py-1 text-slate-700 ring-1 ring-slate-200">📍 {mission.localisation}</span>}
-            {mission.date_debut && <span className="rounded-full bg-marque-50 px-3 py-1 font-semibold text-marque-700 ring-1 ring-marque-100">Démarrage le {new Date(mission.date_debut).toLocaleDateString("fr-FR")}</span>}
+            {mission.date_debut && <span className="rounded-full bg-marque-50 px-3 py-1 font-semibold text-marque-700 ring-1 ring-marque-100">Démarrage le {new Date(mission.date_debut).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })}</span>}
             {mission.annees_min && <span className="rounded-full bg-white px-3 py-1 text-slate-700 ring-1 ring-slate-200">⏱ {mission.annees_min} ans minimum</span>}
             {mission.seniorite && <span className="rounded-full bg-white px-3 py-1 text-slate-700 ring-1 ring-slate-200">★ {mission.seniorite === "confirme" ? "confirmé" : mission.seniorite}</span>}
           </div>
@@ -139,7 +141,13 @@ export default async function PageMission({ params, searchParams }: { params: Pr
         {!tous && proposes.length > 20 && (
           <Link href={`/missions/${id}?tous=1`} scroll={false} className="bouton-secondaire w-full justify-center">Voir les {proposes.length - 20} autres profils pertinents</Link>
         )}
-        {!proposes.length && (
+        {!proposes.length && !resume.calculeLe && (
+          <div className="carte p-8 text-center text-sm text-slate-500">
+            <p className="font-medium text-nuit">Classement en préparation…</p>
+            <p className="mt-1">L&apos;IA lit les CV des profils qui conviennent : comptez une à deux minutes, puis rechargez la page.</p>
+          </div>
+        )}
+        {!proposes.length && !!resume.calculeLe && (
           <div className="carte p-8 text-center text-sm text-slate-500">
             <p className="font-medium text-nuit">Aucun profil pertinent pour l&apos;instant.</p>
             <p className="mt-1">Aucun CV de la base ne remplit tous les critères avec une expérience prouvée. Si un critère est trop strict, corrigez-le ci-dessus : le classement se recalcule aussitôt. Un profil ajouté ensuite est comparé à la mission automatiquement.</p>
@@ -173,7 +181,7 @@ function CarteCandidat({ rang, c, missionId, statut, ouvert, cv, avis }: {
         <div className="min-w-0 flex-1">
           <Link href={`/consultants/${c.consultant_id}?mission=${missionId}`} className="block truncate text-base font-semibold text-nuit hover:text-marque-600">{c.prenom} {c.nom}</Link>
           <div className="truncate text-sm text-slate-500">{c.intitule_poste ?? "Poste non renseigné"} · <span className="font-mono text-xs">{c.trigramme}</span></div>
-          <div className="mt-0.5 truncate text-xs text-slate-500">Disponibilité : {c.disponible_le ? new Date(c.disponible_le).toLocaleDateString("fr-FR") : c.disponibilite ?? "non renseignée"}</div>
+          <div className="mt-0.5 truncate text-xs text-slate-500">Disponibilité : {c.disponible_le ? new Date(c.disponible_le).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" }) : c.disponibilite ?? "non renseignée"}</div>
         </div>
         <JaugeScore score={noteAffichee(c)} />
       </div>

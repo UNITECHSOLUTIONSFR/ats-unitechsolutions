@@ -42,7 +42,7 @@ export default async function Synchronisations() {
           <tbody>
             {(executions ?? []).map((e, i) => (
               <tr key={i} className="border-t border-white/70 align-top">
-                <td className="whitespace-nowrap p-3">{new Date(e.debut).toLocaleString("fr-FR")}</td>
+                <td className="whitespace-nowrap p-3">{new Date(e.debut).toLocaleString("fr-FR", { timeZone: "Europe/Paris" })}</td>
                 <td className="p-3">{Object.values(TACHES).find((t) => t.type === e.type)?.libelle}</td>
                 <td className="p-3"><span className={classePastille(e.statut === "termine" ? "disponible" : e.statut === "echec" ? "alerte" : "en cours")}>{e.statut}</span></td>
                 <td className="p-3">{resumerRapport(e.type, e.rapport as Record<string, unknown>)}</td>

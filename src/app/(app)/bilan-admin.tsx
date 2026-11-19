@@ -97,7 +97,7 @@ export default async function BilanAdmin() {
 
 export function PastilleEcheance({ e }: { e: Echeance }) {
   if (e.niveau === "inconnu") return <span className="pastille shrink-0">Date à renseigner</span>;
-  const date = new Date(`${e.expireLe}T12:00:00`).toLocaleDateString("fr-FR");
+  const date = new Date(`${e.expireLe}T12:00:00`).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" });
   if (e.niveau === "expire") return <span className="pastille pastille-rouge shrink-0">Expiré le {date}</span>;
   const classe = e.niveau === "urgent" ? "pastille pastille-rouge" : e.niveau === "bientot" ? "pastille pastille-orange" : "pastille pastille-vert";
   return <span className={`${classe} shrink-0`}>{date} · {e.joursRestants} j</span>;

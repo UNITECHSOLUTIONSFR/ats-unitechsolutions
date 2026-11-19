@@ -88,7 +88,7 @@ export default async function FicheConsultant({ params, searchParams }: { params
             <div className="mt-2 flex flex-wrap gap-2 text-xs">
               <span className="rounded-full bg-white/20 px-2.5 py-0.5 font-medium capitalize ring-1 ring-white/25">{c.statut === "en_mission" ? "candidat" : c.statut}</span>
               <span className={`rounded-full px-2.5 py-0.5 font-medium ring-1 ${dispoAncienne ? "bg-amber-400/30 ring-amber-200/50" : "bg-white/20 ring-white/25"}`}>
-                {c.disponibilite ?? (c.disponible_le ? `Disponible le ${new Date(c.disponible_le).toLocaleDateString("fr-FR")}` : "Disponibilité non renseignée")}
+                {c.disponibilite ?? (c.disponible_le ? `Disponible le ${new Date(c.disponible_le).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })}` : "Disponibilité non renseignée")}
               </span>
             </div>
           </div>
@@ -199,7 +199,7 @@ export default async function FicheConsultant({ params, searchParams }: { params
                   <span className={`absolute -left-[26px] top-1 h-3 w-3 rounded-full ring-4 ring-white ${COULEUR_EVENEMENT[e.type]}`} />
                   <div className="flex flex-wrap items-baseline gap-x-2">
                     <span className="font-medium text-nuit">{e.lien ? <Link href={e.lien} className="hover:underline">{e.titre}</Link> : e.titre}</span>
-                    <span className="text-xs tabular-nums text-slate-400">{new Date(e.date).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}</span>
+                    <span className="text-xs tabular-nums text-slate-400">{new Date(e.date).toLocaleString("fr-FR", { timeZone: "Europe/Paris", dateStyle: "short", timeStyle: "short" })}</span>
                   </div>
                   {e.detail && <div className="break-words text-slate-500 [overflow-wrap:anywhere]">{e.detail}</div>}
                 </li>
@@ -233,7 +233,7 @@ export default async function FicheConsultant({ params, searchParams }: { params
           <Champ nom="disponibilite" libelle="Disponibilité (texte)" valeur={c.disponibilite} />
           <Champ nom="disponible_le" libelle="Disponible le" valeur={c.disponible_le} type="date" />
           <p className={`text-xs ${dispoAncienne ? "text-amber-700" : "text-slate-500"}`}>
-            {majDispo ? `Disponibilité mise à jour le ${majDispo.toLocaleDateString("fr-FR")}` : "Disponibilité jamais mise à jour"}
+            {majDispo ? `Disponibilité mise à jour le ${majDispo.toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })}` : "Disponibilité jamais mise à jour"}
             {dispoAncienne ? " — à vérifier (plus de 3 mois)" : ""}
           </p>
           <label className="block">

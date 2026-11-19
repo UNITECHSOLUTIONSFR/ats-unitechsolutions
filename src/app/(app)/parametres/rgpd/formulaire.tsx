@@ -13,7 +13,7 @@ export default function FormulairePurge({ fiches }: { fiches: { id: string; libe
       <p className="font-medium">{fiches.length} fiche(s) concernée(s)</p>
       <ul className="max-h-96 space-y-1 overflow-y-auto">
         {fiches.map((f) => (
-          <li key={f.id}><label className="flex items-center gap-2"><input type="checkbox" name="ids" value={f.id} defaultChecked className="accent-marque-600" />{f.libelle} — dernier contact {new Date(f.dernier).toLocaleDateString("fr-FR")}</label></li>
+          <li key={f.id}><label className="flex items-center gap-2"><input type="checkbox" name="ids" value={f.id} defaultChecked className="accent-marque-600" />{f.libelle} — dernier contact {new Date(f.dernier).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })}</label></li>
         ))}
       </ul>
       <p>Pour confirmer l&apos;effacement définitif des fiches cochées, saisissez <b>SUPPRIMER</b> :</p>

@@ -70,7 +70,7 @@ function LigneCV({ g }: { g: CVGenere }) {
     <form action={action}>
       {voilePDF}
       <input type="hidden" name="generation_id" value={g.id} />
-      <div className="text-xs text-slate-400">{new Date(g.date).toLocaleDateString("fr-FR")} · {g.mission ?? "Sans mission"}{g.dossier ? ` · ${g.dossier.split("/").slice(-1)[0]}` : ""}</div>
+      <div className="text-xs text-slate-400">{new Date(g.date).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })} · {g.mission ?? "Sans mission"}{g.dossier ? ` · ${g.dossier.split("/").slice(-1)[0]}` : ""}</div>
       <div className="mt-1 flex flex-wrap items-center gap-2">
         <a href={word.url} target="_blank" rel="noreferrer" className="bouton-secondaire text-xs">Word (ouvrir, corriger)</a>
         <button type="button" disabled={enCoursW} onClick={() => fichierRef.current?.click()} className="bouton-secondaire text-xs"

@@ -28,7 +28,7 @@ export const MODELES = {
 export const EMPREINTES = { modele: "voyage-4-large", dimension: 1024, tarifParMillion: 0.12 } as const;
 
 export const MAX_TOKENS = {
-  ficheCV: 1500,
+  ficheCV: 4000, // CV longs : 1 500 coupait la réponse (fiche invalide → « lecture impossible »), constat du 19/11/2026
   mission: 1500, // fiches longues (beaucoup de technologies) : 600 coupait la réponse
   triEmail: 300,
   analyseApprofondie: 1500,

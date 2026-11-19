@@ -51,7 +51,7 @@ export default async function Alertes({ searchParams }: { searchParams: Promise<
                     {c ? <Link href={`/consultants/${a.consultant_id}`} className="font-semibold text-nuit hover:text-marque-700">{c.prenom} {c.nom}</Link> : <span className="font-semibold text-slate-500">Sans fiche</span>}
                     {c && <span className="font-mono text-xs text-slate-400">{c.trigramme}</span>}
                     <span className="text-xs font-medium text-amber-700">{LIBELLES_ALERTES[a.type] ?? a.type}</span>
-                    <span className="text-xs text-slate-400">· {new Date(a.created_at).toLocaleDateString("fr-FR")}</span>
+                    <span className="text-xs text-slate-400">· {new Date(a.created_at).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })}</span>
                   </div>
                   <div className="truncate text-slate-500">{detailAlerte(a.details as Record<string, unknown>, estAdmin)}</div>
                 </div>

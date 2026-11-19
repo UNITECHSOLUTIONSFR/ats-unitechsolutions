@@ -19,7 +19,7 @@ export interface CarteMission {
 }
 
 const sansAccents = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-const date = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+const date = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris", day: "numeric", month: "short", year: "numeric" });
 
 /** Liste des missions en cartes, avec recherche instantanée et bascule « Mes missions / Toutes ». */
 export default function ListeMissions({ missions, titre, responsables, estAdmin, lienVue, miennes, pertinents, resumes }: {

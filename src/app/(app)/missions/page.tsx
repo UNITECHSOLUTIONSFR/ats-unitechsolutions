@@ -54,7 +54,7 @@ export default async function Missions({ searchParams }: { searchParams: Promise
         </h1>
         {/* Les missions viennent de Trello (lu toutes les heures, en lecture seule) : plus de création dans l'outil. */}
         {utilisateur.role === "admin" ? <BoutonActualiserTrello derniereLecture={lu} />
-          : lu && <span className="text-xs text-slate-500">Missions lues depuis Trello le {new Date(lu).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}</span>}
+          : lu && <span className="text-xs text-slate-500">Missions lues depuis Trello le {new Date(lu).toLocaleString("fr-FR", { timeZone: "Europe/Paris", dateStyle: "short", timeStyle: "short" })}</span>}
       </div>
 
       {/* Onglets par statut */}

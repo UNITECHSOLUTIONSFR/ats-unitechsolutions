@@ -152,7 +152,7 @@ export async function modifierConsultant(formData: FormData) {
   revalidatePath("/consultants");
 }
 
-export interface EtatCreation { erreur?: string }
+export interface EtatCreation { erreur?: string; doublon?: { id: string; nom: string } }
 
 /** Crée une fiche à la main. Elle apparaît dans l'écran Consultants et sera ajoutée au fichier Excel la nuit suivante. */
 export async function creerConsultant(_e: EtatCreation, formData: FormData): Promise<EtatCreation> {
@@ -180,14 +180,21 @@ export async function creerConsultant(_e: EtatCreation, formData: FormData): Pro
   if (texte("email") && !email) return { erreur: "Email invalide." };
   const tel = normaliserTelephone(texte("telephone"));
   // Dédoublonnage : jamais de seconde fiche pour la même personne.
-  if (email) {
-    const { data } = await supabase.from("consultants").select("id").eq("email", email).maybeSingle();
-    if (data) return { erreur: "Une fiche existe déjà avec cet email." };
-  }
-  if (tel.e164) {
-    const { data } = await supabase.from("consultants").select("id").eq("telephone_e164", tel.e164).limit(1).maybeSingle();
-    if (data) return { erreur: "Une fiche existe déjà avec ce téléphone." };
-  }
+  // La fiche existante est nommée, avec un lien. Si c'est la même personne qui vient de la créer (double envoi après une
+  // réponse lente), on ouvre simplement la fiche déjà créée au lieu d'afficher une erreur (retour d'utilisation du 19/11/2026).
+  const existante = async (champ: "email" | "telephone_e164", valeur: string, quoi: string): Promise<EtatCreation | null> => {
+    const { data } = await supabase.from("consultants").select("id, prenom, nom, created_at").eq(champ, valeur).limit(1).maybeSingle();
+    if (!data) return null;
+    // Journal lu par le serveur (un recruteur ne peut pas lire le journal lui-même).
+    const { clientSupabaseAdmin } = await import("@/lib/supabase/admin");
+    const { data: creeParMoi } = await clientSupabaseAdmin().from("journal_acces").select("id").eq("utilisateur_id", utilisateur.id).eq("action", "creation")
+      .eq("consultant_id", data.id).gte("created_at", new Date(Date.now() - 3 * 60_000).toISOString()).limit(1);
+    if (creeParMoi?.length) redirect(`/consultants/${data.id}`);
+    const qui = `${data.prenom === "—" ? "" : data.prenom} ${data.nom}`.trim();
+    return { erreur: `Une fiche existe déjà avec ${quoi} : ${qui}. Ouvrez-la pour la compléter ou y ajouter le CV.`, doublon: { id: data.id as string, nom: qui } };
+  };
+  if (email) { const r = await existante("email", email, "cet email"); if (r) return r; }
+  if (tel.e164) { const r = await existante("telephone_e164", tel.e164, "ce téléphone"); if (r) return r; }
   // Trigramme : celui saisi (lettres, 4 au plus), sinon calculé ; date de mise à jour : celle saisie, sinon aujourd'hui si une disponibilité est donnée.
   const trigrammeSaisi = (texte("trigramme") ?? "").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4);
   const dateMaj = /^\d{4}-\d{2}-\d{2}$/.test(texte("date_maj") ?? "") ? new Date(`${texte("date_maj")}T12:00:00Z`).toISOString() : null;

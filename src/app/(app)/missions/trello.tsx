@@ -25,7 +25,7 @@ export function BoutonActualiserTrello({ derniereLecture }: { derniereLecture: s
       <input type="hidden" name="tache" value="trello" />
       <span className="text-xs text-slate-500">
         {enCours ? "Lecture du tableau Trello…" : etat.erreur ? <span className="text-red-700">{etat.erreur}</span> : etat.message ? <span className="text-emerald-700">Missions à jour ✓</span>
-          : derniereLecture ? `Trello lu le ${new Date(derniereLecture).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}` : "Trello pas encore lu"}
+          : derniereLecture ? `Trello lu le ${new Date(derniereLecture).toLocaleString("fr-FR", { timeZone: "Europe/Paris", dateStyle: "short", timeStyle: "short" })}` : "Trello pas encore lu"}
       </span>
       <button disabled={enCours} className="bouton-secondaire">
         <svg viewBox="0 0 20 20" fill="currentColor" className={`h-4 w-4 ${enCours ? "animate-spin" : ""}`} aria-hidden><path fillRule="evenodd" d="M15.31 4.69a7 7 0 00-11.03 1.5.75.75 0 101.3.75 5.5 5.5 0 019.12-1.18l-1.45 1.45a.5.5 0 00.35.85H17a.5.5 0 00.5-.5V4.15a.5.5 0 00-.85-.35l-1.34 1.34zM4.69 15.31a7 7 0 0011.03-1.5.75.75 0 10-1.3-.75 5.5 5.5 0 01-9.12 1.18l1.45-1.45a.5.5 0 00-.35-.85H3a.5.5 0 00-.5.5v3.41a.5.5 0 00.85.35l1.34-1.34z" clipRule="evenodd" /></svg>

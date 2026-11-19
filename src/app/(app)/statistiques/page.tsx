@@ -60,14 +60,14 @@ export default async function Statistiques() {
         <p className="text-xs text-slate-500">{SEMAINES} dernières semaines · survolez une barre pour le détail</p>
         <div className="mt-5 flex h-48 items-end gap-1.5" role="img" aria-label="Nouveaux profils par semaine">
           {semaines.map((s) => (
-            <div key={s.debut} className="group relative flex h-full flex-1 flex-col justify-end" title={`Semaine du ${new Date(s.debut).toLocaleDateString("fr-FR")} : ${s.n} profil(s)`}>
+            <div key={s.debut} className="group relative flex h-full flex-1 flex-col justify-end" title={`Semaine du ${new Date(s.debut).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })} : ${s.n} profil(s)`}>
               <span className="pointer-events-none absolute -top-6 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-nuit px-2 py-0.5 text-xs text-white group-hover:block">{s.n}</span>
               <div className="rounded-t-[4px] bg-marque-500 transition group-hover:bg-marque-600" style={{ height: `${(s.n / maxSemaine) * 100}%`, minHeight: s.n ? 2 : 0 }} />
             </div>
           ))}
         </div>
         <div className="mt-2 flex gap-1.5 border-t border-slate-200 pt-1 text-[11px] tabular-nums text-slate-400">
-          {semaines.map((s, i) => <span key={s.debut} className="flex-1 text-center">{i % 2 === 0 ? new Date(s.debut).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" }) : ""}</span>)}
+          {semaines.map((s, i) => <span key={s.debut} className="flex-1 text-center">{i % 2 === 0 ? new Date(s.debut).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris", day: "2-digit", month: "2-digit" }) : ""}</span>)}
         </div>
       </section>
 

@@ -108,23 +108,20 @@ export async function lireClassement(supabase: SupabaseClient, missionId: string
   };
 }
 
-/** Calculs lancés par ce serveur : deux écrans qui demandent une mission jamais classée attendent le même calcul. */
-const premiersCalculs = new Map<string, Promise<ClassementResume>>();
-
 /**
- * Classement à afficher : celui rangé dans la base. Seule une mission jamais classée (toute nouvelle) est calculée
- * sur le moment, une seule fois ; ensuite tout se fait en arrière-plan.
+ * Classement à afficher : celui rangé dans la base, lu sans aucun calcul. Une mission jamais classée (toute nouvelle)
+ * n'est plus calculée pendant l'ouverture de l'écran (jusqu'à une minute d'attente avec la lecture des CV par l'IA) :
+ * le calcul est demandé en arrière-plan et l'écran indique « classement en préparation » (constat du 19/11/2026).
  */
 export async function classementAAfficher(missionId: string, supabase: SupabaseClient = clientSupabaseAdmin()): Promise<ClassementStocke> {
   const range = await lireClassement(supabase, missionId);
   if (range) return range;
-  let p = premiersCalculs.get(missionId);
-  if (!p) {
-    p = calculerEtRanger(missionId).finally(() => premiersCalculs.delete(missionId));
-    premiersCalculs.set(missionId, p);
-  }
-  const r = await p;
-  return { ...r, calculeLe: new Date().toISOString(), miseAJour: false };
+  await demanderRecalcul(supabase, [missionId]).catch(() => undefined);
+  try {
+    const { after } = await import("next/server");
+    after(() => calculerEtRanger(missionId).then(() => undefined).catch((e) => console.error("Classement :", (e as Error).message)));
+  } catch { /* hors requête : la tâche « matching » s'en charge */ }
+  return { total: 0, pertinents: 0, eligibles: null, top: [], calculeLe: null, miseAJour: true };
 }
 
 /** Classement rangé s'il existe, sans jamais lancer de calcul (listes, accueil). */

@@ -49,7 +49,7 @@ export async function lireCVJoint(fichier: File): Promise<LectureCV | { erreur: 
     return { ...base, profil: r.donnees, modele: r.modele, avertissement: null };
   } catch (e) {
     usages = (e as { usages?: UsageIA[] }).usages ?? [];
-    return { ...base, avertissement: "CV enregistré ; lecture par l'IA impossible, complétez la fiche à la main." };
+    return { ...base, avertissement: "CV bien enregistré ✓ (il est sur la fiche et dans SharePoint). L'IA n'a pas réussi à en tirer les informations : complétez les champs vides à la main." };
   } finally {
     await enregistrerUsages(usages, `cv-manuel:${fichier.name.slice(0, 60)}`);
   }
