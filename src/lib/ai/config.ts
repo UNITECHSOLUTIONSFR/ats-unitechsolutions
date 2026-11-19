@@ -41,7 +41,7 @@ export const MAX_TOKENS = {
   triCandidats: 3500, // 30 avis courts
   noteCandidats: 3500, // 30 notes et raisons courtes par appel (deux appels par mission)
   criteresMission: 900,
-  noteCV: 2500, // 4 CV complets par appel : note et raison pour chacun (1 200 coupait parfois la réponse)
+  noteCV: 5000, // 4 CV complets par appel : note, raison, récapitulatif et analyse point par point pour chacun
 } as const;
 
 /** Texte envoyé à l'IA tronqué à cette longueur (règle 4 du brief). */

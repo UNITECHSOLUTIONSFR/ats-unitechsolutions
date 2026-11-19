@@ -3,7 +3,7 @@ import { exigerUtilisateur } from "@/lib/acces";
 import { apercuCV } from "@/lib/consultants/apercu-cv";
 import { evaluationPourMission, missionsPourConsultant } from "@/lib/matching/pour-consultant";
 import { suivreProposition } from "@/lib/missions/actions";
-import { ExplicationScore, JaugeScore, niveauScore } from "../../missions/evaluation";
+import { EvaluationIA, JaugeScore, niveauScore } from "../../missions/evaluation";
 import BoutonCVMission from "../../missions/[id]/cv-mission";
 
 const STATUTS: Record<string, string> = { propose: "Proposé", appele: "Appelé", envoye_client: "Envoyé au client", retenu: "Retenu", refuse: "Refusé" };
@@ -28,14 +28,15 @@ export async function EvaluationMission({ consultantId, missionId }: { consultan
         {ev.rang && <span className="text-sm text-slate-500 sm:ml-auto">{ev.rang === 1 ? "1er" : `${ev.rang}e`} du classement</span>}
       </div>
       <div className="flex flex-col gap-5 p-4 sm:flex-row sm:p-6">
-        <JaugeScore score={r.score} />
+        {/* Une seule note partout : celle de l'IA (la même que sur la mission). */}
+        {ev.ligne.avisIA?.note != null && <JaugeScore score={ev.ligne.avisIA.note} />}
         <div className="min-w-0 flex-1 space-y-4">
-          <ExplicationScore resultat={r} />
+          <EvaluationIA note={ev.ligne.avisIA?.note} raison={ev.ligne.avisIA?.raison} detail={ev.ligne.avisIA?.detail} />
           <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
             <form action={suivreProposition} className="flex items-center gap-1 rounded-full bg-white p-1 ring-1 ring-slate-200">
               <input type="hidden" name="mission_id" value={missionId} />
               <input type="hidden" name="consultant_id" value={consultantId} />
-              <input type="hidden" name="score" value={r.score} />
+              <input type="hidden" name="score" value={Math.round(ev.ligne.avisIA?.note ?? r.score)} />
               <input type="hidden" name="detail" value={JSON.stringify(r)} />
               <select name="statut" defaultValue={suivi?.statut ?? "propose"} aria-label="Suivi" className="rounded-full bg-transparent px-2 py-1 text-xs font-semibold text-nuit outline-none">
                 {Object.entries(STATUTS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}

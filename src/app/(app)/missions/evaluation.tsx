@@ -1,4 +1,5 @@
 import type { ResultatScore } from "@/lib/matching/score";
+import type { DetailIA } from "@/lib/matching/classement";
 
 /** Niveau d'adéquation : même couleur partout (vert, bleu, gris). */
 export function niveauScore(score: number) {
@@ -50,6 +51,42 @@ export function ExplicationScore({ resultat }: { resultat: ResultatScore }) {
           </ul>
         </div>
       ))}
+    </div>
+  );
+}
+
+/**
+ * Évaluation IA d'un profil pour une mission (19/11/2026) : la même note partout (celle de l'IA, après lecture du CV
+ * complet), un récapitulatif et l'analyse point par point des exigences, avec la preuve tirée du CV.
+ */
+export function EvaluationIA({ note, raison, detail }: { note: number | null | undefined; raison: string | null | undefined; detail: DetailIA | null | undefined }) {
+  if (note == null) return <p className="text-sm text-slate-500">Pas encore évalué par l&apos;IA pour cette mission : l&apos;évaluation apparaîtra au prochain calcul du classement.</p>;
+  const libelle = note >= 75 ? "Très bon match" : note >= 60 ? "Match potentiel" : "Match faible";
+  return (
+    <div className="space-y-3 text-sm">
+      <p className="flex flex-wrap items-center gap-2 font-semibold text-nuit">
+        <span aria-hidden className="text-marque-600">✳</span> Évaluation IA :
+        <span className={note >= 75 ? "text-emerald-700" : note >= 60 ? "text-marque-600" : "text-slate-500"}>{libelle} – {Math.round(note)} %</span>
+      </p>
+      {detail?.recapitulatif ? (
+        <div>
+          <div className="mb-1 font-semibold text-slate-700">Récapitulatif</div>
+          <p className="leading-relaxed text-slate-700">{detail.recapitulatif}</p>
+        </div>
+      ) : raison ? <p className="text-slate-700">{raison}</p> : null}
+      {detail?.analyse?.length ? (
+        <div>
+          <div className="mb-1.5 font-semibold text-slate-700">Analyse IA</div>
+          <ul className="space-y-2">
+            {detail.analyse.map((a) => (
+              <li key={a.exigence} className="flex gap-2">
+                <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ring-1 ${a.atteint ? "bg-emerald-50 text-emerald-600 ring-emerald-200" : "bg-red-50 text-red-600 ring-red-200"}`}>{a.atteint ? "✓" : "✕"}</span>
+                <span className="text-slate-700"><b className="text-nuit">{a.exigence} :</b> {a.explication}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </div>
   );
 }

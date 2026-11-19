@@ -165,6 +165,8 @@ export const SchemaNoteCV = z.object({
     criteres_prouves: z.boolean(), // vrai seulement si CHAQUE critère obligatoire est prouvé par une vraie expérience
     note: z.number(),
     raison: z.string(),
+    recapitulatif: z.string(), // 3 à 5 phrases sur le profil au regard de la mission
+    analyse: z.array(z.object({ exigence: z.string(), atteint: z.boolean(), explication: z.string() })), // une ligne par exigence clé
   })),
 });
 export type NoteCV = z.infer<typeof SchemaNoteCV>;

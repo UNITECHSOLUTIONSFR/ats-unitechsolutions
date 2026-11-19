@@ -14,6 +14,9 @@ import {
 import { motifCompetence } from "./motifs";
 import { famillesDansTexte } from "./referentiel";
 
+/** Évaluation IA détaillée (matching v2) : récapitulatif du profil et analyse point par point des exigences. */
+export interface DetailIA { recapitulatif: string; analyse: { exigence: string; atteint: boolean; explication: string }[] }
+
 export interface LigneClassement {
   consultant_id: string;
   prenom: string;
@@ -29,7 +32,7 @@ export interface LigneClassement {
   annees_experience: number | null;
   resultat: ResultatScore;
   /** Avis de l'IA (matching) : lecture de la mission et du profil, verdict et raison. */
-  avisIA?: { verdict: "pertinent" | "a_etudier" | "hors_sujet"; raison: string | null; note?: number | null } | null;
+  avisIA?: { verdict: "pertinent" | "a_etudier" | "hors_sujet"; raison: string | null; note?: number | null; detail?: DetailIA | null } | null;
   /** Proximité de sens avec la mission (0 à 1), quand les empreintes sont calculées. */
   similarite?: number | null;
   /** Matching v2 : le CV contient le métier et tous les critères obligatoires de la mission (false = profil « proche » seulement). */

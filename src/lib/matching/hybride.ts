@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { noterCandidats, noterCV, type UsageIA } from "@/lib/ai";
 import { enregistrerUsages, etatBudgetMois } from "@/lib/ai/journal";
-import { classementMission, type LigneClassement } from "./classement";
+import { classementMission, type DetailIA, type LigneClassement } from "./classement";
 import { assurerEmpreinteMission, texteMission } from "./empreintes";
 import { criteresDeLaMission, criteresManquants, motifsCriteres, profilsEligibles, type CriteresMission } from "./criteres";
 
@@ -28,8 +28,8 @@ const K_FUSION = 60;
 const VERSION_NOTE = "note-v1";
 /** Matching v2 : profils éligibles dont l'IA lit le CV complet, et nombre de CV par appel. */
 export const CV_LUS_PAR_IA = 60;
-const CV_PAR_APPEL = 4;
-const VERSION_NOTE_CV = "note-cv-v4";
+const CV_PAR_APPEL = 3;
+const VERSION_NOTE_CV = "note-cv-v5";
 /** Profils « proches » (ne remplissent pas tous les critères) montrés à part, avec ce qui leur manque. */
 const PROCHES_MONTRES = 15;
 
@@ -102,7 +102,7 @@ export async function classerMission(supabase: SupabaseClient, missionId: string
   // Ordre final : éligibles notés (meilleure note d'abord), autres éligibles, profils proches, le reste, puis les écartés.
   const avecAvis = lignes.map((l) => {
     const n = notes.get(l.consultant_id);
-    return { ...l, avisIA: n ? { verdict: verdictDeNote(n.note), raison: n.raison, note: n.note } : null };
+    return { ...l, avisIA: n ? { verdict: verdictDeNote(n.note), raison: n.raison, note: n.note, detail: (n as { detail?: DetailIA | null }).detail ?? null } : null };
   });
   const groupe = (l: LigneClassement) => (l.resultat.elimine ? 4 : !l.eligible ? (l.manques ? 2 : 3) : l.avisIA ? 0 : 1);
   return avecAvis.sort((a, b) => groupe(a) - groupe(b)
@@ -112,12 +112,12 @@ export async function classerMission(supabase: SupabaseClient, missionId: string
 }
 
 /** Matching v2 : notes de l'IA en lisant le CV COMPLET des profils éligibles (5 par appel), gardées tant que la mission et ses critères ne changent pas. */
-async function notesCV(supabase: SupabaseClient, missionId: string, texteIA: string, criteres: CriteresMission, empreinte: string, aLire: LigneClassement[], enregistrer = true): Promise<Map<string, { note: number; raison: string | null }>> {
+async function notesCV(supabase: SupabaseClient, missionId: string, texteIA: string, criteres: CriteresMission, empreinte: string, aLire: LigneClassement[], enregistrer = true): Promise<Map<string, { note: number; raison: string | null; detail?: DetailIA | null }>> {
   const ids = aLire.map((l) => l.consultant_id);
-  const notes = new Map<string, { note: number; raison: string | null }>();
+  const notes = new Map<string, { note: number; raison: string | null; detail?: DetailIA | null }>();
   if (!ids.length) return notes;
-  const { data: existants } = await supabase.from("avis_matching").select("consultant_id, note, raison, empreinte").eq("mission_id", missionId).in("consultant_id", ids);
-  for (const a of existants ?? []) if (a.empreinte === empreinte && a.note != null) notes.set(a.consultant_id, { note: a.note, raison: a.raison });
+  const { data: existants } = await supabase.from("avis_matching").select("consultant_id, note, raison, empreinte, detail").eq("mission_id", missionId).in("consultant_id", ids);
+  for (const a of existants ?? []) if (a.empreinte === empreinte && a.note != null) notes.set(a.consultant_id, { note: a.note, raison: a.raison, detail: (a.detail as DetailIA | null) ?? null });
   const manquants = aLire.filter((l) => !notes.has(l.consultant_id));
   if (!manquants.length || (await etatBudgetMois().catch(() => ({ depasse: true }))).depasse) return notes;
   const cv = await textesCV(supabase, manquants);
@@ -138,12 +138,13 @@ async function notesCV(supabase: SupabaseClient, missionId: string, texteIA: str
         const lignesAvis = r.donnees.notes.map((a) => ({ a, id: parNumero.get(numero(a.ref) ?? "") })).filter((x) => x.id).map(({ a, id }) => {
           // Règle appliquée par l'outil, pas laissée à l'IA : un critère obligatoire non prouvé = jamais « pertinent » (45 au plus).
           const note = Math.max(0, Math.min(a.criteres_prouves ? 100 : 45, Math.round(a.note)));
-          return { mission_id: missionId, consultant_id: id!, empreinte, note, verdict: verdictDeNote(note), raison: a.raison.slice(0, 300), modele: r.modele, updated_at: new Date().toISOString() };
+          const detail: DetailIA = { recapitulatif: a.recapitulatif.slice(0, 1500), analyse: a.analyse.slice(0, 10).map((x) => ({ exigence: x.exigence.slice(0, 120), atteint: x.atteint, explication: x.explication.slice(0, 400) })) };
+          return { mission_id: missionId, consultant_id: id!, empreinte, note, verdict: verdictDeNote(note), raison: a.raison.slice(0, 300), detail, modele: r.modele, updated_at: new Date().toISOString() };
         });
         // Profil sans réponse de l'IA (réponse coupée, référence oubliée) : PAS noté 0 ; il sera relu au prochain calcul.
         // Aperçu (matching v2 pas encore activé) : notes non enregistrées, pour ne pas remplacer celles du classement affiché.
         if (lignesAvis.length && enregistrer) await supabase.from("avis_matching").upsert(lignesAvis);
-        for (const l of lignesAvis) notes.set(l.consultant_id, { note: l.note, raison: l.raison });
+        for (const l of lignesAvis) notes.set(l.consultant_id, { note: l.note, raison: l.raison, detail: l.detail });
       } catch (e) {
         usages.push(...((e as { usages?: UsageIA[] }).usages ?? []));
         console.error("Notes IA (CV) :", (e as Error).message);

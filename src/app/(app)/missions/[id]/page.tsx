@@ -14,7 +14,7 @@ import BoutonCVMission from "./cv-mission";
 import Exigences from "./exigences";
 import { BoutonWhatsApp } from "../../whatsapp";
 import AvisIA from "./avis-ia";
-import { ExplicationScore, JaugeScore } from "../evaluation";
+import { EvaluationIA, JaugeScore } from "../evaluation";
 import type { AvisMission } from "@/lib/ai";
 
 // Génération des CV Unitech (IA + SharePoint) depuis cet écran : jusqu'à 2 minutes.
@@ -205,10 +205,10 @@ function CarteCandidat({ rang, c, missionId, statut, ouvert, cv, avis }: {
 
       <details open={ouvert} className="group mt-3 rounded-2xl bg-slate-50/80 px-4 py-3 ring-1 ring-slate-200/70">
         <summary className="flex cursor-pointer list-none flex-wrap items-center gap-3">
-          <span className="text-sm font-semibold text-nuit">Détail des critères (compétences, expérience, disponibilité)</span>
-          <span className="ml-auto text-xs font-medium text-marque-600 group-open:hidden">Voir l&apos;explication</span>
+          <span className="text-sm font-semibold text-nuit">Évaluation IA : récapitulatif et analyse point par point</span>
+          <span className="ml-auto text-xs font-medium text-marque-600 group-open:hidden">Voir l&apos;évaluation</span>
         </summary>
-        <div className="mt-3"><ExplicationScore resultat={c.resultat} /></div>
+        <div className="mt-3"><EvaluationIA note={c.avisIA?.note} raison={c.avisIA?.raison} detail={c.avisIA?.detail} /></div>
         <Link href={`/consultants/${c.consultant_id}?mission=${missionId}`} className="mt-3 inline-block text-sm font-semibold text-marque-600 hover:underline">Ouvrir sa fiche avec cette évaluation →</Link>
       </details>
     </article>

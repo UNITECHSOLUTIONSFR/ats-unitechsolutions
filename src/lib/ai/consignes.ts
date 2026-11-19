@@ -261,4 +261,6 @@ Règles :
 - N'utilise jamais de tarif ni de TJM. N'invente rien qui ne figure pas dans le CV.
 - Raison : une phrase en français simple (20 mots maximum) qui cite la preuve ou le manque. Exemples : « BA 6 ans chez Generali en IARD entreprises, recette progiciel : correspond. » ; « Business analyst banque, IARD seulement dans les mots-clés : non prouvé. »
 - criteres_prouves : true SEULEMENT si CHAQUE critère obligatoire est prouvé par une vraie expérience (pas une simple mention). Sinon false.
+- recapitulatif : 3 à 5 phrases factuelles sur le profil au regard de la mission (métier actuel, années d'expérience, postes et entreprises marquants, forces et manques principaux). Jamais de tarif, de salaire, d'âge, de nationalité, de situation personnelle ni d'adresse.
+- analyse : une ligne par exigence clé de la mission (6 à 8 lignes : d'abord les critères obligatoires, puis les compétences et responsabilités importantes de la fiche). Pour chacune : exigence (libellé court), atteint (true si le CV le prouve par une vraie expérience), explication (1 à 2 phrases citant la preuve : poste, entreprise, période ; ou ce qui manque).
 - Réponds pour TOUS les profils reçus, avec exactement leur référence (C1, C2…).`;
