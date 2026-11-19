@@ -53,8 +53,11 @@ export default async function Missions({ searchParams }: { searchParams: Promise
           Missions
         </h1>
         {/* Les missions viennent de Trello (lu toutes les heures, en lecture seule) : plus de création dans l'outil. */}
+        <div className="flex flex-wrap items-center gap-3">
+        <Link href="/missions/kanban" className="bouton-secondaire">Vue Kanban</Link>
         {utilisateur.role === "admin" ? <BoutonActualiserTrello derniereLecture={lu} />
           : lu && <span className="text-xs text-slate-500">Missions lues depuis Trello le {new Date(lu).toLocaleString("fr-FR", { timeZone: "Europe/Paris", dateStyle: "short", timeStyle: "short" })}</span>}
+        </div>
       </div>
 
       {/* Onglets par statut */}

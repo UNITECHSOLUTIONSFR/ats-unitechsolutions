@@ -300,3 +300,8 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Fait : dates et heures affichées à l'heure de Paris partout (le serveur à Londres décalait l'historique d'une heure) ; lecture des CV par l'IA : réponse jusqu'à 4 000 jetons (1 500 coupait les CV longs → « lecture impossible ») ; « la fiche existe déjà » : la fiche existante est nommée avec un lien, et un double envoi rouvre la fiche qui vient d'être créée ; message clair « CV bien enregistré ✓ » quand l'IA n'a pas pu le lire ; écran d'une mission jamais bloqué par un calcul (classement préparé en arrière-plan) et chargement en parallèle ; évaluation IA détaillée par profil (récapitulatif + analyse point par point), une seule note partout.
 - Testé : 250 tests, construction ; tests de bout en bout à refaire hors des heures de travail.
 - Suite : suivre les temps réels de l'écran d'une mission ; vérifier qu'aucune fiche créée avec CV ne reste sans document.
+
+## 19/11/2026 — PowerPoint du comité et vue Kanban
+- Fait : PowerPoint du comité (19 diapositives : vision et chiffres réels, points bloquants, 9 modules en couleur et leur détail, diagramme de séquence, backlog, roadmaps fonctionnelle et technique à 6 mois, vision ERP) ; vue Kanban des missions (/missions/kanban) : mêmes colonnes que Trello, dans le même ordre, avec pertinents et suivis par mission (Trello fait foi, lecture seule).
+- Testé : 250 tests, construction, capture de la vue Kanban sur les vraies données.
+- Suite : glisser-déposer des consultants dans un pipeline par mission (roadmap M+2) ; écriture dans Trello seulement si elle est autorisée.
