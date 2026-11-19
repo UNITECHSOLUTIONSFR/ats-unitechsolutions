@@ -209,7 +209,7 @@ export async function creerConsultant(_e: EtatCreation, formData: FormData): Pro
     notes: texte("notes"), source: "manuel", statut,
   }).select("id").single();
   if (error || !cree) return { erreur: error?.message ?? "Fiche non créée." };
-  await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "creation", consultant_id: cree.id, details: {} });
+  await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "creation", consultant_id: cree.id, details: { cv_joint: avecCV ? (fichier as File).name.slice(0, 120) : null } });
   // CV joint : rangé dans SharePoint, compétences enregistrées (lecture déjà faite) ; la fiche sort dans la recherche et le matching.
   if (enArrierePlan) await lireCVEnArrierePlan(cree.id, fichier as File, utilisateur.id);
   const avertissement = lecture ? await enregistrerCVJoint(cree.id, lecture, { prenom: prenom ?? "—", nom }) : null;
