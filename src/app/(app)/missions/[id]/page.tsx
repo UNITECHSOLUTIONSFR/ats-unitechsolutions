@@ -52,8 +52,6 @@ export default async function PageMission({ params, searchParams }: { params: Pr
   const classement = resume.top;
   // Affichés : uniquement les profils que l'IA a lus et jugés pertinents (note ≥ 60). Les autres ne sont pas montrés.
   const proposes = classement.filter(estPertinent);
-  // Matching v2 : profils proches (pas tous les critères), montrés à part avec ce qui leur manque.
-  const proches = classement.filter((c) => c.eligible === false && (c.manques?.length ?? 0) > 0);
   const avisParConsultant = new Map((avisExistants ?? []).map((a) => [a.consultant_id as string, a.contenu as AvisMission]));
   // Dernier CV Unitech généré pour cette mission, par consultant : rouvert sans nouvelle génération.
   const cvParConsultant = new Map<string, { id: string; word: string; pdf: string | null }>();
@@ -148,21 +146,6 @@ export default async function PageMission({ params, searchParams }: { params: Pr
           <div className="carte p-8 text-center text-sm text-slate-500">
             <p className="font-medium text-nuit">Aucun profil pertinent pour l&apos;instant.</p>
             <p className="mt-1">Aucun CV de la base ne remplit tous les critères avec une expérience prouvée. Si un critère est trop strict, corrigez-le ci-dessus : le classement se recalcule aussitôt. Un profil ajouté ensuite est comparé à la mission automatiquement.</p>
-          </div>
-        )}
-        {proches.length > 0 && (
-          <div className="carte space-y-2 p-5 text-sm">
-            <h3 className="font-semibold text-nuit">Profils proches, qui ne remplissent pas tous les critères</h3>
-            <p className="text-xs text-slate-500">Proches par le sens, mais un critère obligatoire est absent de leur CV : à n&apos;appeler qu&apos;en connaissance de cause.</p>
-            <ul className="divide-y divide-slate-100">
-              {proches.slice(0, 10).map((c) => (
-                <li key={c.consultant_id} className="flex flex-wrap items-center justify-between gap-2 py-2">
-                  <Link href={`/consultants/${c.consultant_id}`} className="lien font-medium">{c.prenom === "—" ? "" : c.prenom} {c.nom}</Link>
-                  <span className="text-slate-500">{c.intitule_poste ?? "Poste non renseigné"}</span>
-                  <span className="pastille pastille-orange">Absent du CV : {(c.manques ?? []).join(", ")}</span>
-                </li>
-              ))}
-            </ul>
           </div>
         )}
       </section>
