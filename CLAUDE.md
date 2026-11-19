@@ -27,7 +27,7 @@
 7. Tenir CLAUDE.md et SUIVI.md à jour à chaque fin d'étape.
 8. Un commit clair par étape, poussé. Fin de session : résumé en 3 lignes + prochaine étape.
 9. Signaler avant d'agir toute demande qui contredit le brief ou augmente nettement les coûts.
-10. **Mises en ligne** : carte blanche (tout faire et mettre en ligne sans redemander) **du 17/11/2026 au soir au mercredi 18/11/2026 10 h** ; **à partir du 18/11/2026 à 10 h, redemander son accord** avant chaque mise en ligne. Une capture accompagne le compte rendu des changements visuels. Ne jamais commencer un nouveau chantier sans son accord.
+10. **Mises en ligne** : carte blanche (tout faire et mettre en ligne sans redemander) **la nuit du 19 au 20/11/2026, jusqu'au 20/11/2026 10 h** ; **ensuite, redemander son accord** avant chaque mise en ligne (elle reprend la main). Une capture accompagne le compte rendu des changements visuels. Ne jamais commencer un nouveau chantier sans son accord. Ne jamais lancer les tests de bout en bout (copie branchée sur la vraie base) pendant qu'elle travaille.
 11. **Quand l'utilisatrice pose une question, y répondre d'abord, littéralement, sans rien modifier.** N'agir qu'ensuite, si elle le demande.
 12. Elle veut avancer **vite** : réponses courtes, pas de détours.
 
@@ -68,6 +68,7 @@
 - **Matching (17/11/2026)** : seuls les profils **pertinents** (note IA ≥ 60, `estPertinent`) sont affichés ; l'IA lit les 100 premiers ; une compétence « indispensable » absente n'écarte plus (score ×0,75 + alerte, l'IA tranche) ; une fiche créée/modifiée est comparée aux 5 missions les plus proches (`lib/matching/profil.ts`).
 - **Matching** : filtres éliminatoires (dispo/lieu obligatoires) puis score /100 explicable, pondérations réglables (compétences pondérées, années, séniorité, disponibilité, proximité sémantique). Référentiel de compétences avec synonymes. Suivi : proposé → appelé → envoyé au client → retenu / refusé, avec historique. Nouvelle fiche = comparée aux missions ouvertes (seuil réglable).
 - **Excel sans fin de transition** (17/11/2026) : l'Excel et SharePoint restent tenus à jour. Une case modifiée dans l'outil (fiche ou tableau) est écrite dans l'Excel la nuit **en remplaçant** la valeur (`excel_maj_en_attente.ecraser`) ; un changement de nom ou de trigramme renomme les fichiers SharePoint et met à jour le CV Unitech (`lib/consultants/propagation.ts`). Toutes les cases de la fiche sont modifiables.
+- **Écran Consultants = liste de contacts** (décision du 19/11/2026) : la recherche porte uniquement sur les colonnes, jamais sur le texte des CV (pas de case, pas d'extrait) ; la recherche dans les CV se fait dans l'écran Recherche.
 - **Tableau de suivi** : copie fidèle de l'Excel (tous les onglets, en-têtes et ordre d'origine, tables `tableau_onglets`/`tableau_lignes`) ; le 1er onglet est relié aux fiches et ses modifications mettent la fiche à jour. Ne jamais fusionner prénom et nom à l'affichage.
 - **Interface** : menu latéral à gauche, charte « marque » dans `src/app/globals.css` (classes `carte`, `champ`, `bouton-primaire`, `bouton-secondaire`, `pastille`).
 - **Disponibilité** : date de mise à jour affichée ; alerte si > 3 mois.

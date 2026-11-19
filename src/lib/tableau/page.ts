@@ -53,12 +53,12 @@ export function criteresValides(brut: unknown): CriteresTableau {
   };
 }
 
-/** Fiches dont le CV contient les mots cherchés (index plein texte de la base) : identifiants seulement, très rapide. */
-async function rechercheDansCV(supabase: SupabaseClient, c: CriteresTableau): Promise<string[]> {
-  const q = c.recherche.trim();
-  if (!c.avecCV || q.length < 3) return [];
-  const { data } = await supabase.rpc("cv_contenant", { p_texte: q.slice(0, 100) });
-  return ((data ?? []) as { consultant_id: string }[]).map((d) => d.consultant_id);
+/**
+ * Écran Consultants = liste de contacts : la recherche porte uniquement sur les colonnes, jamais sur le texte des CV
+ * (décision du 19/11/2026 ; la recherche dans les CV se fait dans l'écran Recherche).
+ */
+async function rechercheDansCV(): Promise<string[]> {
+  return [];
 }
 
 function parametres(c: CriteresTableau, idsCV: string[]) {
@@ -68,7 +68,7 @@ function parametres(c: CriteresTableau, idsCV: string[]) {
 
 /** Une page de l'écran Consultants : recherche, filtres et tri faits par la base, sur toutes les lignes. */
 export async function lirePageTableau(supabase: SupabaseClient, c: CriteresTableau): Promise<PageTableau> {
-  const dansCV = await rechercheDansCV(supabase, c);
+  const dansCV = await rechercheDansCV();
   const { data, error } = await supabase.rpc("tableau_page", { p: { ...parametres(c, dansCV), decalage: c.page * PAR_PAGE, limite: PAR_PAGE } });
   if (error) throw new Error(error.message);
   const r = data as Omit<PageTableau, "extraits">;
@@ -84,7 +84,7 @@ export async function lirePageTableau(supabase: SupabaseClient, c: CriteresTable
 
 /** Valeurs d'une colonne et leur nombre (liste à cocher du filtre), selon les autres critères. */
 export async function lireValeursColonne(supabase: SupabaseClient, c: CriteresTableau, colonne: string): Promise<{ valeur: string; nombre: number }[]> {
-  const dansCV = await rechercheDansCV(supabase, c);
+  const dansCV = await rechercheDansCV();
   const { data, error } = await supabase.rpc("tableau_valeurs", { p: parametres(c, dansCV), p_colonne: colonne });
   if (error) throw new Error(error.message);
   return (data ?? []) as { valeur: string; nombre: number }[];
@@ -92,7 +92,7 @@ export async function lireValeursColonne(supabase: SupabaseClient, c: CriteresTa
 
 /** Identifiants de toutes les lignes retenues, dans l'ordre affiché (export Excel). */
 export async function lireIdsTableau(supabase: SupabaseClient, c: CriteresTableau): Promise<string[]> {
-  const dansCV = await rechercheDansCV(supabase, c);
+  const dansCV = await rechercheDansCV();
   const { data, error } = await supabase.rpc("tableau_ids", { p: parametres(c, dansCV) });
   if (error) throw new Error(error.message);
   return (data ?? []) as string[];

@@ -62,7 +62,8 @@ export default function TableauExcel({ vues, criteresInitiaux, premiere, ongletI
   const [ficheOuverte, setFicheOuverte] = useState<string | null>(null);
   const fermerFiche = useCallback(() => setFicheOuverte(null), []);
   const [rapides, setRapides] = useState<FiltreRapide[]>([]);
-  const [avecCV, setAvecCV] = useState(true);
+  // Liste de contacts : la recherche porte uniquement sur les colonnes (la recherche dans les CV est dans l'écran Recherche).
+  const avecCV = false;
 
   const affiche = useCallback((c: string, v: string | undefined) => valeurEcran(champs[c], v), [champs]);
   // La saisie reste fluide : la base n'est interrogée qu'une fois la frappe terminée (un quart de seconde).
@@ -169,7 +170,7 @@ export default function TableauExcel({ vues, criteresInitiaux, premiere, ongletI
       setMessage({ ok: false, texte: "Copie impossible dans ce navigateur." });
     }
   }
-  const reinitialiser = () => { setFiltres({}); setRecherche(""); setRechercheEnvoyee(""); setRapides([]); setTri(criteresInitiaux.tri); setVueActive(""); setAvecCV(true); setPage(0); window.history.replaceState(null, "", "/consultants"); };
+  const reinitialiser = () => { setFiltres({}); setRecherche(""); setRechercheEnvoyee(""); setRapides([]); setTri(criteresInitiaux.tri); setVueActive(""); setPage(0); window.history.replaceState(null, "", "/consultants"); };
 
   return (
     <div className="flex h-full flex-col gap-4">
@@ -203,13 +204,12 @@ export default function TableauExcel({ vues, criteresInitiaux, premiere, ongletI
             vueActive={vueActive}
             onVue={(cle) => { setVueActive(cle); setPage(0); setSelection(new Map()); window.history.replaceState(null, "", cle ? `/consultants?vue=${cle}` : "/consultants"); }}
             rapides={rapides} onRapides={(r) => { setRapides(r); setPage(0); }} desactive={false}
-            avecCV={avecCV} onAvecCV={(v) => { setAvecCV(v); setPage(0); }} />
+            />
         </div>
-        {(vueActive || rapides.length > 0 || !avecCV || Object.keys(filtres).length > 0) && (
+        {(vueActive || rapides.length > 0 || Object.keys(filtres).length > 0) && (
           <div className="flex flex-wrap items-center gap-2 text-sm">
             {vueActive && <Pastille texte={vues.find((o) => o.cle === vueActive)?.nom ?? ""} onRetirer={() => { setVueActive(""); setPage(0); window.history.replaceState(null, "", "/consultants"); }} />}
             {rapides.map((f) => <Pastille key={f} texte={RAPIDES.find(([k]) => k === f)?.[1] ?? f} onRetirer={() => { setRapides((r) => r.filter((x) => x !== f)); setPage(0); }} />)}
-            {!avecCV && <Pastille texte="Sans le texte des CV" onRetirer={() => setAvecCV(true)} />}
             {Object.keys(filtres).length > 0 && <Pastille texte={`${Object.keys(filtres).length} filtre(s) de colonne`} onRetirer={() => { setFiltres({}); setPage(0); }} />}
             <button className="lien text-sm" onClick={reinitialiser}>Tout effacer</button>
           </div>
@@ -560,10 +560,10 @@ function Pastille({ texte, onRetirer }: { texte: string; onRetirer: () => void }
   );
 }
 
-/** Bouton « Filtres » : vues (toute la base, arrivées du jour), filtres rapides et recherche dans les CV, dans un panneau qui s'ouvre au clic. */
-function PanneauFiltres({ vues, vueActive, onVue, rapides, onRapides, desactive, avecCV, onAvecCV }: {
+/** Bouton « Filtres » : vues (toute la base, arrivées du jour) et filtres rapides, dans un panneau qui s'ouvre au clic. */
+function PanneauFiltres({ vues, vueActive, onVue, rapides, onRapides, desactive }: {
   vues: { cle: string; nom: string; nombre: number | null }[]; vueActive: string; onVue: (cle: string) => void;
-  rapides: FiltreRapide[]; onRapides: (r: FiltreRapide[]) => void; desactive: boolean; avecCV: boolean; onAvecCV: (v: boolean) => void;
+  rapides: FiltreRapide[]; onRapides: (r: FiltreRapide[]) => void; desactive: boolean;
 }) {
   const [ouvert, setOuvert] = useState(false);
   const boite = useRef<HTMLDivElement>(null);
@@ -575,7 +575,7 @@ function PanneauFiltres({ vues, vueActive, onVue, rapides, onRapides, desactive,
     document.addEventListener("keydown", touche);
     return () => { document.removeEventListener("mousedown", clic); document.removeEventListener("keydown", touche); };
   }, [ouvert]);
-  const nbActifs = Number(!!vueActive) + rapides.length + Number(!avecCV);
+  const nbActifs = Number(!!vueActive) + rapides.length;
   const ligne = "flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-nuit hover:bg-slate-50";
   return (
     <div ref={boite} className="relative shrink-0">
@@ -603,12 +603,6 @@ function PanneauFiltres({ vues, vueActive, onVue, rapides, onRapides, desactive,
                 {libelle}
               </label>
             ))}
-          </div>
-          <div className="border-t border-slate-100 pt-2">
-            <label className={ligne}>
-              <input type="checkbox" checked={avecCV} onChange={(e) => onAvecCV(e.target.checked)} className="h-4 w-4 accent-marque-600" />
-              Chercher aussi le mot dans le texte des CV
-            </label>
           </div>
         </div>
       )}

@@ -290,3 +290,8 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Fait : corrections (message clair au lieu d'une page d'erreur sur une fiche, avertissement de doublon à la création, journal sans doublons de consultation) ; emails relevés chaque heure par la tâche matching ; matching v2 (critères obligatoires, recherche stricte dans les CV complets, IA sur CV complet, note plafonnée si critère non prouvé, profils proches, critères corrigeables, mesure de qualité) d'abord calculé en aperçu puis activé ; tri du tableau mesuré.
 - Testé : 250 tests ; bout en bout 42/42 ; aperçu sur 29 missions (18 avec profils pertinents ; 11 sans : compétences rares ou critères trop stricts à corriger). Coût : 0,39 $ pour trois calculs complets.
 - Suite : corriger les critères trop stricts (IARDT corporate, assurance construction…) ; mesurer la qualité avec les décisions de l'équipe ; mesurer le tri du tableau.
+
+## 19/11/2026 — Audit vitesse et recherche
+- Fait : empreintes vérifiées seulement après un changement (5 s toutes les 10 min supprimées) + index de détection ; tri du tableau sur lignes étroites (résultat identique) ; « Enregistrer » répond avant la suite ; temps serveur du tableau mesuré ; mesures de la copie de test ignorées ; recherche dans les CV : fonctions en droits du propriétaire avec contrôle « utilisateur actif » (6,2 s → 0,02 s sous RLS, cause des coupures à 8 s) ; écran Consultants : recherche uniquement dans les colonnes (plus de CV).
+- Testé : 250 tests ; résultats identiques avant/après (tri, recherche CV : 656 pour « java ») ; accès anonyme refusé.
+- Suite : vérifier les temps réels demain (Santé) ; à partir du 20/11 10 h, accord avant chaque mise en ligne.
