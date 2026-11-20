@@ -31,6 +31,15 @@ export function lireColonne(nom: string): Colonne | null {
   return null;
 }
 
+/**
+ * Champs de la mission quand sa carte est déplacée vers la colonne `nom` depuis la vue Kanban (même règle que la lecture
+ * horaire) : colonne ignorée (ex. Sourcing Kefi) = seule la colonne affichée change, le statut reste celui d'avant.
+ */
+export function champsApresDeplacement(nom: string): { trello_colonne: string; statut?: StatutMission; trello_recruteur?: string | null } {
+  const c = lireColonne(nom);
+  return c ? { trello_colonne: nom, statut: c.statut, trello_recruteur: c.recruteur } : { trello_colonne: nom };
+}
+
 /** Cartes d'information (« IMPORTANT | … ») : jamais des missions. */
 export function carteInformation(titre: string): boolean {
   return /^\s*important\b/i.test(titre);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { carteInformation, cleIntitule, lireColonne, lireTitre, lireTJM, rapprocher, sansTJM } from "@/lib/trello/regles";
+import { carteInformation, champsApresDeplacement, cleIntitule, lireColonne, lireTitre, lireTJM, rapprocher, sansTJM } from "@/lib/trello/regles";
 
 describe("Trello : colonnes du tableau des missions", () => {
   it.each([
@@ -100,5 +100,24 @@ describe("colonnes d'entrée des nouvelles missions (17/11/2026)", () => {
     expect(lireColonne("Sourcing M CISSE")).toMatchObject({ statut: "ouverte", entree: false });
     expect(lireColonne("Positionnement")?.entree).toBe(false);
     expect(lireColonne("Sourcing Kefi")).toBeNull();
+  });
+});
+
+describe("Trello : déplacement depuis la vue Kanban", () => {
+  it("Sourcing Amadou → mission ouverte, recruteur Amadou", () => {
+    expect(champsApresDeplacement("Sourcing Amadou")).toEqual({ trello_colonne: "Sourcing Amadou", statut: "ouverte", trello_recruteur: "Amadou" });
+  });
+  it("Positionnement → chez le client, recruteur retiré", () => {
+    expect(champsApresDeplacement("Positionnement")).toEqual({ trello_colonne: "Positionnement", statut: "chez_client", trello_recruteur: null });
+  });
+  it("colonne ignorée (Sourcing Kefi) : seule la colonne change, le statut reste", () => {
+    expect(champsApresDeplacement("Sourcing Kefi")).toEqual({ trello_colonne: "Sourcing Kefi" });
+  });
+});
+
+describe("Trello : seule écriture autorisée", () => {
+  it("refuse des identifiants qui ne sont pas des identifiants Trello", async () => {
+    const { deplacerCarteTrello } = await import("@/lib/trello/client");
+    expect(await deplacerCarteTrello("abc", "def")).toMatchObject({ ok: false });
   });
 });

@@ -1,7 +1,9 @@
 import "server-only";
 
 /**
- * Accès à Trello en LECTURE SEULE (jeton créé avec scope=read). Aucune fonction d'écriture n'existe dans l'outil.
+ * Accès à Trello. Lecture : missions (chaque heure). Écriture : UNE seule, le déplacement d'une carte vers une autre colonne
+ * depuis la vue Kanban (décision du 20/11/2026) ; il faut un jeton créé avec scope=read,write. Aucune autre écriture
+ * (ni création, ni modification de texte, ni suppression, ni archivage).
  * Clé et jeton : variables TRELLO_API_KEY et TRELLO_TOKEN (Vercel, jamais dans le code), envoyés dans l'en-tête Authorization.
  */
 const BASE = "https://api.trello.com/1";
@@ -29,6 +31,24 @@ export async function trelloGet<T>(chemin: string): Promise<T> {
     if ((r.status >= 500 || r.status === 429) && essai < 3) { await pause(essai); continue; }
     if (!r.ok) throw new Error(`Trello ${r.status} sur ${chemin.split("?")[0]}`);
     return (await r.json()) as T;
+  }
+}
+
+/** Seule écriture autorisée : change la colonne d'une carte (placée en haut de la colonne). */
+export async function deplacerCarteTrello(carteId: string, listeId: string): Promise<{ ok: true } | { ok: false; erreur: string }> {
+  if (!/^[0-9a-f]{24}$/i.test(carteId) || !/^[0-9a-f]{24}$/i.test(listeId)) return { ok: false, erreur: "Carte ou colonne Trello invalide." };
+  for (let essai = 0; ; essai++) {
+    let r: Response;
+    try {
+      r = await fetch(`${BASE}/cards/${carteId}?idList=${listeId}&pos=top`, { method: "PUT", headers: entete(), cache: "no-store" });
+    } catch {
+      if (essai < 2) { await pause(essai); continue; }
+      return { ok: false, erreur: "Trello ne répond pas : réessayez dans un instant." };
+    }
+    if ((r.status >= 500 || r.status === 429) && essai < 2) { await pause(essai); continue; }
+    if (r.status === 401 || r.status === 403) return { ok: false, erreur: "Le jeton Trello ne permet pas d'écrire : un administrateur doit le remplacer par un jeton « lecture et écriture » (Vercel, TRELLO_TOKEN)." };
+    if (!r.ok) return { ok: false, erreur: `Trello a refusé le déplacement (erreur ${r.status}).` };
+    return { ok: true };
   }
 }
 

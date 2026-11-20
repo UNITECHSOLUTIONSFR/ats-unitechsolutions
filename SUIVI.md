@@ -305,3 +305,8 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Fait : PowerPoint du comité (19 diapositives : vision et chiffres réels, points bloquants, 9 modules en couleur et leur détail, diagramme de séquence, backlog, roadmaps fonctionnelle et technique à 6 mois, vision ERP) ; vue Kanban des missions (/missions/kanban) : mêmes colonnes que Trello, dans le même ordre, avec pertinents et suivis par mission (Trello fait foi, lecture seule).
 - Testé : 250 tests, construction, capture de la vue Kanban sur les vraies données.
 - Suite : glisser-déposer des consultants dans un pipeline par mission (roadmap M+2) ; écriture dans Trello seulement si elle est autorisée.
+
+## 20/11/2026 — PowerPoint technique et glisser-déposer Kanban → Trello
+- Fait : PowerPoint du comité refait (66 diapositives : architecture d'ensemble, architecture par module, diagramme de séquence de chacune des 36 fonctionnalités avec durées mesurées, avant / après / ne fait pas) ; vue Kanban : glisser une carte vers une autre colonne la déplace aussi dans Trello (seule écriture Trello autorisée, décision du 20/11/2026), carte déplacée tout de suite à l'écran, remise en place si Trello refuse, bouton « Annuler » 10 s, trace dans le journal ; statut et recruteur de la mission suivent la colonne (mêmes règles que la lecture horaire).
+- Testé : 254 tests (règles de déplacement, refus d'identifiants invalides), compilation ; glisser-déposer essayé sur une copie locale avec l'envoi vers Trello bloqué (carte déplacée puis remise en place avec le message).
+- Suite : l'utilisatrice remplace le jeton Trello par un jeton « lecture et écriture » dans Vercel (TRELLO_TOKEN) ; mise en ligne après son accord.
