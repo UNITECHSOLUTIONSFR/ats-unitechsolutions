@@ -29,7 +29,7 @@ const { classerMission } = await import("@/lib/matching/hybride");
 function base() {
   const tables: Record<string, Record<string, unknown>[]> = {
     missions: [{ id: "m", intitule: "Testeur QA", client: "X", texte_besoin: "Recette fonctionnelle", localisation: null, mission_competences: [] }],
-    avis_matching: [], profils: [], consultant_competences: [], textes_consultants: [], propositions: [],
+    avis_matching: [], profils: [], reglages: [{ cle: "matching_lecture_ia", valeur: true }], consultant_competences: [], textes_consultants: [], propositions: [],
   };
   const client = {
     rpc: async () => ({ data: [{ consultant_id: "c", similarite: 0.82 }, { consultant_id: "b", similarite: 0.8 }] }),
@@ -62,5 +62,12 @@ describe("Matching : sens + compétences, puis note de l'IA", () => {
     expect(tables.avis_matching).toHaveLength(3);
     await classerMission(client, "m");
     expect(envois).toHaveLength(1); // déjà notés : aucun nouvel appel
+  });
+  it("FinOps : relecture IA coupée (réglage absent ou faux) = aucun appel payant", async () => {
+    const { client, tables } = base();
+    tables.reglages = [];
+    const avant = envois.length;
+    await classerMission(client, "m");
+    expect(envois.length).toBe(avant);
   });
 });
