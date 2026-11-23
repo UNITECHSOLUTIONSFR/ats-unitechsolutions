@@ -34,8 +34,8 @@ type Note = { note: number; bon: boolean; raison: string | null; detail: DetailI
 
 const empreinte = (...parties: string[]) => createHash("md5").update(parties.join("|")).digest("hex");
 
-/** Appels en parallèle, 4 à la fois au plus. */
-async function parPaquets<T>(taches: (() => Promise<T>)[], n = 4): Promise<T[]> {
+/** Appels en parallèle, 8 à la fois au plus. */
+async function parPaquets<T>(taches: (() => Promise<T>)[], n = 8): Promise<T[]> {
   const res: T[] = [];
   for (let i = 0; i < taches.length; i += n) res.push(...(await Promise.all(taches.slice(i, i + n).map((t) => t()))));
   return res;
