@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { envoyerLotReference, lireLotReference, type UsageIA } from "@/lib/ai";
 import { enregistrerUsages } from "@/lib/ai/journal";
 import { MODELES } from "@/lib/ai/config";
-import { classerMissionV3 } from "./v3";
+import { premiersV3 } from "./v3";
 
 /**
  * Vérification de la qualité du matching v3 (une fois, avant activation) : pour 15 missions, un modèle plus puissant lit
@@ -58,7 +58,7 @@ export async function avancerReference(supabase: SupabaseClient): Promise<string
   const requetes: Record<string, { mission: string; refs: Record<string, string> }> = {};
   const aEnvoyer: { id: string; texte: string }[] = [];
   for (const m of missions ?? []) {
-    const v3 = (await classerMissionV3(supabase, m.id)).filter((l) => !l.resultat.elimine).slice(0, 20).map((l) => l.consultant_id);
+    const v3 = await premiersV3(supabase, m.id, 20);
     const { data: c } = await supabase.from("classements_mission").select("ordre").eq("mission_id", m.id).maybeSingle();
     const actuel = ((c?.ordre ?? []) as [string, number, number][]).slice(0, 20).map((o) => o[0]);
     const ids = [...new Set([...v3, ...actuel])];

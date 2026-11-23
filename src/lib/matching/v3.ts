@@ -194,6 +194,20 @@ export async function preparerMissionV3(supabase: SupabaseClient, missionId: str
 // 3. Classement : toute la base notée, avec preuves
 // ---------------------------------------------------------------------------------------------------------------------
 
+/** Identifiants des premiers profils v3 d'une mission (sans charger les fiches) : vérification de la qualité. */
+export async function premiersV3(supabase: SupabaseClient, missionId: string, nombre = 20): Promise<string[]> {
+  if (!(await preparerMissionV3(supabase, missionId))) return [];
+  const [{ data: m }, { data }, s] = await Promise.all([
+    supabase.from("missions").select("annees_min").eq("id", missionId).maybeSingle(),
+    supabase.rpc("classement_v3", { p_mission: missionId }),
+    seuils(supabase),
+  ]);
+  const lignes = (data ?? []) as LigneV3[];
+  const ctx = contexteMission(lignes, s);
+  return lignes.map((l) => ({ id: l.consultant_id, n: noterV3(l, Number(m?.annees_min ?? 0) || null, s, ctx) }))
+    .filter((x) => x.n.memeMetier).sort((a, b) => b.n.note - a.n.note).slice(0, nombre).map((x) => x.id);
+}
+
 /** Classement v3 d'une mission : tous les CV découpés, notés par la base ; les autres métiers sont écartés d'office. */
 export async function classerMissionV3(supabase: SupabaseClient, missionId: string): Promise<LigneClassement[]> {
   if (!(await preparerMissionV3(supabase, missionId))) throw new Error("Mission sans métier ni exigence, ou service d'empreintes absent.");
