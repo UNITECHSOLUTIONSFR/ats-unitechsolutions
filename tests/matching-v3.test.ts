@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { dateISO, dureeMois, noterV3, periode, texteExperience, type LigneV3 } from "@/lib/matching/v3-calcul";
 
+let ordre = 0;
 const exig = (libelle: string, poids: number, s: number, role = "Business Analyst") =>
-  ({ ordre: 1, libelle, poids, s, role, entreprise: "EDF", debut: "2021-01-01", fin: null, duree_mois: 36 });
+  ({ ordre: ++ordre, libelle, poids, s, role, entreprise: "EDF", debut: "2021-01-01", fin: null, duree_mois: 36 });
 const ligne = (metier: number, exigences: LigneV3["exigences"], annees = 8): LigneV3 =>
   ({ consultant_id: "c", metier_sim: metier, metier_role: "Business Analyst", exigences, annees });
 
@@ -30,14 +31,14 @@ describe("Matching v3 : dates et textes", () => {
 
 describe("Matching v3 : note avec preuves", () => {
   it("même métier et exigences prouvées : pertinent, avec la preuve", () => {
-    const n = noterV3(ligne(0.72, [exig("SAP", 3, 0.66), exig("Recette", 1, 0.6)]), 5);
+    const n = noterV3(ligne(0.72, [exig("SAP", 3, 0.66), exig("Recette", 1, 0.6)]), 5, undefined, { metierSeuil: 0.6, metierHaut: 0.72, exigencesUtiles: new Set([1, 2, 3, 4, 5, 6, 7, 8, 9]) });
     expect(n.memeMetier).toBe(true);
     expect(n.note).toBeGreaterThanOrEqual(90);
     expect(n.analyse[0]).toMatchObject({ exigence: "SAP", atteint: true });
     expect(n.analyse[0].explication).toMatch(/Business Analyst chez EDF \(depuis 2021, 3 an\(s\)\)/);
   });
   it("autre métier (un comptable pour un Application Manager) : écarté, 30 au plus", () => {
-    const n = noterV3({ ...ligne(0.38, [exig("SAP", 3, 0.7)]), metier_role: "Comptable" }, null);
+    const n = noterV3({ ...ligne(0.38, [exig("SAP", 3, 0.7)]), metier_role: "Comptable" }, null, undefined, { metierSeuil: 0.6, metierHaut: 0.7, exigencesUtiles: new Set() });
     expect(n.memeMetier).toBe(false);
     expect(n.note).toBeLessThanOrEqual(30);
     expect(n.raison).toBe("Autre métier : Comptable");
@@ -59,5 +60,19 @@ describe("Matching v3 : années d'expérience", () => {
     const { anneesSansChevauchement } = await import("@/lib/matching/v3-calcul");
     expect(anneesSansChevauchement([{ debut: "2018-01-01", fin: "2019-12-01" }, { debut: "2019-01-01", fin: "2020-12-01" }])).toBeCloseTo(3, 0);
     expect(anneesSansChevauchement([{ debut: null, fin: null }])).toBeNull();
+  });
+});
+
+describe("Matching v3 : seuil propre à la mission", () => {
+  it("seuil de métier = sous les meilleurs profils de la mission ; exigence que personne ne prouve non comptée", async () => {
+    const { contexteMission } = await import("@/lib/matching/v3-calcul");
+    const l = (s: number, e: { ordre: number; s: number; x?: boolean }[]) => ({ consultant_id: String(s), metier_sim: s, metier_role: "PO", annees: 5,
+      exigences: e.map((x) => ({ ...x, libelle: "e", poids: 3, role: "PO", entreprise: null, debut: null, fin: null, duree_mois: null })) });
+    const ctx = contexteMission([l(0.70, [{ ordre: 1, s: 0.2 }, { ordre: 2, s: 0.3, x: true }]), l(0.69, []), l(0.68, []), l(0.5, [])]);
+    expect(ctx.metierSeuil).toBeCloseTo(0.61, 2);
+    expect([...ctx.exigencesUtiles]).toEqual([2]);
+    const n = noterV3(l(0.70, [{ ordre: 1, s: 0.2 }, { ordre: 2, s: 0.3, x: true }]), null, undefined, ctx);
+    expect(n.analyse).toHaveLength(1);
+    expect(n.note).toBeGreaterThanOrEqual(80);
   });
 });

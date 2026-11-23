@@ -7,7 +7,7 @@ import { MODELES } from "@/lib/ai/config";
 import { motifSynonyme } from "./criteres";
 import { empreintes, voyageConfigure } from "./empreintes";
 import { chargerCandidats, type DetailIA, type LigneClassement } from "./classement";
-import { anneesSansChevauchement, dateISO, dureeMois, noterV3, SEUILS_V3, texteExperience, texteDossier, type LigneV3, type SeuilsV3 } from "./v3-calcul";
+import { anneesSansChevauchement, contexteMission, dateISO, dureeMois, noterV3, SEUILS_V3, texteExperience, texteDossier, type LigneV3, type SeuilsV3 } from "./v3-calcul";
 
 /**
  * Matching v3 (23/11/2026) — « la base note tout, avec preuves ».
@@ -204,7 +204,8 @@ export async function classerMissionV3(supabase: SupabaseClient, missionId: stri
   ]);
   if (error) throw new Error(error.message);
   const lignes = (data ?? []) as LigneV3[];
-  const notes = lignes.map((l) => ({ l, n: noterV3(l, Number(m?.annees_min ?? 0) || null, s) }));
+  const ctx = contexteMission(lignes, s);
+  const notes = lignes.map((l) => ({ l, n: noterV3(l, Number(m?.annees_min ?? 0) || null, s, ctx) }));
   const ids = notes.map((x) => x.l.consultant_id);
   const fiches = new Map((await chargerCandidats(supabase, ids)).map((c) => [c.consultant_id, c]));
   const resultat: LigneClassement[] = [];

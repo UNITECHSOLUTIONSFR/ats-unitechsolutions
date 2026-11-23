@@ -134,14 +134,14 @@ as $$
   ),
   best as (
     select distinct on (xp.consultant_id, ex.id) xp.consultant_id, ex.ordre, ex.libelle, ex.poids,
-      ((1 - (xp.empreinte <=> ex.empreinte))
-        + case when exists (select 1 from unnest(ex.motifs) mo where xp.texte ~* mo) then 0.08 else 0 end)::real s,
+      (1 - (xp.empreinte <=> ex.empreinte))::real s,
+      exists (select 1 from unnest(ex.motifs) mo where xp.texte ~* mo) x,
       xp.role, xp.entreprise, xp.debut, xp.fin, xp.duree_mois
     from xp cross join ex
-    order by xp.consultant_id, ex.id, 6 desc
+    order by xp.consultant_id, ex.id, 7 desc, 6 desc
   ),
   agg as (
-    select b.consultant_id, jsonb_agg(jsonb_build_object('ordre', b.ordre, 'libelle', b.libelle, 'poids', b.poids, 's', round(b.s::numeric, 3),
+    select b.consultant_id, jsonb_agg(jsonb_build_object('ordre', b.ordre, 'libelle', b.libelle, 'poids', b.poids, 's', round(b.s::numeric, 3), 'x', b.x,
       'role', b.role, 'entreprise', b.entreprise, 'debut', b.debut, 'fin', b.fin, 'duree_mois', b.duree_mois) order by b.ordre) ex
     from best b group by b.consultant_id
   )
