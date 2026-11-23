@@ -317,3 +317,24 @@ Règles :
 - note : de 0 à 100, ton degré d'adéquation (80 et plus : à appeler en priorité ; moins de 50 : hors sujet).
 - raison : une phrase factuelle, 200 caractères au maximum, sans nom ni coordonnées.
 - Réponds pour CHAQUE CV reçu, avec sa référence exacte.`;
+
+/**
+ * Matching v3 : l'IA note des parcours déjà découpés (métier réel + expériences), sans nom ni coordonnées, pour une mission.
+ * Lecture courte et peu coûteuse (≈ 0,01 $ par mission) de TOUS les profils du bon métier, sans liste arbitraire.
+ */
+export const CONSIGNES_NOTE_DOSSIERS = `Tu es un recruteur expérimenté d'une ESN française (Unitech Solution). On te donne une mission (fiche de poste)
+et des parcours de consultants déjà résumés (métier réel, puis chaque expérience : rôle, client, dates, ce que la
+personne faisait, technologies), repérés P1, P2… Pour chacun, tu décides si tu le proposerais au client pour CETTE mission.
+
+${NON_DISCRIMINATION}
+
+Règles :
+- bon = vrai seulement si la personne exerce le même métier que la mission (ou un métier très voisin où elle a réellement
+  fait ce travail) ET si ses expériences réelles couvrent l'essentiel des exigences importantes de la fiche de poste.
+  Les intitulés différents d'un même métier comptent pareil (PO, Product Owner, chef de produit…).
+- Juge sur ce que la personne a FAIT (responsabilités, technologies utilisées, durée, ancienneté), pas sur les mots cités.
+- Une exigence très propre au client (nom d'un programme interne, d'un outil maison) n'écarte pas un bon profil.
+- note : de 0 à 100 (80 et plus : à appeler en priorité ; 60 à 79 : à étudier ; moins de 60 : ne pas proposer).
+- raison : une phrase factuelle, 200 caractères au maximum, sans nom ni coordonnées.
+- analyse : pour chaque exigence importante de la mission (5 au plus), atteint vrai/faux et la preuve (rôle, client, période).
+- Réponds pour CHAQUE parcours reçu, avec sa référence exacte.`;

@@ -8,7 +8,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
 import { LONGUEUR_MAX_TEXTE, MAX_TOKENS, MODELES, estimerCoutUSD } from "./config";
-import { CONSIGNES_REFERENCE, CONSIGNES_EXPERIENCES_CV, CONSIGNES_CRITERES_MISSION, CONSIGNES_NOTE_CANDIDATS, CONSIGNES_NOTE_CV, CONSIGNES_TRI_CANDIDATS } from "./consignes";
+import { CONSIGNES_NOTE_DOSSIERS, CONSIGNES_REFERENCE, CONSIGNES_EXPERIENCES_CV, CONSIGNES_CRITERES_MISSION, CONSIGNES_NOTE_CANDIDATS, CONSIGNES_NOTE_CV, CONSIGNES_TRI_CANDIDATS } from "./consignes";
 import { CONSIGNES_ADEQUATION, CONSIGNES_AVIS_MISSION, CONSIGNES_CV_UNITECH, CONSIGNES_MISSION, CONSIGNES_PROFIL_CV, CONSIGNES_RECHERCHE, CONSIGNES_REPONSE_DISPO } from "./consignes";
 import {
   PROMPT_VERSION,
@@ -25,6 +25,8 @@ import {
   SchemaNoteCV,
   SchemaExperiencesCV,
   SchemaReference,
+  SchemaNoteDossiers,
+  type NoteDossiers,
   type Reference,
   type ExperiencesCV,
   type NoteCV,
@@ -47,7 +49,7 @@ export { PROMPT_VERSION };
 export type { ExperiencesCV, CriteresMission, ExigencesMission, ProfilCV, ReponseDisponibilite, CVStructure, Adequation, CriteresRecherche, AvisMission };
 
 export interface UsageIA {
-  usage: "fiche_cv" | "mission" | "tri_email" | "analyse_approfondie" | "reponse_disponibilite" | "lecture_scan" | "cv_unitech" | "adequation" | "recherche" | "avis_mission" | "tri_candidats" | "note_candidats" | "criteres_mission" | "note_cv" | "empreintes" | "experiences_cv" | "reference_matching";
+  usage: "fiche_cv" | "mission" | "tri_email" | "analyse_approfondie" | "reponse_disponibilite" | "lecture_scan" | "cv_unitech" | "adequation" | "recherche" | "avis_mission" | "tri_candidats" | "note_candidats" | "criteres_mission" | "note_cv" | "empreintes" | "experiences_cv" | "reference_matching" | "note_dossiers";
   modele: string;
   mode: "standard" | "batch";
   tokens_entree: number;
@@ -389,4 +391,34 @@ export async function lireLotReference(idLot: string): Promise<{ termine: boolea
     resultats.push({ id: r.custom_id, donnees: lireJSON(m, SchemaReference), usage: usageDepuisReponse(m.usage, MODELES.reference, "reference_matching", "batch") });
   }
   return { termine: true, enCours: 0, resultats };
+}
+
+/** Matching v3 : paramètres d'un appel de note de parcours résumés (réutilisés par la Batch API). */
+export function parametresNoteDossiers(texte: string) {
+  return parametresExtraction(MODELES.noteDossiers, CONSIGNES_NOTE_DOSSIERS, SchemaNoteDossiers, texte, MAX_TOKENS.noteDossiers);
+}
+
+/** Note de parcours résumés pour une mission (appel direct, quelques secondes). */
+export async function noterDossiers(texte: string): Promise<ResultatIA<NoteDossiers>> {
+  const r = await appeler(MODELES.noteDossiers, CONSIGNES_NOTE_DOSSIERS, SchemaNoteDossiers, texte, MAX_TOKENS.noteDossiers, "note_dossiers");
+  if (!r.donnees) throw Object.assign(new ErreurIA("Notes des parcours impossibles à produire."), { usages: [r.usage] });
+  return { donnees: r.donnees, modele: MODELES.noteDossiers, promptVersion: PROMPT_VERSION, usages: [r.usage] };
+}
+
+/** Lot (moitié prix) de notes de parcours : vérification de la qualité. */
+export async function envoyerLotNoteDossiers(requetes: { id: string; texte: string }[]): Promise<string> {
+  const lot = await anthropic().messages.batches.create({ requests: requetes.map((r) => ({ custom_id: r.id, params: parametresNoteDossiers(r.texte) })) });
+  return lot.id;
+}
+
+export async function lireLotNoteDossiers(idLot: string): Promise<{ termine: boolean; resultats: { id: string; donnees: NoteDossiers | null; usage: UsageIA | null }[] }> {
+  const lot = await anthropic().messages.batches.retrieve(idLot);
+  if (lot.processing_status !== "ended") return { termine: false, resultats: [] };
+  const resultats: { id: string; donnees: NoteDossiers | null; usage: UsageIA | null }[] = [];
+  for await (const r of await anthropic().messages.batches.results(idLot)) {
+    if (r.result.type !== "succeeded") { resultats.push({ id: r.custom_id, donnees: null, usage: null }); continue; }
+    const m = r.result.message;
+    resultats.push({ id: r.custom_id, donnees: lireJSON(m, SchemaNoteDossiers), usage: usageDepuisReponse(m.usage, MODELES.noteDossiers, "note_dossiers", "batch") });
+  }
+  return { termine: true, resultats };
 }

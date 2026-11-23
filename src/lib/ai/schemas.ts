@@ -192,3 +192,12 @@ export const SchemaReference = z.object({
   jugements: z.array(z.object({ ref: z.string(), bon: z.boolean(), note: z.number(), raison: z.string() })),
 });
 export type Reference = z.infer<typeof SchemaReference>;
+
+/** Matching v3 : note d'un parcours résumé pour une mission. */
+export const SchemaNoteDossiers = z.object({
+  notes: z.array(z.object({
+    ref: z.string(), note: z.number(), bon: z.boolean(), raison: z.string(),
+    analyse: z.array(z.object({ exigence: z.string(), atteint: z.boolean(), explication: z.string() })),
+  })),
+});
+export type NoteDossiers = z.infer<typeof SchemaNoteDossiers>;

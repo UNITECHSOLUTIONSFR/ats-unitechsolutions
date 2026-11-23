@@ -7,7 +7,7 @@ import { MODELES } from "@/lib/ai/config";
 import { motifSynonyme } from "./criteres";
 import { empreintes, voyageConfigure } from "./empreintes";
 import { chargerCandidats, type DetailIA, type LigneClassement } from "./classement";
-import { anneesSansChevauchement, contexteMission, dateISO, dureeMois, noterV3, SEUILS_V3, texteExperience, texteDossier, type LigneV3, type SeuilsV3 } from "./v3-calcul";
+import { anneesSansChevauchement, contexteMission, dateISO, dureeMois, noterV3, periode, SEUILS_V3, texteExperience, texteDossier, type LigneV3, type SeuilsV3 } from "./v3-calcul";
 
 /**
  * Matching v3 (23/11/2026) — « la base note tout, avec preuves ».
@@ -138,6 +138,31 @@ export async function empreintesV3(supabase: SupabaseClient, budgetMs = 60_000):
   } finally {
     if (jetons) await enregistrerUsages([{ usage: "empreintes", modele: "voyage-4-large", mode: "standard", tokens_entree: jetons, tokens_sortie: 0, tokens_cache_lecture: 0, tokens_cache_ecriture: 0, cout_estime_usd: 0 }], "empreintes:v3").catch(() => undefined);
   }
+}
+
+/** Parcours résumés (sans nom ni coordonnées) de plusieurs consultants, pour la note de l'IA. */
+export async function textesDossiers(supabase: SupabaseClient, ids: string[]): Promise<Map<string, string>> {
+  const res = new Map<string, string>();
+  for (let i = 0; i < ids.length; i += 200) {
+    const lot = ids.slice(i, i + 200);
+    const [{ data: ds }, { data: xs }] = await Promise.all([
+      supabase.from("dossiers_cv").select("consultant_id, metier_principal, metiers, annees_total").in("consultant_id", lot),
+      supabase.from("experiences_cv").select("consultant_id, ordre, role, metier, entreprise, debut, fin, duree_mois, technologies, responsabilites").in("consultant_id", lot).order("ordre"),
+    ]);
+    const parC = new Map<string, NonNullable<typeof xs>>();
+    for (const x of xs ?? []) parC.set(x.consultant_id, [...(parC.get(x.consultant_id) ?? []), x]);
+    for (const d of ds ?? []) {
+      const exps = (parC.get(d.consultant_id) ?? []).slice(0, 8).map((x) => `- ${x.role}${x.metier ? ` [${x.metier}]` : ""}${x.entreprise ? ` chez ${x.entreprise}` : ""}${periode(x.debut, x.fin) ? `, ${periode(x.debut, x.fin)}` : ""}${x.duree_mois ? ` (${x.duree_mois} mois)` : ""} : ${String(x.responsabilites ?? "").slice(0, 280)}${(x.technologies ?? []).length ? ` Technos : ${(x.technologies as string[]).slice(0, 10).join(", ")}.` : ""}`);
+      res.set(d.consultant_id, `Métier : ${d.metier_principal ?? "inconnu"}${(d.metiers ?? []).length ? ` (métiers exercés : ${(d.metiers as string[]).join(", ")})` : ""}${d.annees_total != null ? ` · ${Math.round(Number(d.annees_total))} an(s) d'expérience` : ""}\n${exps.join("\n")}`.slice(0, 2600));
+    }
+  }
+  return res;
+}
+
+/** Texte de la mission lu par l'IA (sans TJM). */
+export async function texteMissionIA(supabase: SupabaseClient, missionId: string): Promise<string> {
+  const { data: m } = await supabase.from("missions").select("intitule, client, texte_besoin").eq("id", missionId).maybeSingle();
+  return `MISSION : ${m?.intitule ?? ""}${m?.client ? ` — ${m.client}` : ""}\n${String(m?.texte_besoin ?? "").replace(/(tjm|taux journalier|tarif)[^\n]*/gi, "").slice(0, 6000)}`;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

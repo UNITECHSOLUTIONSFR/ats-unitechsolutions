@@ -1,9 +1,9 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { envoyerLotReference, lireLotReference, type UsageIA } from "@/lib/ai";
+import { envoyerLotNoteDossiers, envoyerLotReference, lireLotNoteDossiers, lireLotReference, type UsageIA } from "@/lib/ai";
 import { enregistrerUsages } from "@/lib/ai/journal";
 import { MODELES } from "@/lib/ai/config";
-import { premiersV3 } from "./v3";
+import { premiersV3, texteMissionIA, textesDossiers } from "./v3";
 
 /**
  * Vérification de la qualité du matching v3 (une fois, avant activation) : pour 15 missions, un modèle plus puissant lit
@@ -76,4 +76,52 @@ export async function avancerReference(supabase: SupabaseClient): Promise<string
   const lotId = await envoyerLotReference(aEnvoyer);
   await supabase.from("reglages").upsert({ cle: "reference_v3", valeur: { etat: "envoyee", lot: lotId, requetes, missions: (missions ?? []).map((m) => m.id) } });
   return `lot de référence envoyé (${aEnvoyer.length} requêtes)`;
+}
+
+/**
+ * Test (une fois) : l'IA note les parcours RÉSUMÉS des profils déjà jugés par la référence, pour mesurer si cette lecture
+ * courte (≈ 0,01 $ par mission) retrouve les mêmes bons profils. Lancé par le réglage « test_dossiers » = { etat: "demandee" }.
+ */
+export async function avancerTestDossiers(supabase: SupabaseClient): Promise<string> {
+  const { data: r } = await supabase.from("reglages").select("valeur").eq("cle", "test_dossiers").maybeSingle();
+  const etat = (r?.valeur ?? null) as { etat: string; lot?: string; requetes?: Record<string, { mission: string; refs: Record<string, string> }> } | null;
+  if (!etat || etat.etat === "terminee") return "rien";
+  if (etat.etat === "envoyee" && etat.lot) {
+    const lot = await lireLotNoteDossiers(etat.lot);
+    if (!lot.termine) return "test en cours";
+    const usages: UsageIA[] = [];
+    const notes: Record<string, Record<string, { note: number; bon: boolean }>> = {};
+    for (const res of lot.resultats) {
+      if (res.usage) usages.push(res.usage);
+      const req = etat.requetes?.[res.id];
+      if (!req || !res.donnees) continue;
+      for (const n of res.donnees.notes) {
+        const id = req.refs[(n.ref.match(/(\d+)/)?.[1]) ?? ""];
+        if (id) (notes[req.mission] ??= {})[id] = { note: Math.round(n.note), bon: n.bon };
+      }
+    }
+    const { error } = await supabase.from("reglages").upsert({ cle: "test_dossiers", valeur: { etat: "terminee", notes } });
+    if (error) throw new Error(error.message);
+    await enregistrerUsages(usages, "test_dossiers").catch(() => undefined);
+    return "test rangé";
+  }
+  const { data: juges } = await supabase.from("jugements_reference").select("mission_id, consultant_id").limit(5000);
+  const parMission = new Map<string, string[]>();
+  for (const j of juges ?? []) parMission.set(j.mission_id, [...(parMission.get(j.mission_id) ?? []), j.consultant_id]);
+  const requetes: Record<string, { mission: string; refs: Record<string, string> }> = {};
+  const aEnvoyer: { id: string; texte: string }[] = [];
+  for (const [m, ids] of parMission) {
+    const [mission, dossiers] = await Promise.all([texteMissionIA(supabase, m), textesDossiers(supabase, ids)]);
+    const avec = ids.filter((id) => dossiers.has(id));
+    for (let i = 0; i < avec.length; i += 20) {
+      const lot = avec.slice(i, i + 20);
+      const id = `${m.slice(0, 8)}-${i / 20}`;
+      requetes[id] = { mission: m, refs: Object.fromEntries(lot.map((c, k) => [String(k + 1), c])) };
+      aEnvoyer.push({ id, texte: `${mission}\n\nPARCOURS :\n${lot.map((c, k) => `===== P${k + 1} =====\n${dossiers.get(c)}`).join("\n\n")}` });
+    }
+  }
+  if (!aEnvoyer.length) return "rien à tester";
+  const lotId = await envoyerLotNoteDossiers(aEnvoyer);
+  await supabase.from("reglages").upsert({ cle: "test_dossiers", valeur: { etat: "envoyee", lot: lotId, requetes } });
+  return `test envoyé (${aEnvoyer.length} requêtes)`;
 }
