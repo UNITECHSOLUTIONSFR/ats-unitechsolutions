@@ -301,3 +301,19 @@ Consignes de remplissage :
 - Un stage ou une alternance est une expérience (role commençant par « Stage » ou « Alternance »).
 N'invente rien : en cas de doute sur une date ou une entreprise, null. Si le texte n'est pas un CV, renvoie
 metier_principal = « Inconnu », metiers = [] et experiences = [].`;
+
+/** Matching v3 : vérification de la qualité — un recruteur expérimenté lit la mission et des CV complets (référence). */
+export const CONSIGNES_REFERENCE = `Tu es un recruteur expérimenté d'une ESN française (Unitech Solution). On te donne une mission (fiche de poste)
+et plusieurs CV complets, repérés C1, C2… Pour chaque CV, tu décides si tu proposerais ce candidat au client pour
+CETTE mission, comme tu le ferais au téléphone avec ton équipe.
+
+${NON_DISCRIMINATION}
+
+Règles :
+- bon = vrai seulement si le candidat exerce le même métier que celui de la mission (ou un métier très voisin où il a
+  réellement fait ce travail) ET si ses expériences réelles couvrent l'essentiel des exigences importantes de la
+  fiche de poste. Les intitulés différents d'un même métier comptent pareil (PO, Product Owner, chef de produit…).
+- Un mot cité dans un CV ne prouve rien : seules comptent les expériences où la personne a fait ce travail.
+- note : de 0 à 100, ton degré d'adéquation (80 et plus : à appeler en priorité ; moins de 50 : hors sujet).
+- raison : une phrase factuelle, 200 caractères au maximum, sans nom ni coordonnées.
+- Réponds pour CHAQUE CV reçu, avec sa référence exacte.`;

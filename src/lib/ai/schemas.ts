@@ -186,3 +186,9 @@ export const SchemaExperiencesCV = z.object({
   })),
 });
 export type ExperiencesCV = z.infer<typeof SchemaExperiencesCV>;
+
+/** Matching v3 : jugement de référence d'un recruteur (vérification de la qualité). */
+export const SchemaReference = z.object({
+  jugements: z.array(z.object({ ref: z.string(), bon: z.boolean(), note: z.number(), raison: z.string() })),
+});
+export type Reference = z.infer<typeof SchemaReference>;

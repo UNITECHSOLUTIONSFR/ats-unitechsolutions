@@ -8,7 +8,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
 import { LONGUEUR_MAX_TEXTE, MAX_TOKENS, MODELES, estimerCoutUSD } from "./config";
-import { CONSIGNES_EXPERIENCES_CV, CONSIGNES_CRITERES_MISSION, CONSIGNES_NOTE_CANDIDATS, CONSIGNES_NOTE_CV, CONSIGNES_TRI_CANDIDATS } from "./consignes";
+import { CONSIGNES_REFERENCE, CONSIGNES_EXPERIENCES_CV, CONSIGNES_CRITERES_MISSION, CONSIGNES_NOTE_CANDIDATS, CONSIGNES_NOTE_CV, CONSIGNES_TRI_CANDIDATS } from "./consignes";
 import { CONSIGNES_ADEQUATION, CONSIGNES_AVIS_MISSION, CONSIGNES_CV_UNITECH, CONSIGNES_MISSION, CONSIGNES_PROFIL_CV, CONSIGNES_RECHERCHE, CONSIGNES_REPONSE_DISPO } from "./consignes";
 import {
   PROMPT_VERSION,
@@ -24,6 +24,8 @@ import {
   SchemaCriteresMission,
   SchemaNoteCV,
   SchemaExperiencesCV,
+  SchemaReference,
+  type Reference,
   type ExperiencesCV,
   type NoteCV,
   type CriteresMission,
@@ -354,4 +356,37 @@ export async function extraireExperiencesCV(texteCV: string): Promise<ResultatIA
   const r = await appeler(MODELES.experiencesCV, CONSIGNES_EXPERIENCES_CV, SchemaExperiencesCV, texteCV, MAX_TOKENS.experiencesCV, "experiences_cv");
   if (!r.donnees) throw Object.assign(new ErreurIA("Parcours du CV impossible à découper."), { usages: [r.usage] });
   return { donnees: r.donnees, modele: MODELES.experiencesCV, promptVersion: PROMPT_VERSION, usages: [r.usage] };
+}
+
+/**
+ * Matching v3 : vérification de la qualité, une fois (lot, moitié prix). Le modèle de référence lit la mission et des CV
+ * complets, et dit pour chacun s'il le proposerait. Réflexion courte entre les étapes, niveau d'effort moyen.
+ */
+export async function envoyerLotReference(requetes: { id: string; texte: string }[]): Promise<string> {
+  const modele = MODELES.reference;
+  const lot = await anthropic().messages.batches.create({
+    requests: requetes.map((r) => ({
+      custom_id: r.id,
+      params: {
+        model: modele, max_tokens: MAX_TOKENS.reference,
+        system: [{ type: "text", text: CONSIGNES_REFERENCE, cache_control: { type: "ephemeral" } }],
+        messages: [{ role: "user", content: r.texte.slice(0, 120_000) }],
+        thinking: { type: "between_tools" },
+        output_config: { effort: "medium", format: zodOutputFormat(SchemaReference) },
+      } as Anthropic.MessageCreateParamsNonStreaming,
+    })),
+  });
+  return lot.id;
+}
+
+export async function lireLotReference(idLot: string): Promise<{ termine: boolean; enCours: number; resultats: { id: string; donnees: Reference | null; usage: UsageIA | null }[] }> {
+  const lot = await anthropic().messages.batches.retrieve(idLot);
+  if (lot.processing_status !== "ended") return { termine: false, enCours: lot.request_counts.processing, resultats: [] };
+  const resultats: { id: string; donnees: Reference | null; usage: UsageIA | null }[] = [];
+  for await (const r of await anthropic().messages.batches.results(idLot)) {
+    if (r.result.type !== "succeeded") { resultats.push({ id: r.custom_id, donnees: null, usage: null }); continue; }
+    const m = r.result.message;
+    resultats.push({ id: r.custom_id, donnees: lireJSON(m, SchemaReference), usage: usageDepuisReponse(m.usage, MODELES.reference, "reference_matching", "batch") });
+  }
+  return { termine: true, enCours: 0, resultats };
 }
