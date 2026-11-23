@@ -111,6 +111,15 @@ export async function classerMission(supabase: SupabaseClient, missionId: string
     || b.resultat.score - a.resultat.score);
 }
 
+/**
+ * FinOps (23/11/2026) : la relecture des CV par l'IA pendant le matching est coupée par défaut (réglage « matching_lecture_ia »).
+ * Les calculs automatiques (mission ou fiche modifiée, nuit) ne dépensent plus rien ; les notes déjà payées restent utilisées.
+ */
+async function lectureIAAutorisee(supabase: SupabaseClient): Promise<boolean> {
+  const { data } = await supabase.from("reglages").select("valeur").eq("cle", "matching_lecture_ia").maybeSingle();
+  return data?.valeur === true || data?.valeur === "true";
+}
+
 /** Matching v2 : notes de l'IA en lisant le CV COMPLET des profils éligibles (5 par appel), gardées tant que la mission et ses critères ne changent pas. */
 async function notesCV(supabase: SupabaseClient, missionId: string, texteIA: string, criteres: CriteresMission, empreinte: string, aLire: LigneClassement[], enregistrer = true): Promise<Map<string, { note: number; raison: string | null; detail?: DetailIA | null }>> {
   const ids = aLire.map((l) => l.consultant_id);
@@ -119,7 +128,7 @@ async function notesCV(supabase: SupabaseClient, missionId: string, texteIA: str
   const { data: existants } = await supabase.from("avis_matching").select("consultant_id, note, raison, empreinte, detail").eq("mission_id", missionId).in("consultant_id", ids);
   for (const a of existants ?? []) if (a.empreinte === empreinte && a.note != null) notes.set(a.consultant_id, { note: a.note, raison: a.raison, detail: (a.detail as DetailIA | null) ?? null });
   const manquants = aLire.filter((l) => !notes.has(l.consultant_id));
-  if (!manquants.length || (await etatBudgetMois().catch(() => ({ depasse: true }))).depasse) return notes;
+  if (!manquants.length || !(await lectureIAAutorisee(supabase)) || (await etatBudgetMois().catch(() => ({ depasse: true }))).depasse) return notes;
   const cv = await textesCV(supabase, manquants);
   const exemples = await exemplesEquipe(supabase, missionId);
   const texteCriteres = [`Métier : ${criteres.metier.libelle}`, ...criteres.obligatoires.map((o) => `Obligatoire : ${o.critere} (${o.synonymes.slice(0, 6).join(", ")})`),
@@ -184,7 +193,7 @@ async function notesIA(supabase: SupabaseClient, missionId: string, texteIA: str
   for (const a of existants ?? []) if (a.empreinte === empreinte && a.note != null) notes.set(a.consultant_id, { note: a.note, raison: a.raison });
 
   const manquants = aLire.filter((l) => !notes.has(l.consultant_id));
-  if (!manquants.length || (await etatBudgetMois().catch(() => ({ depasse: true }))).depasse) return notes;
+  if (!manquants.length || !(await lectureIAAutorisee(supabase)) || (await etatBudgetMois().catch(() => ({ depasse: true }))).depasse) return notes;
   const profils = await textesProfils(supabase, manquants);
   const exemples = await exemplesEquipe(supabase, missionId);
   const usages: UsageIA[] = [];
