@@ -54,6 +54,17 @@ export function texteDossier(metier: string | null, metiers: string[], experienc
   return [`Métier : ${metier ?? "inconnu"}`, metiers.length ? `Métiers exercés : ${metiers.join(", ")}` : "", roles.length ? `Postes récents : ${roles.join(" ; ")}` : ""].filter(Boolean).join("\n");
 }
 
+/** Années d'expérience : périodes qui se chevauchent comptées une seule fois (missions en parallèle). */
+export function anneesSansChevauchement(xs: { debut: string | null; fin: string | null }[], aujourdhui = new Date()): number | null {
+  const p = xs.filter((x) => x.debut).map((x) => [Date.parse(x.debut!), x.fin ? Date.parse(x.fin) + 31 * 86_400_000 : aujourdhui.getTime()] as const)
+    .filter(([a, b]) => b > a).sort((a, b) => a[0] - b[0]);
+  if (!p.length) return null;
+  let total = 0, [a, b] = p[0];
+  for (const [c, d] of p.slice(1)) { if (c <= b) b = Math.max(b, d); else { total += b - a; [a, b] = [c, d]; } }
+  total += b - a;
+  return Math.round((total / (365.25 * 86_400_000)) * 10) / 10;
+}
+
 export function periode(debut: string | null, fin: string | null): string {
   const a = (d: string | null) => d?.slice(0, 4) ?? null;
   if (!a(debut)) return fin ? `jusqu'en ${a(fin)}` : "";

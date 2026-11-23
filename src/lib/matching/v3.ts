@@ -7,7 +7,7 @@ import { MODELES } from "@/lib/ai/config";
 import { motifSynonyme } from "./criteres";
 import { empreintes, voyageConfigure } from "./empreintes";
 import { chargerCandidats, type DetailIA, type LigneClassement } from "./classement";
-import { dateISO, dureeMois, noterV3, SEUILS_V3, texteExperience, texteDossier, type LigneV3, type SeuilsV3 } from "./v3-calcul";
+import { anneesSansChevauchement, dateISO, dureeMois, noterV3, SEUILS_V3, texteExperience, texteDossier, type LigneV3, type SeuilsV3 } from "./v3-calcul";
 
 /**
  * Matching v3 (23/11/2026) — « la base note tout, avec preuves ».
@@ -89,7 +89,6 @@ export async function rangerDecoupage(supabase: SupabaseClient, consultantId: st
     const e = { role: x.role.slice(0, 200), metier: x.metier.slice(0, 120), entreprise: x.entreprise?.slice(0, 160) ?? null, technologies: x.technologies.slice(0, 15).map((t) => t.slice(0, 60)), responsabilites: x.responsabilites.slice(0, 600) };
     return { consultant_id: consultantId, ordre: i, ...e, debut, fin, duree_mois: dureeMois(debut, fin), texte: texteExperience(e) };
   });
-  const annees = experiences.reduce((t, x) => t + (x.duree_mois ?? 0), 0) / 12;
   await supabase.from("experiences_cv").delete().eq("consultant_id", consultantId);
   if (experiences.length) {
     const { error } = await supabase.from("experiences_cv").insert(experiences);
@@ -97,7 +96,7 @@ export async function rangerDecoupage(supabase: SupabaseClient, consultantId: st
   }
   const { error } = await supabase.from("dossiers_cv").upsert({
     consultant_id: consultantId, document_id: documentId, texte_hash: hash, metier_principal: d?.metier_principal?.slice(0, 120) ?? "Inconnu",
-    metiers: (d?.metiers ?? []).slice(0, 3), annees_total: experiences.length ? Math.round(annees * 10) / 10 : null, empreinte: null,
+    metiers: (d?.metiers ?? []).slice(0, 3), annees_total: anneesSansChevauchement(experiences), empreinte: null,
     modele: MODELES.experiencesCV, version: VERSION_DECOUPAGE, updated_at: new Date().toISOString(),
   });
   if (error) throw new Error(error.message);

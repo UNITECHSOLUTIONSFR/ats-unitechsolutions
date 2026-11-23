@@ -53,3 +53,11 @@ describe("Matching v3 : note avec preuves", () => {
     expect(a - b).toBe(10);
   });
 });
+
+describe("Matching v3 : années d'expérience", () => {
+  it("périodes qui se chevauchent comptées une fois", async () => {
+    const { anneesSansChevauchement } = await import("@/lib/matching/v3-calcul");
+    expect(anneesSansChevauchement([{ debut: "2018-01-01", fin: "2019-12-01" }, { debut: "2019-01-01", fin: "2020-12-01" }])).toBeCloseTo(3, 0);
+    expect(anneesSansChevauchement([{ debut: null, fin: null }])).toBeNull();
+  });
+});
