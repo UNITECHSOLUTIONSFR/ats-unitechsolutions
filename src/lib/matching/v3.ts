@@ -18,7 +18,7 @@ import { anneesSansChevauchement, contexteMission, dateISO, dureeMois, noterV3, 
  * Aucune relecture payante des CV par mission. L'analyse approfondie par l'IA reste sur clic.
  */
 export const VERSION_DECOUPAGE = "experiences-v1";
-export const VERSION_MOTEUR_V3 = "2026-11-23.1-v3";
+export const VERSION_MOTEUR_V3 = "2026-11-23.2-v3-ia";
 
 export async function matchingV3Actif(supabase: SupabaseClient): Promise<boolean> {
   const { data } = await supabase.from("reglages").select("valeur").eq("cle", "matching_v3").maybeSingle();

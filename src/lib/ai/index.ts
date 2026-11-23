@@ -46,7 +46,7 @@ import {
 } from "./schemas";
 
 export { PROMPT_VERSION };
-export type { ExperiencesCV, CriteresMission, ExigencesMission, ProfilCV, ReponseDisponibilite, CVStructure, Adequation, CriteresRecherche, AvisMission };
+export type { NoteDossiers, ExperiencesCV, CriteresMission, ExigencesMission, ProfilCV, ReponseDisponibilite, CVStructure, Adequation, CriteresRecherche, AvisMission };
 
 export interface UsageIA {
   usage: "fiche_cv" | "mission" | "tri_email" | "analyse_approfondie" | "reponse_disponibilite" | "lecture_scan" | "cv_unitech" | "adequation" | "recherche" | "avis_mission" | "tri_candidats" | "note_candidats" | "criteres_mission" | "note_cv" | "empreintes" | "experiences_cv" | "reference_matching" | "note_dossiers" | "note_cv_complet";

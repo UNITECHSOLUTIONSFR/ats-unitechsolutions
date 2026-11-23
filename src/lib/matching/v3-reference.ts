@@ -15,7 +15,7 @@ interface EtatReference { etat: "demandee" | "envoyee" | "terminee"; lot?: strin
 
 const PAR_REQUETE = 8;
 
-async function textesCV(supabase: SupabaseClient, ids: string[]): Promise<Map<string, string>> {
+export async function textesCV(supabase: SupabaseClient, ids: string[]): Promise<Map<string, string>> {
   const [{ data }, { data: fiches }] = await Promise.all([
     supabase.from("dossiers_cv").select("consultant_id, documents(texte_extrait)").in("consultant_id", ids),
     supabase.from("consultants").select("id, prenom, nom").in("id", ids),
