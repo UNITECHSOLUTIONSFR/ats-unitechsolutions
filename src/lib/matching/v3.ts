@@ -66,8 +66,10 @@ export async function avancerDecoupage(supabase: SupabaseClient): Promise<{ etat
         .catch((e) => console.error("Découpage :", (e as Error).message));
     }
     if (!complet) return { etat: "rangement en cours", ranges };
+    // Lot terminé : effacé AVANT de compter son coût (un échec ne doit jamais faire compter le même lot deux fois).
+    const { error: e } = await supabase.from("reglages").delete().eq("cle", "lot_experiences_cv");
+    if (e) throw new Error(e.message);
     await enregistrerUsages(usages, `experiences_cv:${lot.id}`).catch(() => undefined);
-    await supabase.from("reglages").upsert({ cle: "lot_experiences_cv", valeur: null });
     return { etat: "lot rangé", ranges };
   }
   if ((await etatBudgetMois().catch(() => ({ depasse: true }))).depasse) return { etat: "plafond IA atteint" };

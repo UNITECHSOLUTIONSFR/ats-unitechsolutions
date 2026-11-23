@@ -47,8 +47,9 @@ export async function avancerReference(supabase: SupabaseClient): Promise<string
       }
     }
     if (lignes.length) await supabase.from("jugements_reference").upsert(lignes);
+    const { error: e } = await supabase.from("reglages").upsert({ cle: "reference_v3", valeur: { etat: "terminee", missions: etat.missions, jugements: lignes.length } });
+    if (e) throw new Error(e.message);
     await enregistrerUsages(usages, "reference_v3").catch(() => undefined);
-    await supabase.from("reglages").upsert({ cle: "reference_v3", valeur: { etat: "terminee", missions: etat.missions, jugements: lignes.length } });
     return `référence rangée (${lignes.length} jugements)`;
   }
   // Demandée : 15 missions suivies qui ont des critères, les plus récentes.
