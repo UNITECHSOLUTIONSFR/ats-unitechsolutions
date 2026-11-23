@@ -20,7 +20,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   if (tache === "matching") {
     // Par sécurité, la projection de l'écran Consultants est aussi remise à jour (seules les lignes changées sont réécrites).
     // Une fois par heure seulement (chaque modification la met déjà à jour) : elle relit tout le tableau.
-    const projection = new Date().getMinutes() < 10 ? await actualiserProjection().catch((e) => ({ erreur: (e as Error).message })) : "déjà à jour (passage horaire)";
+    // Contrôle complet de la liste des consultants une fois par nuit (vers 3 h, heure de Paris) : chaque modification la
+    // met déjà à jour ; l'ancien contrôle horaire relisait toute la base pour rien (audit du 23/11/2026, point 2).
+    const heureParis = Number(new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", hour12: false }).format(new Date()));
+    const projection = heureParis === 3 && new Date().getMinutes() < 10 ? await actualiserProjection().catch((e) => ({ erreur: (e as Error).message })) : "contrôle de nuit seulement";
     // Emails relevés aussi d'ici, une fois par heure (passage de :20 à :29) : l'appel horaire direct de la tâche emails
     // par la base échoue (erreur réseau « HTTP2 framing ») et GitHub ne lance ses tâches horaires que quelques fois par jour.
     // Sans double passage : une relève faite il y a moins de 30 minutes n'est pas refaite.

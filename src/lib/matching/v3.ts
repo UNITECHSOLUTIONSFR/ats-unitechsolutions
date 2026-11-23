@@ -72,11 +72,18 @@ export async function avancerDecoupage(supabase: SupabaseClient): Promise<{ etat
     await enregistrerUsages(usages, `experiences_cv:${lot.id}`).catch(() => undefined);
     return { etat: "lot rangé", ranges };
   }
+  // Sortie immédiate si aucun document n'a changé depuis la dernière vérification (la recherche des CV à découper lit tous les CV).
+  const [{ data: dernierDoc }, { data: marque }] = await Promise.all([
+    supabase.from("documents").select("updated_at").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+    supabase.from("reglages").select("valeur").eq("cle", "decoupage_verifie_le").maybeSingle(),
+  ]);
+  if (marque?.valeur && dernierDoc?.updated_at && Date.parse(String(marque.valeur)) >= Date.parse(dernierDoc.updated_at)) return { etat: "aucun CV nouveau" };
   if ((await etatBudgetMois().catch(() => ({ depasse: true }))).depasse) return { etat: "plafond IA atteint" };
+  const verifie = new Date().toISOString();
   const { data: aFaire, error } = await supabase.rpc("cv_a_decouper", { p_limite: 2000 });
   if (error) throw new Error(error.message);
   const cv = (aFaire ?? []) as { consultant_id: string; document_id: string; texte: string; texte_hash: string }[];
-  if (!cv.length) return { etat: "rien à découper" };
+  if (!cv.length) { await supabase.from("reglages").upsert({ cle: "decoupage_verifie_le", valeur: verifie }); return { etat: "rien à découper" }; }
   const id = await envoyerLotExperiencesCV(cv.map((c) => ({ id: c.consultant_id, texte: c.texte })));
   const etat: EtatLot = { id, envoye_le: new Date().toISOString(), nombre: cv.length, textes: Object.fromEntries(cv.map((c) => [c.consultant_id, { document_id: c.document_id, hash: c.texte_hash }])) };
   await supabase.from("reglages").upsert({ cle: "lot_experiences_cv", valeur: etat });

@@ -166,11 +166,14 @@ export async function recalculerEnAttente(supabase: SupabaseClient, budgetMs = 2
   await empreintesSiChangement(supabase).catch((e) => console.error("Empreintes :", (e as Error).message));
   const dernier = (table: string, colonne: string) => supabase.from(table).select(colonne).order(colonne, { ascending: false }).limit(1).maybeSingle()
     .then((r) => Date.parse(String((r.data as Record<string, string> | null)?.[colonne] ?? "1970-01-01")));
+  const { matchingV3Actif: v3Actif } = await import("./v3");
+  const v3 = await v3Actif(supabase);
   const [{ data: missions }, { data: lignes }, ficheModifiee, profilModifie] = await Promise.all([
     supabase.from("missions").select("id").in("statut", STATUTS_SUIVIS),
     supabase.from("classements_mission").select("mission_id, calcule_le, version, a_recalculer, demande_le"),
-    dernier("consultants", "updated_at"),
-    dernier("profils", "updated_at"),
+    // Matching v3 : seuls les CV découpés comptent (une fiche modifiée sans nouveau CV ne change pas le classement).
+    v3 ? dernier("dossiers_cv", "updated_at") : dernier("consultants", "updated_at"),
+    v3 ? Promise.resolve(0) : dernier("profils", "updated_at"),
   ]);
   // Fiches ajoutées ou modifiées, CV analysés depuis le dernier calcul : classement refait, au plus toutes les 30 minutes.
   const dernierChangement = Math.max(ficheModifiee, profilModifie);

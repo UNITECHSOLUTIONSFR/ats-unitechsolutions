@@ -20,10 +20,10 @@ import { textesCV } from "./v3-reference";
 export const REGLAGES_V3IA = {
   /** Écart de proximité de métier toléré sous les meilleurs profils de la mission pour être candidat. */
   ecartCandidats: 0.1,
-  candidatsMax: 150,
+  candidatsMax: 2000, // pas de plafond pratique : tous les profils du bon métier (décision du 24/11/2026)
   /** Note sur le résumé à partir de laquelle le CV complet est relu. */
-  seuilRelecture: 55,
-  relecturesMax: 20,
+  seuilRelecture: 60,
+  relecturesMax: 1000, // pas de plafond : tous ceux notés au moins 60 sur leur résumé
   /** Note après relecture complète à partir de laquelle le profil est affiché (mesuré le 23/11/2026 : 79 % de bons profils). */
   seuilAffichage: 75,
   parAppelResumes: 10,

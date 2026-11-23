@@ -29,7 +29,9 @@ export const MODELES = {
  * Empreintes de sens (matching) : service Voyage AI, modèle multilingue (choisi le 17/11/2026 : meilleur service prêt à
  * l'emploi pour le français). Clé VOYAGE_API_KEY (Vercel). 200 millions de jetons gratuits, puis 0,12 $ par million.
  */
-export const EMPREINTES = { modele: "voyage-4-large", dimension: 1024, tarifParMillion: 0.12 } as const;
+// Coût compté à 0 tant que le quota gratuit (200 millions de jetons) n'est pas épuisé : ≈ 7 millions utilisés au 24/11/2026.
+// Les jetons restent comptés (ai_usage.tokens_entree) pour suivre le quota ; repasser à 0.12 s'il est un jour dépassé.
+export const EMPREINTES = { modele: "voyage-4-large", dimension: 1024, tarifParMillion: 0, quotaGratuitJetons: 200_000_000 } as const;
 
 export const MAX_TOKENS = {
   ficheCV: 4000, // CV longs : 1 500 coupait la réponse (fiche invalide → « lecture impossible »), constat du 19/11/2026
