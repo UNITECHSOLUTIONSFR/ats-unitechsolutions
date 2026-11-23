@@ -63,11 +63,13 @@ describe("Matching : sens + compétences, puis note de l'IA", () => {
     await classerMission(client, "m");
     expect(envois).toHaveLength(1); // déjà notés : aucun nouvel appel
   });
-  it("FinOps : relecture IA coupée (réglage absent ou faux) = aucun appel payant", async () => {
+  it("FinOps : relecture coupée = mission déjà notée jamais relue ; mission nouvelle lue une fois", async () => {
     const { client, tables } = base();
     tables.reglages = [];
     const avant = envois.length;
+    await classerMission(client, "m"); // mission sans aucune note : lue une fois
+    expect(envois.length).toBe(avant + 1);
     await classerMission(client, "m");
-    expect(envois.length).toBe(avant);
+    expect(envois.length).toBe(avant + 1);
   });
 });

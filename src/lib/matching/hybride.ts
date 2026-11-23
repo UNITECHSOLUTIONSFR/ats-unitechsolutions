@@ -128,7 +128,10 @@ async function notesCV(supabase: SupabaseClient, missionId: string, texteIA: str
   const { data: existants } = await supabase.from("avis_matching").select("consultant_id, note, raison, empreinte, detail").eq("mission_id", missionId).in("consultant_id", ids);
   for (const a of existants ?? []) if (a.empreinte === empreinte && a.note != null) notes.set(a.consultant_id, { note: a.note, raison: a.raison, detail: (a.detail as DetailIA | null) ?? null });
   const manquants = aLire.filter((l) => !notes.has(l.consultant_id));
-  if (!manquants.length || !(await lectureIAAutorisee(supabase)) || (await etatBudgetMois().catch(() => ({ depasse: true }))).depasse) return notes;
+  // FinOps : une mission nouvelle ou modifiée (aucune note pour son texte actuel) est lue une fois ; ensuite, les profils
+  // qui entrent dans la liste après une modification de fiche ne déclenchent plus de relecture payante.
+  const missionNouvelle = notes.size === 0;
+  if (!manquants.length || !(missionNouvelle || (await lectureIAAutorisee(supabase))) || (await etatBudgetMois().catch(() => ({ depasse: true }))).depasse) return notes;
   const cv = await textesCV(supabase, manquants);
   const exemples = await exemplesEquipe(supabase, missionId);
   const texteCriteres = [`Métier : ${criteres.metier.libelle}`, ...criteres.obligatoires.map((o) => `Obligatoire : ${o.critere} (${o.synonymes.slice(0, 6).join(", ")})`),
@@ -193,7 +196,7 @@ async function notesIA(supabase: SupabaseClient, missionId: string, texteIA: str
   for (const a of existants ?? []) if (a.empreinte === empreinte && a.note != null) notes.set(a.consultant_id, { note: a.note, raison: a.raison });
 
   const manquants = aLire.filter((l) => !notes.has(l.consultant_id));
-  if (!manquants.length || !(await lectureIAAutorisee(supabase)) || (await etatBudgetMois().catch(() => ({ depasse: true }))).depasse) return notes;
+  if (!manquants.length || !(notes.size === 0 || (await lectureIAAutorisee(supabase))) || (await etatBudgetMois().catch(() => ({ depasse: true }))).depasse) return notes;
   const profils = await textesProfils(supabase, manquants);
   const exemples = await exemplesEquipe(supabase, missionId);
   const usages: UsageIA[] = [];
