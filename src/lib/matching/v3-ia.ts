@@ -24,6 +24,8 @@ export const REGLAGES_V3IA = {
   /** Note sur le résumé à partir de laquelle le CV complet est relu. */
   seuilRelecture: 55,
   relecturesMax: 20,
+  /** Note après relecture complète à partir de laquelle le profil est affiché (mesuré le 23/11/2026 : 79 % de bons profils). */
+  seuilAffichage: 75,
   parAppelResumes: 10,
   parAppelComplets: 5,
 };
@@ -83,6 +85,8 @@ export async function classerMissionV3IA(supabase: SupabaseClient, missionId: st
   try {
     // 1. Résumés de tous les candidats.
     const resumes = await lireEtape(supabase, missionId, "resume", ids, cles, await textesDossiers(supabase, ids), mission, R.parAppelResumes, noterDossiers, "P", usages);
+    // Plafond IA atteint avant toute note : l'ancien classement reste affiché (rien n'est remplacé par une liste vide).
+    if (ids.length && !resumes.size) throw new Error("Plafond IA atteint ou IA indisponible : classement précédent gardé.");
     // 2. CV complets des mieux notés sur leur résumé.
     const retenus = [...resumes.entries()].filter(([, n]) => n.note >= R.seuilRelecture).sort((a, b) => b[1].note - a[1].note).slice(0, R.relecturesMax).map(([id]) => id);
     const complets = await lireEtape(supabase, missionId, "complet", retenus, cles, await textesCV(supabase, retenus), mission, R.parAppelComplets, noterCVComplets, "C", usages);
@@ -94,7 +98,8 @@ export async function classerMissionV3IA(supabase: SupabaseClient, missionId: st
       if (!c) continue;
       const comp = complets.get(l.consultant_id), resu = resumes.get(l.consultant_id);
       const n = comp ?? resu;
-      const note = comp ? (comp.bon ? Math.max(comp.note, 60) : Math.min(comp.note, 59)) : Math.min(resu?.note ?? 0, 55);
+      // Affiché (note ≥ 60 pour l'écran) seulement si la relecture complète donne au moins le seuil mesuré.
+      const note = comp ? (comp.note >= R.seuilAffichage ? comp.note : Math.min(comp.note, 59)) : Math.min(resu?.note ?? 0, 55);
       res.push({
         consultant_id: c.consultant_id, prenom: c.prenom, nom: c.nom, trigramme: c.trigramme, telephone_e164: c.telephone_e164, email: c.email,
         intitule_poste: c.intitule_poste, disponibilite: c.disponibilite, disponible_le: c.disponible_le, pdf_anonyme_url: c.pdf_anonyme_url,
