@@ -18,6 +18,7 @@ export const MODELES = {
   triCandidats: "claude-haiku-5-5", // ancien matching (remplacé le 17/11/2026 par noteCandidats)
   noteCandidats: "claude-haiku-5-5", // matching : note sur 100 et raison pour les 60 profils présélectionnés d'une mission
   criteresMission: "claude-haiku-5-5", // matching v2 : métier et critères obligatoires d'une mission (avec synonymes)
+  noteCVComplet: "claude-haiku-5-5", // matching v3 : relecture complète des profils retenus par les résumés
   noteDossiers: "claude-haiku-5-5", // matching v3 : note des parcours résumés du bon métier (≈ 0,01 $ par mission)
   experiencesCV: "claude-haiku-5-5", // matching v3 : CV découpé en expériences, une seule fois par CV (lot de nuit)
   reference: "claude-sonnet-5-5", // matching v3 : vérification de la qualité (lecture complète des CV, une fois, en lot)
@@ -44,7 +45,8 @@ export const MAX_TOKENS = {
   triCandidats: 3500, // 30 avis courts
   noteCandidats: 3500, // 30 notes et raisons courtes par appel (deux appels par mission)
   criteresMission: 900,
-  noteDossiers: 12000, // 20 parcours par appel : note, raison, analyse courte
+  noteCVComplet: 6000, // 5 CV complets par appel
+  noteDossiers: 9000, // 10 parcours par appel : note, raison, analyse courte (20 par appel coupait des réponses)
   experiencesCV: 4000, // 20 expériences au plus, 500 caractères de responsabilités chacune
   reference: 3000, // 8 CV par appel : bon / pas bon, note et raison courte
   noteCV: 5000, // 4 CV complets par appel : note, raison, récapitulatif et analyse point par point pour chacun

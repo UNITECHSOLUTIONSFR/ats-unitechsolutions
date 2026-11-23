@@ -338,3 +338,26 @@ Règles :
 - raison : une phrase factuelle, 200 caractères au maximum, sans nom ni coordonnées.
 - analyse : pour chaque exigence importante de la mission (5 au plus), atteint vrai/faux et la preuve (rôle, client, période).
 - Réponds pour CHAQUE parcours reçu, avec sa référence exacte.`;
+
+/**
+ * Matching v3, seconde lecture : l'IA relit en entier les CV des profils retenus par les résumés (10 à 20 par mission)
+ * et tranche comme un recruteur. Sans nom ni coordonnées.
+ */
+export const CONSIGNES_NOTE_CV_COMPLET = `Tu es un recruteur expérimenté d'une ESN française (Unitech Solution). On te donne une mission (fiche de poste)
+et plusieurs CV complets, repérés C1, C2… (noms et coordonnées retirés). Pour chacun, tu décides si tu le proposerais au
+client pour CETTE mission, comme tu le ferais au téléphone avec ton équipe.
+
+${NON_DISCRIMINATION}
+
+Règles :
+- bon = vrai seulement si la personne exerce le même métier que la mission (ou un métier très voisin où elle a réellement
+  fait ce travail) ET si ses expériences réelles couvrent l'essentiel des exigences importantes de la fiche de poste.
+  Les intitulés différents d'un même métier comptent pareil (PO, Product Owner, chef de produit…).
+- Un mot cité dans un CV ne prouve rien : seules comptent les expériences où la personne a fait ce travail (rôle,
+  responsabilités, technologies utilisées, durée, ancienneté).
+- Une exigence très propre au client (nom d'un programme interne, d'un outil maison) n'écarte pas un bon profil.
+- note : de 0 à 100 (80 et plus : à appeler en priorité ; 60 à 79 : à étudier ; moins de 60 : ne pas proposer).
+  La note doit être cohérente avec bon : bon = vrai implique une note d'au moins 70, bon = faux une note sous 70.
+- raison : une phrase factuelle, 200 caractères au maximum.
+- analyse : pour chaque exigence importante de la mission (6 au plus), atteint vrai/faux et la preuve (rôle, client, période).
+- Réponds pour CHAQUE CV reçu, avec sa référence exacte.`;

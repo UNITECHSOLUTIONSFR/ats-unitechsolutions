@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { envoyerLotNoteDossiers, envoyerLotReference, lireLotNoteDossiers, lireLotReference, type UsageIA } from "@/lib/ai";
+import { envoyerLotNoteCVComplets, envoyerLotNoteDossiers, envoyerLotReference, lireLotNoteCVComplets, lireLotNoteDossiers, lireLotReference, type UsageIA } from "@/lib/ai";
 import { enregistrerUsages } from "@/lib/ai/journal";
 import { MODELES } from "@/lib/ai/config";
 import { premiersV3, texteMissionIA, textesDossiers } from "./v3";
@@ -124,4 +124,85 @@ export async function avancerTestDossiers(supabase: SupabaseClient): Promise<str
   const lotId = await envoyerLotNoteDossiers(aEnvoyer);
   await supabase.from("reglages").upsert({ cle: "test_dossiers", valeur: { etat: "envoyee", lot: lotId, requetes } });
   return `test envoyé (${aEnvoyer.length} requêtes)`;
+}
+
+/**
+ * Test n° 2 (une fois) : 1) résumés notés par l'IA pour TOUS les profils jugés (10 par appel, sans réponse coupée) ;
+ * 2) CV complets relus pour les profils notés au moins 55 sur leur résumé (20 au plus par mission, 5 par appel).
+ * Réglage « test_v3b » = { etat: "demandee" }. Quelques centimes.
+ */
+type Requetes = Record<string, { mission: string; refs: Record<string, string> }>;
+interface EtatTest2 { etat: string; lot?: string; requetes?: Requetes; resumes?: Record<string, Record<string, number>>; complets?: Record<string, Record<string, { note: number; bon: boolean }>> }
+
+function lireNotes(resultats: { id: string; donnees: { notes: { ref: string; note: number; bon: boolean }[] } | null }[], requetes: Requetes) {
+  const out: Record<string, Record<string, { note: number; bon: boolean }>> = {};
+  for (const res of resultats) {
+    const req = requetes[res.id];
+    if (!req || !res.donnees) continue;
+    for (const n of res.donnees.notes) {
+      const id = req.refs[(n.ref.match(/(\d+)/)?.[1]) ?? ""];
+      if (id) (out[req.mission] ??= {})[id] = { note: Math.round(n.note), bon: n.bon };
+    }
+  }
+  return out;
+}
+
+export async function avancerTestV3b(supabase: SupabaseClient): Promise<string> {
+  const { data: r } = await supabase.from("reglages").select("valeur").eq("cle", "test_v3b").maybeSingle();
+  const etat = (r?.valeur ?? null) as EtatTest2 | null;
+  if (!etat || etat.etat === "terminee") return "rien";
+  const sauver = async (v: EtatTest2) => { const { error } = await supabase.from("reglages").upsert({ cle: "test_v3b", valeur: v }); if (error) throw new Error(error.message); };
+  if (etat.etat === "resumes_envoyes" && etat.lot) {
+    const lot = await lireLotNoteDossiers(etat.lot);
+    if (!lot.termine) return "résumés en cours";
+    const notes = lireNotes(lot.resultats, etat.requetes ?? {});
+    const resumes = Object.fromEntries(Object.entries(notes).map(([m, x]) => [m, Object.fromEntries(Object.entries(x).map(([c, v]) => [c, v.note]))]));
+    // Seconde lecture : CV complets des profils notés au moins 55 sur leur résumé.
+    const requetes: Requetes = {};
+    const aEnvoyer: { id: string; texte: string }[] = [];
+    for (const [m, x] of Object.entries(resumes)) {
+      const ids = Object.entries(x).filter(([, n]) => n >= 55).sort((a, b) => b[1] - a[1]).slice(0, 20).map(([c]) => c);
+      if (!ids.length) continue;
+      const [mission, cv] = await Promise.all([texteMissionIA(supabase, m), textesCV(supabase, ids)]);
+      const lisibles = ids.filter((c) => (cv.get(c) ?? "").length > 200);
+      for (let i = 0; i < lisibles.length; i += 5) {
+        const lotIds = lisibles.slice(i, i + 5);
+        const id = `${m.slice(0, 8)}-c${i / 5}`;
+        requetes[id] = { mission: m, refs: Object.fromEntries(lotIds.map((c, k) => [String(k + 1), c])) };
+        aEnvoyer.push({ id, texte: `${mission}\n\n${lotIds.map((c, k) => `===== CV C${k + 1} =====\n${cv.get(c)}`).join("\n\n")}` });
+      }
+    }
+    await enregistrerUsages(lot.resultats.flatMap((x) => (x.usage ? [x.usage] : [])), "test_v3b:resumes").catch(() => undefined);
+    if (!aEnvoyer.length) { await sauver({ etat: "terminee", resumes, complets: {} }); return "aucun profil à relire"; }
+    const lotId = await envoyerLotNoteCVComplets(aEnvoyer);
+    await sauver({ etat: "complets_envoyes", lot: lotId, requetes, resumes });
+    return `relecture complète envoyée (${aEnvoyer.length} requêtes)`;
+  }
+  if (etat.etat === "complets_envoyes" && etat.lot) {
+    const lot = await lireLotNoteCVComplets(etat.lot);
+    if (!lot.termine) return "relecture complète en cours";
+    const complets = lireNotes(lot.resultats, etat.requetes ?? {});
+    await sauver({ etat: "terminee", resumes: etat.resumes, complets });
+    await enregistrerUsages(lot.resultats.flatMap((x) => (x.usage ? [x.usage] : [])), "test_v3b:complets").catch(() => undefined);
+    return "test v3b rangé";
+  }
+  // Demandé : résumés de tous les profils jugés, 10 par appel.
+  const { data: juges } = await supabase.from("jugements_reference").select("mission_id, consultant_id").limit(5000);
+  const parMission = new Map<string, string[]>();
+  for (const j of juges ?? []) parMission.set(j.mission_id, [...(parMission.get(j.mission_id) ?? []), j.consultant_id]);
+  const requetes: Requetes = {};
+  const aEnvoyer: { id: string; texte: string }[] = [];
+  for (const [m, ids] of parMission) {
+    const [mission, dossiers] = await Promise.all([texteMissionIA(supabase, m), textesDossiers(supabase, ids)]);
+    const avec = ids.filter((id) => dossiers.has(id));
+    for (let i = 0; i < avec.length; i += 10) {
+      const lotIds = avec.slice(i, i + 10);
+      const id = `${m.slice(0, 8)}-r${i / 10}`;
+      requetes[id] = { mission: m, refs: Object.fromEntries(lotIds.map((c, k) => [String(k + 1), c])) };
+      aEnvoyer.push({ id, texte: `${mission}\n\nPARCOURS :\n${lotIds.map((c, k) => `===== P${k + 1} =====\n${dossiers.get(c)}`).join("\n\n")}` });
+    }
+  }
+  const lotId = await envoyerLotNoteDossiers(aEnvoyer);
+  await sauver({ etat: "resumes_envoyes", lot: lotId, requetes });
+  return `résumés envoyés (${aEnvoyer.length} requêtes)`;
 }

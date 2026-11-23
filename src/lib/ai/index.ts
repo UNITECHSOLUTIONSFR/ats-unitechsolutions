@@ -8,7 +8,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
 import { LONGUEUR_MAX_TEXTE, MAX_TOKENS, MODELES, estimerCoutUSD } from "./config";
-import { CONSIGNES_NOTE_DOSSIERS, CONSIGNES_REFERENCE, CONSIGNES_EXPERIENCES_CV, CONSIGNES_CRITERES_MISSION, CONSIGNES_NOTE_CANDIDATS, CONSIGNES_NOTE_CV, CONSIGNES_TRI_CANDIDATS } from "./consignes";
+import { CONSIGNES_NOTE_CV_COMPLET, CONSIGNES_NOTE_DOSSIERS, CONSIGNES_REFERENCE, CONSIGNES_EXPERIENCES_CV, CONSIGNES_CRITERES_MISSION, CONSIGNES_NOTE_CANDIDATS, CONSIGNES_NOTE_CV, CONSIGNES_TRI_CANDIDATS } from "./consignes";
 import { CONSIGNES_ADEQUATION, CONSIGNES_AVIS_MISSION, CONSIGNES_CV_UNITECH, CONSIGNES_MISSION, CONSIGNES_PROFIL_CV, CONSIGNES_RECHERCHE, CONSIGNES_REPONSE_DISPO } from "./consignes";
 import {
   PROMPT_VERSION,
@@ -49,7 +49,7 @@ export { PROMPT_VERSION };
 export type { ExperiencesCV, CriteresMission, ExigencesMission, ProfilCV, ReponseDisponibilite, CVStructure, Adequation, CriteresRecherche, AvisMission };
 
 export interface UsageIA {
-  usage: "fiche_cv" | "mission" | "tri_email" | "analyse_approfondie" | "reponse_disponibilite" | "lecture_scan" | "cv_unitech" | "adequation" | "recherche" | "avis_mission" | "tri_candidats" | "note_candidats" | "criteres_mission" | "note_cv" | "empreintes" | "experiences_cv" | "reference_matching" | "note_dossiers";
+  usage: "fiche_cv" | "mission" | "tri_email" | "analyse_approfondie" | "reponse_disponibilite" | "lecture_scan" | "cv_unitech" | "adequation" | "recherche" | "avis_mission" | "tri_candidats" | "note_candidats" | "criteres_mission" | "note_cv" | "empreintes" | "experiences_cv" | "reference_matching" | "note_dossiers" | "note_cv_complet";
   modele: string;
   mode: "standard" | "batch";
   tokens_entree: number;
@@ -419,6 +419,34 @@ export async function lireLotNoteDossiers(idLot: string): Promise<{ termine: boo
     if (r.result.type !== "succeeded") { resultats.push({ id: r.custom_id, donnees: null, usage: null }); continue; }
     const m = r.result.message;
     resultats.push({ id: r.custom_id, donnees: lireJSON(m, SchemaNoteDossiers), usage: usageDepuisReponse(m.usage, MODELES.noteDossiers, "note_dossiers", "batch") });
+  }
+  return { termine: true, resultats };
+}
+
+/** Matching v3, seconde lecture : CV complets des profils retenus (5 par appel). */
+export function parametresNoteCVComplet(texte: string) {
+  return parametresExtraction(MODELES.noteCVComplet, CONSIGNES_NOTE_CV_COMPLET, SchemaNoteDossiers, texte, MAX_TOKENS.noteCVComplet);
+}
+
+export async function noterCVComplets(texte: string): Promise<ResultatIA<NoteDossiers>> {
+  const r = await appeler(MODELES.noteCVComplet, CONSIGNES_NOTE_CV_COMPLET, SchemaNoteDossiers, texte, MAX_TOKENS.noteCVComplet, "note_cv_complet");
+  if (!r.donnees) throw Object.assign(new ErreurIA("Notes des CV impossibles à produire."), { usages: [r.usage] });
+  return { donnees: r.donnees, modele: MODELES.noteCVComplet, promptVersion: PROMPT_VERSION, usages: [r.usage] };
+}
+
+export async function envoyerLotNoteCVComplets(requetes: { id: string; texte: string }[]): Promise<string> {
+  const lot = await anthropic().messages.batches.create({ requests: requetes.map((r) => ({ custom_id: r.id, params: parametresNoteCVComplet(r.texte) })) });
+  return lot.id;
+}
+
+export async function lireLotNoteCVComplets(idLot: string) {
+  const lot = await anthropic().messages.batches.retrieve(idLot);
+  if (lot.processing_status !== "ended") return { termine: false, resultats: [] as { id: string; donnees: NoteDossiers | null; usage: UsageIA | null }[] };
+  const resultats: { id: string; donnees: NoteDossiers | null; usage: UsageIA | null }[] = [];
+  for await (const r of await anthropic().messages.batches.results(idLot)) {
+    if (r.result.type !== "succeeded") { resultats.push({ id: r.custom_id, donnees: null, usage: null }); continue; }
+    const m = r.result.message;
+    resultats.push({ id: r.custom_id, donnees: lireJSON(m, SchemaNoteDossiers), usage: usageDepuisReponse(m.usage, MODELES.noteCVComplet, "note_cv_complet", "batch") });
   }
   return { termine: true, resultats };
 }

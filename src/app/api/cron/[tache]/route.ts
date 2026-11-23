@@ -30,13 +30,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const { avancerDecoupage, empreintesV3 } = await import("@/lib/matching/v3");
     const decoupage = await avancerDecoupage(clientSupabaseAdmin()).catch((e) => ({ etat: `erreur : ${(e as Error).message.slice(0, 200)}` }));
     const empreintesExp = await empreintesV3(clientSupabaseAdmin(), 70_000).catch((e) => ({ erreur: (e as Error).message.slice(0, 200) }));
-    const { avancerReference, avancerTestDossiers } = await import("@/lib/matching/v3-reference");
+    const { avancerReference, avancerTestDossiers, avancerTestV3b } = await import("@/lib/matching/v3-reference");
     const reference = await avancerReference(clientSupabaseAdmin()).catch((e) => `erreur : ${(e as Error).message.slice(0, 200)}`);
     const testDossiers = await avancerTestDossiers(clientSupabaseAdmin()).catch((e) => `erreur : ${(e as Error).message.slice(0, 200)}`);
+    const testV3b = await avancerTestV3b(clientSupabaseAdmin()).catch((e) => `erreur : ${(e as Error).message.slice(0, 200)}`);
     const classements = await recalculerEnAttente(clientSupabaseAdmin(), 120_000);
     // Matching v2 pas encore activé : son aperçu est calculé à côté avec le temps qui reste (sans changer les écrans).
     const apercus = classements.restants === 0 ? await calculerApercus(clientSupabaseAdmin(), 80_000).catch((e) => ({ erreur: (e as Error).message })) : "plus tard";
-    return NextResponse.json({ classements, projection, apercus, decoupage, empreintesExp, reference, testDossiers });
+    return NextResponse.json({ classements, projection, apercus, decoupage, empreintesExp, reference, testDossiers, testV3b });
   }
   if (!(tache in TACHES)) return new NextResponse("Tâche inconnue", { status: 404 });
   const supabase = clientSupabaseAdmin();
