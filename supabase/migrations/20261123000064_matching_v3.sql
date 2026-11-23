@@ -139,14 +139,16 @@ as $$
       xp.role, xp.entreprise, xp.debut, xp.fin, xp.duree_mois
     from xp cross join ex
     order by xp.consultant_id, ex.id, 6 desc
+  ),
+  agg as (
+    select b.consultant_id, jsonb_agg(jsonb_build_object('ordre', b.ordre, 'libelle', b.libelle, 'poids', b.poids, 's', round(b.s::numeric, 3),
+      'role', b.role, 'entreprise', b.entreprise, 'debut', b.debut, 'fin', b.fin, 'duree_mois', b.duree_mois) order by b.ordre) ex
+    from best b group by b.consultant_id
   )
-  select d.consultant_id, coalesce(met.s, 0)::real, met.role,
-    coalesce((select jsonb_agg(jsonb_build_object('ordre', b.ordre, 'libelle', b.libelle, 'poids', b.poids, 's', round(b.s::numeric, 3),
-      'role', b.role, 'entreprise', b.entreprise, 'debut', b.debut, 'fin', b.fin, 'duree_mois', b.duree_mois) order by b.ordre)
-      from best b where b.consultant_id = d.consultant_id), '[]'::jsonb),
-    d.annees_total
+  select d.consultant_id, coalesce(met.s, 0)::real, met.role, coalesce(agg.ex, '[]'::jsonb), d.annees_total
   from dossiers_cv d
   join acces on acces.ok
+  left join agg on agg.consultant_id = d.consultant_id
   left join met on met.consultant_id = d.consultant_id;
 $$;
 revoke all on function public.classement_v3(uuid) from public, anon;
