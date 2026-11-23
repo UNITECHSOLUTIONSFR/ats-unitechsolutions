@@ -69,6 +69,19 @@ export async function graphTeleverser(driveId: string, cheminFichier: string, co
   return (await r.json()) as { id: string; webUrl: string; name: string };
 }
 
+/**
+ * Supprime un fichier TEMPORAIRE créé par l'outil pour une conversion en PDF. Refuse tout fichier qui n'est pas dans le
+ * dossier des conversions temporaires (aucune autre suppression dans SharePoint).
+ */
+export async function graphSupprimerTemporaire(driveId: string, itemId: string, dossierAutorise: string, fetchFn: typeof fetch = fetch): Promise<void> {
+  const item = await graphGet<{ parentReference?: { path?: string } }>(`drives/${driveId}/items/${itemId}?$select=parentReference`, { fetchFn });
+  const parent = decodeURIComponent(item.parentReference?.path ?? "");
+  if (!parent.endsWith(`root:/${dossierAutorise}`)) throw new Error("Suppression refusée : fichier hors du dossier des conversions temporaires.");
+  const jeton = await obtenirJeton(fetchFn);
+  const r = await fetchFn(`${GRAPH}/drives/${driveId}/items/${itemId}`, { method: "DELETE", headers: { Authorization: `Bearer ${jeton}` } });
+  if (!r.ok && r.status !== 404) throw new Error(`Graph ${r.status} (suppression du fichier temporaire)`);
+}
+
 /** Appel GET Graph avec reprise automatique en cas de limitation (429/503). */
 export async function graphGet<T>(chemin: string, options: { fetchFn?: typeof fetch; brut?: boolean } = {}): Promise<T> {
   const fetchFn = options.fetchFn ?? fetch;

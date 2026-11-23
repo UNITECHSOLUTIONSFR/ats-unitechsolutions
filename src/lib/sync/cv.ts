@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { analyserNomFichier, listerFichiersCV, trouverBibliotheque, type FichierCV } from "@/lib/sharepoint";
 import { normaliserNomPersonne } from "@/lib/metier/texte";
+import { fichesNomSouple } from "@/lib/metier/rapprochement-nom";
 
 export interface BilanSynchroCV {
   fichiers: number;
@@ -90,29 +91,42 @@ export async function synchroniserCV(supabase: SupabaseClient): Promise<BilanSyn
     const k = `${p.metier_dossier}|${t}`;
     pdfsParCle.set(k, [...(pdfsParCle.get(k) ?? []), p]);
   }
-  const fiches = await tous<{ id: string; prenom: string; nom: string }>(supabase, "consultants", "id, prenom, nom");
+  const fiches = await tous<{ id: string; prenom: string; nom: string; source?: string }>(supabase, "consultants", "id, prenom, nom, source");
+  const creeesDepuisSharePoint = new Set(fiches.filter((f) => f.source === "sharepoint").map((f) => f.id));
   const parNom = new Map<string, string[]>();
   for (const c of fiches) {
     const k = normaliserNomPersonne(c.prenom, c.nom);
     parNom.set(k, [...(parNom.get(k) ?? []), c.id]);
   }
   const fichierParItem = new Map(fichiers.map((f) => [f.id, f]));
+  // CV Unitech produits par l'outil : rattachés à la fiche pour laquelle ils ont été faits, quel que soit le nom du fichier.
+  const { data: generes } = await supabase.from("cv_unitech_generes").select("consultant_id, word_item_id").not("word_item_id", "is", null);
+  const ficheDuGenere = new Map((generes ?? []).map((g) => [g.word_item_id as string, g.consultant_id as string]));
 
   for (const w of aJour.filter((d) => d.type === "word_nominatif")) {
     const a = analyserNomFichier(w.nom_fichier);
     const maj: Record<string, unknown> = {};
 
     let consultantId = w.consultant_id;
+    const genere = ficheDuGenere.get(w.sharepoint_item_id);
+    // Jamais retiré d'une fiche choisie par l'équipe : seulement d'une fiche vide ou créée automatiquement depuis SharePoint.
+    if (genere && genere !== consultantId && (!consultantId || creeesDepuisSharePoint.has(consultantId))) { consultantId = genere; maj.consultant_id = genere; bilan.fichesReliees++; }
     if (!consultantId && a.prenom && a.nom) {
-      const ids = parNom.get(normaliserNomPersonne(a.prenom, a.nom)) ?? [];
+      let ids = parNom.get(normaliserNomPersonne(a.prenom, a.nom)) ?? [];
+      // Nom écrit un peu autrement (particule, nom composé) : rattaché si une seule fiche convient ; plusieurs = pas de création.
+      const souples = ids.length ? [] : fichesNomSouple(a.prenom, a.nom, fiches);
+      if (!ids.length && souples.length === 1) ids = souples;
       if (ids.length === 1) { consultantId = ids[0]; bilan.fichesReliees++; }
-      else if (!ids.length && miseEnService && estPosterieur(fichierParItem.get(w.sharepoint_item_id), miseEnService)) {
+      else if (!ids.length && !souples.length && miseEnService && estPosterieur(fichierParItem.get(w.sharepoint_item_id), miseEnService)) {
         const { data: cree } = await supabase.from("consultants").insert({
           prenom: a.prenom, nom: a.nom, trigramme: a.trigramme, intitule_poste: a.fonction, metier: w.metier_dossier, source: "sharepoint", statut: "candidat",
         }).select("id").single();
         if (cree) {
           consultantId = cree.id;
           bilan.fichesCreees++;
+          // Un autre fichier au même nom trouvé la même nuit rejoint cette fiche (jamais une fiche par fichier).
+          parNom.set(normaliserNomPersonne(a.prenom, a.nom), [cree.id]);
+          fiches.push({ id: cree.id, prenom: a.prenom, nom: a.nom });
           await supabase.from("alertes").insert({ type: "autre", consultant_id: cree.id, document_id: w.id, details: { motif: "coordonnées à compléter (fiche créée depuis un CV SharePoint)" } });
         }
       }

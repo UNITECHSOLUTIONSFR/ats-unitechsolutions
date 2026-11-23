@@ -1,12 +1,45 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { redigerAdequation, structurerCVUnitech, type UsageIA } from "@/lib/ai";
 import { enregistrerUsages } from "@/lib/ai/journal";
 import { sansAccents } from "@/lib/metier/texte";
-import { graphGet, graphTeleverser, listerEnfants, SHAREPOINT, trouverBibliotheque } from "@/lib/sharepoint";
+import { graphGet, graphSupprimerTemporaire, graphTeleverser, listerEnfants, SHAREPOINT, trouverBibliotheque } from "@/lib/sharepoint";
+import { clientSupabaseAdmin } from "@/lib/supabase/admin";
 import { genererDocx, nomsFichiers, type CVUnitech } from "./generation";
+
+/**
+ * Rangement des CV Unitech (décision du 23/11/2026) : dans SharePoint, UN SEUL CV par consultant, le Word de base (fait par
+ * l'équipe, ou à défaut le premier CV Unitech généré) et son premier PDF. Tous les CV générés ensuite (adéquations à d'autres
+ * missions, Word et PDF) restent dans l'outil (espace privé « cv-adequation ») et se téléchargent depuis la fiche.
+ */
+export const ESPACE_ADEQUATIONS = "cv-adequation";
+/** Dossier SharePoint (hors des dossiers de CV) où un Word de l'outil est posé quelques secondes, le temps de sa conversion en PDF. */
+export const DOSSIER_CONVERSIONS = "General/0 - Recrutement/Sauvegardes ATS/Conversions temporaires";
+const TYPE_WORD = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+/** Le consultant a-t-il déjà son CV de base dans SharePoint (Word de l'équipe, ou CV Unitech déjà déposé) ? */
+export async function aUnCVDeBase(supabase: SupabaseClient, consultantId: string): Promise<boolean> {
+  const [{ count: words }, { count: generes }] = await Promise.all([
+    supabase.from("documents").select("id", { count: "exact", head: true }).eq("consultant_id", consultantId).eq("type", "word_nominatif").eq("supprime_sharepoint", false),
+    supabase.from("cv_unitech_generes").select("id", { count: "exact", head: true }).eq("consultant_id", consultantId).eq("stockage", "sharepoint")
+      .not("word_item_id", "is", null).not("dossier", "ilike", "%Essais CV Unitech%"),
+  ]);
+  return (words ?? 0) + (generes ?? 0) > 0;
+}
+
+/** Conversion Word → PDF par Microsoft (rendu identique au Word) d'un fichier gardé dans l'outil : posé, converti, retiré. */
+async function convertirEnPDF(word: Buffer): Promise<Buffer> {
+  const driveId = await trouverBibliotheque();
+  const temp = await graphTeleverser(driveId, `${DOSSIER_CONVERSIONS}/${randomUUID()}.docx`, word, TYPE_WORD, fetch, "rename");
+  try {
+    return await graphGet<Buffer>(`drives/${driveId}/items/${temp.id}/content?format=pdf`, { brut: true });
+  } finally {
+    await graphSupprimerTemporaire(driveId, temp.id, DOSSIER_CONVERSIONS).catch((e) => console.error("Conversion PDF :", (e as Error).message));
+  }
+}
 
 /** Dossier où sont déposés les essais (validation du rendu avant de généraliser). */
 export const DOSSIER_ESSAIS = "General/0 - Recrutement/Sauvegardes ATS/Essais CV Unitech - version 2";
@@ -93,23 +126,41 @@ export async function genererCVUnitech(supabase: SupabaseClient, consultantId: s
     const gabarit = await readFile(path.join(process.cwd(), "src/lib/cv-unitech/gabarit-unitech.docx"));
     const docx = await genererDocx(gabarit, contenu);
 
-    const driveId = await trouverBibliotheque();
-    const dossier = options.essai ? DOSSIER_ESSAIS : `${SHAREPOINT.dossierCV}/${await dossierMetier(driveId, c.intitule_poste ?? cv.donnees.titre, source.metier_dossier)}`;
     const noms = nomsFichiers(c.prenom === "—" ? "" : c.prenom, c.nom, c.trigramme, cv.donnees.titre, suffixe);
-    // Dépôt par chemin : le dossier métier est créé par SharePoint s'il n'existe pas encore.
-    const word = await graphTeleverser(driveId, `${dossier}/${noms.word}`, docx, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", fetch, "rename");
     const coutUSD = usages.reduce((s, u) => s + u.cout_estime_usd, 0);
-    // Gardé dans l'outil : la fiche et la mission rouvrent ce Word, et en produisent le PDF quand l'équipe l'a relu.
-    const { data: ligne } = await supabase.from("cv_unitech_generes").insert({
-      consultant_id: consultantId, mission_id: options.missionId ?? null, word_nom: word.name, word_url: word.webUrl,
-      drive_id: driveId, word_item_id: word.id, pdf_nom_prevu: noms.pdf, dossier, cout_usd: coutUSD, par: options.par ?? null,
-    }).select("id").single();
+    let resultat: { id: string; word: { nom: string; url: string }; dossier: string };
+    if (!options.essai && (await aUnCVDeBase(supabase, consultantId))) {
+      // CV de base déjà dans SharePoint : ce CV (adéquation) reste dans l'outil.
+      const id = randomUUID();
+      const chemin = `${consultantId}/${id}.docx`;
+      const { error: e } = await clientSupabaseAdmin().storage.from(ESPACE_ADEQUATIONS).upload(chemin, docx, { contentType: TYPE_WORD, upsert: false });
+      if (e) throw new Error(`Enregistrement du Word dans l'outil impossible : ${e.message}`);
+      const url = `/api/cv-unitech/${id}/word`;
+      const { error } = await supabase.from("cv_unitech_generes").insert({
+        id, consultant_id: consultantId, mission_id: options.missionId ?? null, word_nom: noms.word, word_url: url, stockage: "outil", word_chemin: chemin,
+        pdf_nom_prevu: noms.pdf, dossier: "Plateforme (CV d'adéquation)", cout_usd: coutUSD, par: options.par ?? null,
+      });
+      if (error) throw new Error(error.message);
+      resultat = { id, word: { nom: noms.word, url }, dossier: "Plateforme (CV d'adéquation)" };
+    } else {
+      // Pas encore de CV de base : celui-ci le devient, déposé dans le dossier métier de SharePoint.
+      const driveId = await trouverBibliotheque();
+      const dossier = options.essai ? DOSSIER_ESSAIS : `${SHAREPOINT.dossierCV}/${await dossierMetier(driveId, c.intitule_poste ?? cv.donnees.titre, source.metier_dossier)}`;
+      // Dépôt par chemin : le dossier métier est créé par SharePoint s'il n'existe pas encore.
+      const word = await graphTeleverser(driveId, `${dossier}/${noms.word}`, docx, TYPE_WORD, fetch, "rename");
+      // Gardé dans l'outil : la fiche et la mission rouvrent ce Word, et en produisent le PDF quand l'équipe l'a relu.
+      const { data: ligne } = await supabase.from("cv_unitech_generes").insert({
+        consultant_id: consultantId, mission_id: options.missionId ?? null, word_nom: word.name, word_url: word.webUrl, stockage: "sharepoint",
+        drive_id: driveId, word_item_id: word.id, pdf_nom_prevu: noms.pdf, dossier, cout_usd: coutUSD, par: options.par ?? null,
+      }).select("id").single();
+      resultat = { id: ligne?.id ?? "", word: { nom: word.name, url: word.webUrl }, dossier };
+    }
     // Contrôle : le Word doit reprendre au moins autant de tâches que le CV d'origine en liste (à 20 % près).
     const puces = compterPuces(source.texte_extrait);
     const taches = cv.donnees.experiences.reduce((t, e) => t + e.missions.length, 0);
     const avertissement = puces >= 6 && taches < puces * 0.8
       ? `Le Word reprend ${taches} tâches pour environ ${puces} lignes listées dans le CV d'origine : vérifiez les missions avant envoi.` : undefined;
-    return { id: ligne?.id ?? "", word: { nom: word.name, url: word.webUrl }, dossier, coutUSD, avertissement };
+    return { ...resultat, coutUSD, avertissement };
   } finally {
     await enregistrerUsages(usages, `cv_unitech:${consultantId}`);
   }
@@ -145,7 +196,21 @@ export async function deposerCVEmails(supabase: SupabaseClient, limite = 10) {
  * (rendu identique au Word), déposée à côté du Word. Un PDF déjà produit pour ce Word est remplacé par la nouvelle version.
  */
 export async function genererPDFUnitech(supabase: SupabaseClient, generationId: string): Promise<ResultatPDFUnitech> {
-  const { data: g } = await supabase.from("cv_unitech_generes").select("drive_id, word_item_id, word_nom, dossier, pdf_nom_prevu, pdf_nom").eq("id", generationId).single();
+  const { data: g } = await supabase.from("cv_unitech_generes").select("drive_id, word_item_id, word_nom, dossier, pdf_nom_prevu, pdf_nom, stockage, word_chemin").eq("id", generationId).single();
+  if (g?.stockage === "outil") {
+    // CV d'adéquation : PDF produit à partir du Word gardé dans l'outil, et gardé dans l'outil lui aussi.
+    const espace = clientSupabaseAdmin().storage.from(ESPACE_ADEQUATIONS);
+    const { data: f, error } = await espace.download(g.word_chemin as string);
+    if (error || !f) throw new Error("Word introuvable dans l'outil : régénérez le CV.");
+    const pdf = await convertirEnPDF(Buffer.from(await f.arrayBuffer()));
+    const chemin = (g.word_chemin as string).replace(/\.docx$/i, ".pdf");
+    const { error: e } = await espace.upload(chemin, pdf, { contentType: "application/pdf", upsert: true });
+    if (e) throw new Error(`Enregistrement du PDF impossible : ${e.message}`);
+    const nom = (g.pdf_nom_prevu as string | null) ?? (g.word_nom as string).replace(/\.docx$/i, ".pdf");
+    const url = `/api/cv-unitech/${generationId}/pdf`;
+    await supabase.from("cv_unitech_generes").update({ pdf_nom: nom, pdf_url: url, pdf_chemin: chemin, pdf_genere_le: new Date().toISOString() }).eq("id", generationId);
+    return { pdf: { nom, url } };
+  }
   if (!g?.word_item_id || !g.drive_id) throw new Error("Ce CV a été généré avant la séparation Word / PDF : régénérez le Word.");
   let itemId = g.word_item_id as string;
   // Word remplacé par un nouveau fichier du même nom (réenregistré) : retrouvé par son chemin.
@@ -178,7 +243,13 @@ export async function actualiserPDFUnitech(supabase: SupabaseClient, limite = 30
  * relié à la fiche, puis le PDF est refait à partir de ce nouveau Word.
  */
 export async function remplacerWordUnitech(supabase: SupabaseClient, generationId: string, contenu: Buffer): Promise<ResultatPDFUnitech & { word: { nom: string; url: string } }> {
-  const { data: g } = await supabase.from("cv_unitech_generes").select("drive_id, word_nom, dossier").eq("id", generationId).single();
+  const { data: g } = await supabase.from("cv_unitech_generes").select("drive_id, word_nom, dossier, stockage, word_chemin, word_url").eq("id", generationId).single();
+  if (g?.stockage === "outil") {
+    const { error } = await clientSupabaseAdmin().storage.from(ESPACE_ADEQUATIONS).upload(g.word_chemin as string, contenu, { contentType: TYPE_WORD, upsert: true });
+    if (error) throw new Error(`Remplacement du Word impossible : ${error.message}`);
+    const pdf = await genererPDFUnitech(supabase, generationId);
+    return { ...pdf, word: { nom: g.word_nom as string, url: g.word_url as string } };
+  }
   if (!g?.drive_id || !g.dossier || !g.word_nom) throw new Error("CV Unitech introuvable : générez d'abord le Word.");
   const word = await graphTeleverser(g.drive_id as string, `${g.dossier}/${g.word_nom}`, contenu,
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document", fetch, "replace");
