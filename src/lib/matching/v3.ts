@@ -48,13 +48,24 @@ export async function avancerDecoupage(supabase: SupabaseClient): Promise<{ etat
     if (!etat.termine) return { etat: "lot en cours", enCours: etat.enCours };
     const usages: UsageIA[] = [];
     let ranges = 0;
+    // Rangement en plusieurs passages si besoin (1 000 CV) : les CV déjà rangés depuis ce lot sont sautés.
+    const fait = new Set<string>();
+    for (let page = 0; ; page++) {
+      const { data: d } = await supabase.from("dossiers_cv").select("consultant_id, texte_hash").range(page * 1000, page * 1000 + 999);
+      for (const x of d ?? []) if (lot.textes[x.consultant_id]?.hash === x.texte_hash) fait.add(x.consultant_id as string);
+      if ((d ?? []).length < 1000) break;
+    }
+    const debut = Date.now();
+    let complet = true;
     for (const res of etat.resultats) {
       if (res.usage) usages.push(res.usage);
       const source = lot.textes[res.id];
-      if (!source) continue;
+      if (!source || fait.has(res.id)) continue;
+      if (Date.now() - debut > 150_000) { complet = false; continue; }
       await rangerDecoupage(supabase, res.id, source.document_id, source.hash, res.donnees).then(() => ranges++)
         .catch((e) => console.error("Découpage :", (e as Error).message));
     }
+    if (!complet) return { etat: "rangement en cours", ranges };
     await enregistrerUsages(usages, `experiences_cv:${lot.id}`).catch(() => undefined);
     await supabase.from("reglages").upsert({ cle: "lot_experiences_cv", valeur: null });
     return { etat: "lot rangé", ranges };
