@@ -151,7 +151,7 @@ export async function suivreProposition(formData: FormData) {
   const { utilisateur, supabase } = await exigerUtilisateur();
   const missionId = String(formData.get("mission_id"));
   const consultantId = String(formData.get("consultant_id"));
-  const statut = String(formData.get("statut") ?? "propose");
+  const statut = String(formData.get("statut") ?? "");
   if (!STATUTS_PROPOSITION.includes(statut as (typeof STATUTS_PROPOSITION)[number])) return;
   const score = formData.get("score") ? Number(formData.get("score")) : null;
   // Mise à jour directe si le profil est déjà suivi (cas le plus courant) ; sinon création, avec le détail du score
@@ -291,5 +291,21 @@ export async function enregistrerCriteres(formData: FormData) {
   }
   await supabase.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "modification", consultant_id: null, details: { criteres_mission: missionId } });
   await recalculerMission(missionId);
+  revalidatePath(`/missions/${missionId}`);
+}
+
+/**
+ * Retour de l'équipe sur un profil pour une mission (23/11/2026) : « bon profil » ou « pas pour cette mission ».
+ * Un second clic sur le même choix l'annule. Sert à mesurer et régler le matching ; aucune action extérieure.
+ */
+export async function donnerRetourMatching(formData: FormData) {
+  const { utilisateur, supabase } = await exigerUtilisateur();
+  const missionId = String(formData.get("mission_id"));
+  const consultantId = String(formData.get("consultant_id"));
+  const avis = String(formData.get("avis"));
+  if (avis !== "bon" && avis !== "pas") return;
+  const { data: deja } = await supabase.from("retours_matching").select("avis").match({ mission_id: missionId, consultant_id: consultantId }).maybeSingle();
+  if (deja?.avis === avis) await supabase.from("retours_matching").delete().match({ mission_id: missionId, consultant_id: consultantId });
+  else await supabase.from("retours_matching").upsert({ mission_id: missionId, consultant_id: consultantId, avis, par: utilisateur.id, updated_at: new Date().toISOString() });
   revalidatePath(`/missions/${missionId}`);
 }

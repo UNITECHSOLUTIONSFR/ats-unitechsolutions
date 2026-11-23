@@ -19,7 +19,7 @@ import type { AvisMission } from "@/lib/ai";
 
 // Génération des CV Unitech (IA + SharePoint) depuis cet écran : jusqu'à 2 minutes.
 export const maxDuration = 120;
-import { suivreProposition } from "@/lib/missions/actions";
+import { donnerRetourMatching, suivreProposition } from "@/lib/missions/actions";
 import ChoixStatut from "../statut";
 import { EtiquetteTrello } from "../trello";
 import { LIBELLE_STATUT } from "@/lib/missions/statuts";
@@ -40,14 +40,16 @@ export default async function PageMission({ params, searchParams }: { params: Pr
     .maybeSingle();
   if (!mission) notFound();
 
-  const [resume, { data: propositions }, responsables, { data: cvMission }, { data: avisExistants }, v2] = await Promise.all([
+  const [resume, { data: propositions }, responsables, { data: cvMission }, { data: avisExistants }, v2, { data: retours }] = await Promise.all([
     classementAAfficher(id), // rangé dans la base : lu sans calcul (recalculé en arrière-plan quand quelque chose change)
     supabase.from("propositions").select("consultant_id, statut").eq("mission_id", id),
     responsablesPossibles(supabase),
     supabase.from("cv_unitech_generes").select("id, consultant_id, word_url, pdf_url, created_at").eq("mission_id", id).order("created_at", { ascending: false }),
     supabase.from("avis_ia").select("consultant_id, contenu").eq("mission_id", id),
     matchingV2Actif(supabase),
+    supabase.from("retours_matching").select("consultant_id, avis").eq("mission_id", id),
   ]);
+  const retourParConsultant = new Map((retours ?? []).map((r) => [r.consultant_id as string, r.avis as "bon" | "pas"]));
   // Lancé en même temps que le reste de la page (au lieu d'après) : nombre de profils par compétence demandée.
   const possedeesP = ((mission.mission_competences ?? []) as unknown as { competence_id: string }[]).length
     ? supabase.rpc("profils_par_competence", { p_ids: ((mission.mission_competences ?? []) as unknown as { competence_id: string }[]).map((e) => e.competence_id) })
@@ -136,7 +138,7 @@ export default async function PageMission({ params, searchParams }: { params: Pr
         </div>
 
         {proposes.slice(0, tous ? 100 : 20).map((c, i) => (
-          <CarteCandidat key={c.consultant_id} rang={i + 1} c={c} missionId={id} statut={suivi.get(c.consultant_id)} ouvert={i < 3} cv={cvParConsultant.get(c.consultant_id)} avis={avisParConsultant.get(c.consultant_id)} />
+          <CarteCandidat key={c.consultant_id} rang={i + 1} c={c} missionId={id} statut={suivi.get(c.consultant_id)} ouvert={i < 3} cv={cvParConsultant.get(c.consultant_id)} avis={avisParConsultant.get(c.consultant_id)} retour={retourParConsultant.get(c.consultant_id)} />
         ))}
         {!tous && proposes.length > 20 && (
           <Link href={`/missions/${id}?tous=1`} scroll={false} className="bouton-secondaire w-full justify-center">Voir les {proposes.length - 20} autres profils pertinents</Link>
@@ -166,8 +168,8 @@ const AVIS_IA = {
   hors_sujet: { libelle: "Hors sujet", classe: "bg-red-50 text-red-800 ring-red-200" },
 } as const;
 
-function CarteCandidat({ rang, c, missionId, statut, ouvert, cv, avis }: {
-  rang: number; c: LigneClassement; missionId: string; statut?: string; ouvert: boolean; cv?: { id: string; word: string; pdf: string | null }; avis?: AvisMission;
+function CarteCandidat({ rang, c, missionId, statut, ouvert, cv, avis, retour }: {
+  rang: number; c: LigneClassement; missionId: string; statut?: string; ouvert: boolean; cv?: { id: string; word: string; pdf: string | null }; avis?: AvisMission; retour?: "bon" | "pas";
 }) {
   const initiales = `${c.prenom?.[0] ?? ""}${c.nom?.[0] ?? ""}`.replace("—", "").toUpperCase() || "?";
   const action = "flex h-10 items-center gap-1.5 rounded-full sm:h-9 bg-white px-3 text-xs font-semibold text-nuit ring-1 ring-slate-200 transition hover:bg-slate-50 hover:ring-slate-300";
@@ -187,7 +189,7 @@ function CarteCandidat({ rang, c, missionId, statut, ouvert, cv, avis }: {
       </div>
       {c.avisIA && (
         <div className={`mt-3 flex items-start gap-2 rounded-xl px-3 py-2 text-sm ring-1 ${AVIS_IA[c.avisIA.verdict].classe}`}>
-          <span className="shrink-0 font-bold">IA · {c.avisIA.note != null ? `${c.avisIA.note}/100` : AVIS_IA[c.avisIA.verdict].libelle}</span>
+          <span className="shrink-0 font-bold">Note · {c.avisIA.note != null ? `${c.avisIA.note}/100` : AVIS_IA[c.avisIA.verdict].libelle}</span>
           {c.avisIA.raison && <span className="text-slate-700">{c.avisIA.raison}</span>}
         </div>
       )}
@@ -203,17 +205,26 @@ function CarteCandidat({ rang, c, missionId, statut, ouvert, cv, avis }: {
           <input type="hidden" name="mission_id" value={missionId} />
           <input type="hidden" name="consultant_id" value={c.consultant_id} />
           <input type="hidden" name="score" value={noteAffichee(c)} />
-          <select name="statut" defaultValue={statut ?? "propose"} aria-label="Suivi" className="rounded-full bg-transparent px-2 py-1 text-xs font-semibold text-nuit outline-none">
+          <select name="statut" defaultValue={statut ?? ""} aria-label="Suivi" className="rounded-full bg-transparent px-2 py-1 text-xs font-semibold text-nuit outline-none">
+            <option value="" disabled>Suivi…</option>
             {Object.entries(STATUTS_PROPOSITION).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
           <BoutonSuivi libelle={statut ? "OK" : "Suivre"} />
         </form>
         <AvisIA missionId={missionId} consultantId={c.consultant_id} initial={avis} />
+        <form action={donnerRetourMatching} className="flex items-center gap-1 rounded-full bg-white p-1 ring-1 ring-slate-200">
+          <input type="hidden" name="mission_id" value={missionId} />
+          <input type="hidden" name="consultant_id" value={c.consultant_id} />
+          <button name="avis" value="bon" aria-pressed={retour === "bon"} title="Bon profil pour cette mission"
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${retour === "bon" ? "bg-emerald-600 text-white" : "text-emerald-700 hover:bg-emerald-50"}`}>👍 Bon profil</button>
+          <button name="avis" value="pas" aria-pressed={retour === "pas"} title="Pas pour cette mission"
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${retour === "pas" ? "bg-rose-600 text-white" : "text-rose-700 hover:bg-rose-50"}`}>👎 Pas pour cette mission</button>
+        </form>
       </div>
 
       <details open={ouvert} className="group mt-3 rounded-2xl bg-slate-50/80 px-4 py-3 ring-1 ring-slate-200/70">
         <summary className="flex cursor-pointer list-none flex-wrap items-center gap-3">
-          <span className="text-sm font-semibold text-nuit">Évaluation IA : récapitulatif et analyse point par point</span>
+          <span className="text-sm font-semibold text-nuit">Évaluation : récapitulatif et analyse point par point</span>
           <span className="ml-auto text-xs font-medium text-marque-600 group-open:hidden">Voir l&apos;évaluation</span>
         </summary>
         <div className="mt-3"><EvaluationIA note={c.avisIA?.note} raison={c.avisIA?.raison} detail={c.avisIA?.detail} /></div>

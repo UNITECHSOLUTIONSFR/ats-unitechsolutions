@@ -1,7 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { PROMPT_VERSION, type ProfilCV } from "@/lib/ai";
-import { signalerMissionsCorrespondantes } from "@/lib/matching/nouvelle-fiche";
 
 /**
  * Enregistre la fiche de compétences d'un consultant (profil + compétences rattachées au référentiel).
@@ -30,6 +29,6 @@ export async function enregistrerProfil(
   if (lignes.size) {
     await supabase.from("consultant_competences").insert([...lignes].map(([competence_id, v]) => ({ consultant_id: consultantId, competence_id, ...v })));
   }
-  await signalerMissionsCorrespondantes(supabase, consultantId);
+  // Plus de suivi « proposé » créé automatiquement (23/11/2026) : le suivi d'un profil est choisi par l'équipe.
   return true;
 }

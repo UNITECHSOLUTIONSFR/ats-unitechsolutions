@@ -38,7 +38,8 @@ export async function EvaluationMission({ consultantId, missionId }: { consultan
               <input type="hidden" name="consultant_id" value={consultantId} />
               <input type="hidden" name="score" value={Math.round(ev.ligne.avisIA?.note ?? r.score)} />
               <input type="hidden" name="detail" value={JSON.stringify(r)} />
-              <select name="statut" defaultValue={suivi?.statut ?? "propose"} aria-label="Suivi" className="rounded-full bg-transparent px-2 py-1 text-xs font-semibold text-nuit outline-none">
+              <select name="statut" defaultValue={suivi?.statut ?? ""} aria-label="Suivi" className="rounded-full bg-transparent px-2 py-1 text-xs font-semibold text-nuit outline-none">
+                <option value="" disabled>Suivi…</option>
                 {Object.entries(STATUTS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
               <button className="rounded-full bg-marque-600 px-3 py-1 text-xs font-semibold text-white hover:bg-marque-500">{suivi ? "Mettre à jour" : "Suivre sur cette mission"}</button>
