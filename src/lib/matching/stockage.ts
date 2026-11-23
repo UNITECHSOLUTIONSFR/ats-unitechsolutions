@@ -65,7 +65,9 @@ export async function calculerEtRanger(missionId: string, supabase: SupabaseClie
   try {
     // Présélection par le sens et par les compétences, puis note de l'IA sur les 60 premiers (voir hybride.ts).
     const v2 = await matchingV2Actif(supabase);
-    const lignes = await classerMission(supabase, missionId, { v2 });
+    const { matchingV3Actif, classerMissionV3, VERSION_MOTEUR_V3 } = await import("./v3");
+    const v3 = await matchingV3Actif(supabase);
+    const lignes = v3 ? await classerMissionV3(supabase, missionId) : await classerMission(supabase, missionId, { v2 });
     // Rangés : les profils pertinents (note de l'IA ≥ 60) d'abord, jusqu'à 100. Scores (fiche consultant) : notes de l'IA seulement.
     // Gardés : les 100 premiers (pertinents d'abord), et les profils « proches » montrés à part avec ce qui leur manque.
     const proches = lignes.filter((l) => l.eligible === false && l.manques);
@@ -86,7 +88,7 @@ export async function calculerEtRanger(missionId: string, supabase: SupabaseClie
     // Publication d'un bloc : le nouveau classement remplace l'ancien seulement une fois complet.
     await supabase.from("classements_mission").upsert({
       mission_id: missionId, total: resume.total, pertinents: resume.pertinents, eligibles: resume.eligibles ?? null, top: resume.top, scores, ordre,
-      calcule_le: new Date().toISOString(), duree_ms: Date.now() - debut, version: v2 ? VERSION_MOTEUR_V2 : VERSION_MOTEUR,
+      calcule_le: new Date().toISOString(), duree_ms: Date.now() - debut, version: v3 ? VERSION_MOTEUR_V3 : v2 ? VERSION_MOTEUR_V2 : VERSION_MOTEUR,
       a_recalculer: redemande, en_calcul_depuis: null, erreur: null,
     });
     return resume;
@@ -172,7 +174,8 @@ export async function recalculerEnAttente(supabase: SupabaseClient, budgetMs = 2
   // Fiches ajoutées ou modifiées, CV analysés depuis le dernier calcul : classement refait, au plus toutes les 30 minutes.
   const dernierChangement = Math.max(ficheModifiee, profilModifie);
   const parMission = new Map((lignes ?? []).map((l) => [l.mission_id as string, l]));
-  const version = (await matchingV2Actif(supabase)) ? VERSION_MOTEUR_V2 : VERSION_MOTEUR;
+  const { matchingV3Actif, VERSION_MOTEUR_V3 } = await import("./v3");
+  const version = (await matchingV3Actif(supabase)) ? VERSION_MOTEUR_V3 : (await matchingV2Actif(supabase)) ? VERSION_MOTEUR_V2 : VERSION_MOTEUR;
   const aFaire = (missions ?? []).map((m) => ({ id: m.id as string, l: parMission.get(m.id) }))
     .filter(({ l }) => {
       if (!l?.calcule_le || l.a_recalculer || l.version !== version) return true;

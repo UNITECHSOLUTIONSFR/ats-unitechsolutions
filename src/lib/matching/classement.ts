@@ -211,7 +211,7 @@ export function avecTextes(competences: { competence_id: string; annees: number 
 }
 
 /** Données de classement pour des personnes données (mêmes champs que candidats_mission, sans proximité sémantique). */
-async function chargerCandidats(supabase: SupabaseClient, ids: string[]): Promise<LigneCandidat[]> {
+export async function chargerCandidats(supabase: SupabaseClient, ids: string[]): Promise<LigneCandidat[]> {
   const lignes: LigneCandidat[] = [];
   for (let i = 0; i < ids.length; i += 1000) {
     const { data } = await supabase.rpc("candidats_recherche", { p_competences: [], p_motifs_poste: [], p_ids: ids.slice(i, i + 1000) });

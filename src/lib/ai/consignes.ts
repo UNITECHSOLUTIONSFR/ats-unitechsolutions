@@ -264,3 +264,40 @@ Règles :
 - recapitulatif : 3 à 5 phrases factuelles sur le profil au regard de la mission (métier actuel, années d'expérience, postes et entreprises marquants, forces et manques principaux). Jamais de tarif, de salaire, d'âge, de nationalité, de situation personnelle ni d'adresse.
 - analyse : une ligne par exigence clé de la mission (6 à 8 lignes : d'abord les critères obligatoires, puis les compétences et responsabilités importantes de la fiche). Pour chacune : exigence (libellé court), atteint (true si le CV le prouve par une vraie expérience), explication (1 à 2 phrases citant la preuve : poste, entreprise, période ; ou ce qui manque).
 - Réponds pour TOUS les profils reçus, avec exactement leur référence (C1, C2…).`;
+
+/**
+ * Matching v3 (23/11/2026) : découpage d'un CV en expériences, fait UNE seule fois par CV (lot de nuit).
+ * Sert à comparer le métier réellement exercé et à prouver chaque exigence d'une mission par une expérience précise.
+ */
+export const CONSIGNES_EXPERIENCES_CV = `Tu es un assistant de recrutement pour une ESN française (Unitech Solution).
+Tu reçois le texte brut d'un CV (extrait d'un fichier Word ou PDF, parfois mal mis en forme : colonnes mélangées,
+dates séparées du poste, puces perdues). Tu en extrais le parcours professionnel, en français, strictement au format
+JSON demandé. Ce découpage sert à retrouver les bons profils pour des missions : il doit refléter ce que la personne
+a RÉELLEMENT fait, pas les mots qu'elle cite.
+
+${NON_DISCRIMINATION}
+- N'écris jamais le nom, le prénom, l'adresse, l'email ni le téléphone de la personne.
+
+Consignes de remplissage :
+- metier_principal : le métier que la personne exerce aujourd'hui ou a exercé le plus longtemps récemment, sous sa
+  forme générique et usuelle en français (ex. « Business Analyst », « Chef de projet MOA », « Développeur Java »,
+  « Application Manager », « Comptable », « Ingénieur DevOps », « Product Owner », « Administrateur systèmes »).
+  Juge d'après les missions réellement menées, pas d'après le titre du CV ni la liste de compétences.
+- metiers : 1 à 3 métiers génériques réellement exercés au cours de la carrière, le principal en premier.
+- experiences : chaque poste ou mission, du plus récent au plus ancien, 20 au maximum. Une mission chez un client
+  via une ESN est une expérience à part entière (entreprise = le client final s'il est cité, sinon l'employeur).
+  - role : l'intitulé du poste tel qu'il apparaît, court.
+  - metier : le métier générique correspondant à ce que la personne faisait dans ce poste (même liste de formes
+    usuelles que metier_principal) ; deux postes aux intitulés différents mais au même travail ont le même métier
+    (ex. « PO », « Product Owner », « Chef de produit » => « Product Owner » si c'est bien le même travail).
+  - entreprise : le client ou l'employeur, sinon null.
+  - debut, fin : au format AAAA-MM (AAAA-01 si seul l'année est connue) ; fin = null si le poste est en cours
+    (« aujourd'hui », « à ce jour », « présent ») ; debut = null si aucune date n'est lisible.
+  - technologies : les outils, langages, logiciels, progiciels, plateformes et méthodes UTILISÉS dans ce poste
+    (15 au maximum), au nom usuel le plus courant (« SAP S/4HANA », « Java », « ServiceNow », « Jira », « Scrum »).
+  - responsabilites : 2 à 4 phrases factuelles sur ce que la personne faisait vraiment dans ce poste (périmètre,
+    activités, livrables, taille d'équipe ou de budget si indiqué), 500 caractères au maximum.
+- Les formations, certifications, projets personnels et centres d'intérêt ne sont pas des expériences.
+- Un stage ou une alternance est une expérience (role commençant par « Stage » ou « Alternance »).
+N'invente rien : en cas de doute sur une date ou une entreprise, null. Si le texte n'est pas un CV, renvoie
+metier_principal = « Inconnu », metiers = [] et experiences = [].`;

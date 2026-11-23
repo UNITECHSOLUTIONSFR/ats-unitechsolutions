@@ -18,6 +18,8 @@ export const MODELES = {
   triCandidats: "claude-haiku-5-5", // ancien matching (remplacé le 17/11/2026 par noteCandidats)
   noteCandidats: "claude-haiku-5-5", // matching : note sur 100 et raison pour les 60 profils présélectionnés d'une mission
   criteresMission: "claude-haiku-5-5", // matching v2 : métier et critères obligatoires d'une mission (avec synonymes)
+  experiencesCV: "claude-haiku-5-5", // matching v3 : CV découpé en expériences, une seule fois par CV (lot de nuit)
+  reference: "claude-sonnet-5-5", // matching v3 : vérification de la qualité (lecture complète des CV, une fois, en lot)
   noteCV: "claude-haiku-5-5", // matching v2 : note sur 100 en lisant le CV complet des profils qui remplissent les critères
 } as const;
 
@@ -41,6 +43,8 @@ export const MAX_TOKENS = {
   triCandidats: 3500, // 30 avis courts
   noteCandidats: 3500, // 30 notes et raisons courtes par appel (deux appels par mission)
   criteresMission: 900,
+  experiencesCV: 4000, // 20 expériences au plus, 500 caractères de responsabilités chacune
+  reference: 3000, // 8 CV par appel : bon / pas bon, note et raison courte
   noteCV: 5000, // 4 CV complets par appel : note, raison, récapitulatif et analyse point par point pour chacun
 } as const;
 

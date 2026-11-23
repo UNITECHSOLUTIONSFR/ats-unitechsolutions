@@ -26,10 +26,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Sans double passage : une relève faite il y a moins de 30 minutes n'est pas refaite.
     const minute = new Date().getMinutes();
     if (minute >= 20 && minute < 30) after(() => executerTache("emails", clientSupabaseAdmin(), { planifiee: true }).then(() => undefined).catch((e) => console.error("Emails :", (e as Error).message)));
-    const classements = await recalculerEnAttente(clientSupabaseAdmin(), 150_000);
+    // Matching v3 : découpage des CV en expériences (lot de nuit, seulement s'il y a des CV nouveaux) et empreintes.
+    const { avancerDecoupage, empreintesV3 } = await import("@/lib/matching/v3");
+    const decoupage = await avancerDecoupage(clientSupabaseAdmin()).catch((e) => ({ etat: `erreur : ${(e as Error).message.slice(0, 200)}` }));
+    const empreintesExp = await empreintesV3(clientSupabaseAdmin(), 70_000).catch((e) => ({ erreur: (e as Error).message.slice(0, 200) }));
+    const classements = await recalculerEnAttente(clientSupabaseAdmin(), 120_000);
     // Matching v2 pas encore activé : son aperçu est calculé à côté avec le temps qui reste (sans changer les écrans).
     const apercus = classements.restants === 0 ? await calculerApercus(clientSupabaseAdmin(), 80_000).catch((e) => ({ erreur: (e as Error).message })) : "plus tard";
-    return NextResponse.json({ classements, projection, apercus });
+    return NextResponse.json({ classements, projection, apercus, decoupage, empreintesExp });
   }
   if (!(tache in TACHES)) return new NextResponse("Tâche inconnue", { status: 404 });
   const supabase = clientSupabaseAdmin();

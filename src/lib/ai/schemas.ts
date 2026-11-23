@@ -170,3 +170,19 @@ export const SchemaNoteCV = z.object({
   })),
 });
 export type NoteCV = z.infer<typeof SchemaNoteCV>;
+
+/** Matching v3 : parcours d'un CV découpé en expériences (une seule fois par CV). */
+export const SchemaExperiencesCV = z.object({
+  metier_principal: z.string(),
+  metiers: z.array(z.string()),
+  experiences: z.array(z.object({
+    role: z.string(),
+    metier: z.string(),
+    entreprise: z.string().nullable(),
+    debut: z.string().nullable(),
+    fin: z.string().nullable(),
+    technologies: z.array(z.string()),
+    responsabilites: z.string(),
+  })),
+});
+export type ExperiencesCV = z.infer<typeof SchemaExperiencesCV>;

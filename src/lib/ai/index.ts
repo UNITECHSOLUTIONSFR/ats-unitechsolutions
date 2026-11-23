@@ -8,7 +8,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
 import { LONGUEUR_MAX_TEXTE, MAX_TOKENS, MODELES, estimerCoutUSD } from "./config";
-import { CONSIGNES_CRITERES_MISSION, CONSIGNES_NOTE_CANDIDATS, CONSIGNES_NOTE_CV, CONSIGNES_TRI_CANDIDATS } from "./consignes";
+import { CONSIGNES_EXPERIENCES_CV, CONSIGNES_CRITERES_MISSION, CONSIGNES_NOTE_CANDIDATS, CONSIGNES_NOTE_CV, CONSIGNES_TRI_CANDIDATS } from "./consignes";
 import { CONSIGNES_ADEQUATION, CONSIGNES_AVIS_MISSION, CONSIGNES_CV_UNITECH, CONSIGNES_MISSION, CONSIGNES_PROFIL_CV, CONSIGNES_RECHERCHE, CONSIGNES_REPONSE_DISPO } from "./consignes";
 import {
   PROMPT_VERSION,
@@ -23,6 +23,8 @@ import {
   SchemaNoteCandidats,
   SchemaCriteresMission,
   SchemaNoteCV,
+  SchemaExperiencesCV,
+  type ExperiencesCV,
   type NoteCV,
   type CriteresMission,
   type NoteCandidats,
@@ -40,10 +42,10 @@ import {
 } from "./schemas";
 
 export { PROMPT_VERSION };
-export type { CriteresMission, ExigencesMission, ProfilCV, ReponseDisponibilite, CVStructure, Adequation, CriteresRecherche, AvisMission };
+export type { ExperiencesCV, CriteresMission, ExigencesMission, ProfilCV, ReponseDisponibilite, CVStructure, Adequation, CriteresRecherche, AvisMission };
 
 export interface UsageIA {
-  usage: "fiche_cv" | "mission" | "tri_email" | "analyse_approfondie" | "reponse_disponibilite" | "lecture_scan" | "cv_unitech" | "adequation" | "recherche" | "avis_mission" | "tri_candidats" | "note_candidats" | "criteres_mission" | "note_cv" | "empreintes";
+  usage: "fiche_cv" | "mission" | "tri_email" | "analyse_approfondie" | "reponse_disponibilite" | "lecture_scan" | "cv_unitech" | "adequation" | "recherche" | "avis_mission" | "tri_candidats" | "note_candidats" | "criteres_mission" | "note_cv" | "empreintes" | "experiences_cv" | "reference_matching";
   modele: string;
   mode: "standard" | "batch";
   tokens_entree: number;
@@ -324,4 +326,32 @@ export async function noterCV(mission: string, criteres: string, profils: { ref:
   const r = await appeler(MODELES.noteCV, CONSIGNES_NOTE_CV, SchemaNoteCV, texte, MAX_TOKENS.noteCV, "note_cv");
   if (!r.donnees) throw Object.assign(new ErreurIA("Notation des CV impossible."), { usages: [r.usage] });
   return { donnees: r.donnees, modele: MODELES.noteCV, promptVersion: PROMPT_VERSION, usages: [r.usage] };
+}
+
+/** Matching v3 : requêtes de lot (Batch API, moitié prix) pour découper des CV en expériences. */
+export async function envoyerLotExperiencesCV(cv: { id: string; texte: string }[]): Promise<string> {
+  const lot = await anthropic().messages.batches.create({
+    requests: cv.map((c) => ({ custom_id: c.id, params: parametresExtraction(MODELES.experiencesCV, CONSIGNES_EXPERIENCES_CV, SchemaExperiencesCV, c.texte, MAX_TOKENS.experiencesCV) })),
+  });
+  return lot.id;
+}
+
+/** État d'un lot de découpage ; une fois terminé, le parcours de chaque CV (null si la réponse est invalide). */
+export async function lireLotExperiencesCV(idLot: string): Promise<{ termine: boolean; enCours: number; resultats: { id: string; donnees: ExperiencesCV | null; usage: UsageIA | null }[] }> {
+  const lot = await anthropic().messages.batches.retrieve(idLot);
+  if (lot.processing_status !== "ended") return { termine: false, enCours: lot.request_counts.processing, resultats: [] };
+  const resultats: { id: string; donnees: ExperiencesCV | null; usage: UsageIA | null }[] = [];
+  for await (const r of await anthropic().messages.batches.results(idLot)) {
+    if (r.result.type !== "succeeded") { resultats.push({ id: r.custom_id, donnees: null, usage: null }); continue; }
+    const m = r.result.message;
+    resultats.push({ id: r.custom_id, donnees: lireJSON(m, SchemaExperiencesCV), usage: usageDepuisReponse(m.usage, MODELES.experiencesCV, "experiences_cv", "batch") });
+  }
+  return { termine: true, enCours: 0, resultats };
+}
+
+/** Découpage d'un seul CV (CV arrivé dans la journée : nouvelle fiche, email, SharePoint). */
+export async function extraireExperiencesCV(texteCV: string): Promise<ResultatIA<ExperiencesCV>> {
+  const r = await appeler(MODELES.experiencesCV, CONSIGNES_EXPERIENCES_CV, SchemaExperiencesCV, texteCV, MAX_TOKENS.experiencesCV, "experiences_cv");
+  if (!r.donnees) throw Object.assign(new ErreurIA("Parcours du CV impossible à découper."), { usages: [r.usage] });
+  return { donnees: r.donnees, modele: MODELES.experiencesCV, promptVersion: PROMPT_VERSION, usages: [r.usage] };
 }
