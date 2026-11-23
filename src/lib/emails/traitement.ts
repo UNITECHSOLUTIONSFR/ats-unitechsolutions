@@ -74,6 +74,7 @@ export async function traiterMessage(
   bilan.lus++;
   let statut: Statut = "non_candidature";
   let consultantId: string | null = null;
+  let ficheRelance: string | null = null;
   try {
     const expediteur = m.from?.emailAddress?.address?.toLowerCase();
     // Réponse à une relance des disponibilités : la fiche est mise à jour automatiquement (puis un éventuel CV joint est traité).
@@ -82,6 +83,7 @@ export async function traiterMessage(
       if (envoi) {
         await traiterReponse(supabase, m, envoi, usages);
         consultantId = envoi.consultant_id;
+        ficheRelance = envoi.consultant_id;
         bilan.reponsesRelance = (bilan.reponsesRelance ?? 0) + 1;
       }
     }
@@ -91,7 +93,7 @@ export async function traiterMessage(
     else {
       // Chaque CV joint est traité (un partenaire envoie souvent plusieurs profils dans le même email).
       for (const cv of cvs) {
-        const r = await traiterCandidature(supabase, m, cv, origine, usages);
+        const r = await traiterCandidature(supabase, m, cv, origine, usages, ficheRelance);
         if (r.statut === "candidature_traitee" || statut !== "candidature_traitee") { statut = r.statut; consultantId ??= r.consultantId; }
         if (r.dejaConnu) bilan.dejaConnues++;
       }
@@ -130,6 +132,7 @@ export async function traiterCandidature(
   pj: { id: string; name: string; contentBytes?: string },
   origine: OrigineCV,
   usages: UsageIA[],
+  ficheConnue: string | null = null,
 ): Promise<{ statut: Statut; consultantId: string | null; dejaConnu?: boolean }> {
   const contenu = Buffer.from(pj.contentBytes ?? "", "base64");
   const empreinte = empreinteSHA256(contenu);
@@ -162,8 +165,9 @@ export async function traiterCandidature(
   // Fiche : email du CV, sinon celui de l'expéditeur ; puis téléphone ; sinon nouvelle fiche.
   const email = normaliserEmail(p.email) ?? normaliserEmail(m.from?.emailAddress?.address);
   const tel = normaliserTelephone(p.telephone);
-  let consultantId: string | null = null;
-  if (email) consultantId = (await supabase.from("consultants").select("id").eq("email", email).maybeSingle()).data?.id ?? null;
+  // Réponse à un email envoyé par l'outil (ex. demande de CV) : le CV va sur la fiche de la personne à qui on a écrit.
+  let consultantId: string | null = ficheConnue;
+  if (!consultantId && email) consultantId = (await supabase.from("consultants").select("id").eq("email", email).maybeSingle()).data?.id ?? null;
   if (!consultantId && tel.e164) consultantId = (await supabase.from("consultants").select("id").eq("telephone_e164", tel.e164).limit(1).maybeSingle()).data?.id ?? null;
 
   const [prenomExp, ...nomExp] = (m.from?.emailAddress?.name ?? "").split(" ");

@@ -18,6 +18,7 @@ function lireFiltre(formData: FormData): FiltreCampagne {
     dispoPlusVieilleQueJours: jours > 0 ? jours : undefined,
     disponibleAvant: String(formData.get("disponible_avant") ?? "") || undefined,
     exclus: JSON.parse(String(formData.get("exclus") ?? "[]")) as string[],
+    sansCV: formData.get("sans_cv") === "1" || undefined,
   };
 }
 

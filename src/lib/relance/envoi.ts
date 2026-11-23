@@ -16,6 +16,7 @@ export interface FiltreCampagne {
   dispoPlusVieilleQueJours?: number; // seulement les disponibilités non mises à jour depuis N jours
   disponibleAvant?: string;          // AAAA-MM-JJ : disponibles (ou bientôt) avant cette date
   exclus?: string[];                 // consultants décochés à la main
+  sansCV?: boolean;                  // seulement les consultants sans CV lisible dans l'outil (demande de CV)
 }
 
 
@@ -27,7 +28,15 @@ export async function destinatairesCampagne(supabase: SupabaseClient, filtre: Fi
         .not("email", "is", null).eq("ne_plus_contacter", false).neq("statut", "inactif").order("nom").range(a, b)),
     filtre.fonction ? lireTout<{ consultant_id: string; competences: string }>((a, b) => supabase.from("competences_par_consultant").select("consultant_id, competences").range(a, b)) : Promise.resolve([]),
   ]);
-  return filtrerDestinataires(tous, new Map(competences.map((c) => [c.consultant_id, c.competences])), filtre, Date.now());
+  let liste = tous;
+  if (filtre.sansCV) {
+    // CV lisible = un document dont le texte a pu être extrait (Word, PDF texte) ; sans lui, ni recherche ni matching possibles.
+    const avecCV = await lireTout<{ consultant_id: string }>((a, b) => supabase.from("documents").select("consultant_id")
+      .eq("texte_extractible", true).not("texte_extrait", "is", null).not("consultant_id", "is", null).order("id").range(a, b));
+    const ids = new Set(avecCV.map((d) => d.consultant_id));
+    liste = tous.filter((c) => !ids.has(c.id));
+  }
+  return filtrerDestinataires(liste, new Map(competences.map((c) => [c.consultant_id, c.competences])), filtre, Date.now());
 }
 
 /** Prépare une campagne : un envoi « à envoyer » par destinataire. Rien n'est envoyé ici. */

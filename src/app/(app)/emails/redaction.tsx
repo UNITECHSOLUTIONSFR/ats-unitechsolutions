@@ -14,16 +14,17 @@ export default function Redaction({ modeles, modeleInitial }: { modeles: Modele[
   const [jours, setJours] = useState(90);
   const [avant, setAvant] = useState("");
   const [exclus, setExclus] = useState<string[]>([]);
+  const [sansCV, setSansCV] = useState(false);
   const [apercu, setApercu] = useState<ApercuDestinataires | null>(null);
   const [apercuOuvert, setApercuOuvert] = useState(false);
   useEffect(() => {
     let actif = true;
     const t = setTimeout(() => {
-      apercuDestinataires({ fonction: fonction || undefined, dispoPlusVieilleQueJours: jours || undefined, disponibleAvant: avant || undefined, exclus })
+      apercuDestinataires({ fonction: fonction || undefined, dispoPlusVieilleQueJours: jours || undefined, disponibleAvant: avant || undefined, exclus, sansCV: sansCV || undefined })
         .then((a) => { if (actif) setApercu(a); });
     }, 350);
     return () => { actif = false; clearTimeout(t); };
-  }, [fonction, jours, avant, exclus]);
+  }, [fonction, jours, avant, exclus, sansCV]);
   // 2. Message
   const premier = modeles.find((m) => m.id === modeleInitial);
   const [depart, setDepart] = useState<string>(premier?.id ?? "vierge");
@@ -68,7 +69,11 @@ export default function Redaction({ modeles, modeleInitial }: { modeles: Modele[
             <input type="date" name="disponible_avant" value={avant} onChange={(e) => setAvant(e.target.value)} className="champ mt-1 w-full" />
           </label>
         </div>
-        <div className="flex justify-end">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <label className="flex items-center gap-2 text-sm font-medium text-nuit">
+            <input type="checkbox" name="sans_cv" value="1" checked={sansCV} onChange={(e) => setSansCV(e.target.checked)} className="h-4 w-4" />
+            Seulement les consultants sans CV dans l&apos;outil
+          </label>
           <button type="button" onClick={() => setApercuOuvert(true)} className="bouton-secondaire">Aperçu des destinataires</button>
         </div>
       </div>
