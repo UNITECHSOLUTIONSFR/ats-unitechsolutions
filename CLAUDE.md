@@ -19,9 +19,14 @@
 - **Tout en français** : interface, explications, documentation, messages de commit.
 
 ## 2. Façon de travailler
+0. **RÈGLE ABSOLUE (24/11/2026, prime sur toutes les autres)** :
+   - **Aucune décision, même implicite, sans l'accord de l'utilisatrice** : seuil, plafond, limite, périmètre réduit (« seulement les 20 premiers »), choix de méthode, valeur par défaut, ordre de priorité, coût, etc.
+   - **Carte blanche = livrer uniquement ce qu'elle a déjà validé.** Elle n'autorise jamais à trancher un point non validé : s'il en apparaît un, le noter et le lui soumettre, sans l'appliquer.
+   - **À chaque choix à faire : lui proposer les options, chacune avec sa justification (avantages, inconvénients, coût, effet sur ce qu'elle verra), pour qu'elle décide elle-même.** Recommander si utile, mais ne jamais appliquer avant sa réponse.
+   - Les « Décisions à confirmer (appliquées par défaut) » ne s'appliquent plus : rien n'est appliqué par défaut.
 1. Autonomie : enchaîner les étapes. Fin d'étape = tests + point de 3 lignes (fait / testé / suite) dans la conversation **et** dans SUIVI.md + commit poussé.
-2. S'arrêter **uniquement** pour : action imprévue que seule l'utilisatrice peut faire (la guider écran par écran puis vérifier) ; décision métier bloquante non tranchée (sinon : appliquer la recommandation et l'ajouter aux « Décisions à confirmer ») ; action irréversible (suppression, écrasement, envoi d'email, écriture SharePoint ou dans l'Excel d'origine) ; dépense IA > 5 $ en une fois ou hausse des coûts mensuels ; jalons A, B, C, D.
-3. Questions groupées : 5 maximum, chacune avec une réponse recommandée par défaut.
+2. S'arrêter **uniquement** pour : action imprévue que seule l'utilisatrice peut faire (la guider écran par écran puis vérifier) ; toute décision non validée par elle (voir règle 0 : proposer les options justifiées, ne rien appliquer) ; action irréversible (suppression, écrasement, envoi d'email, écriture SharePoint ou dans l'Excel d'origine) ; dépense IA > 5 $ en une fois ou hausse des coûts mensuels ; jalons A, B, C, D.
+3. Questions groupées : 5 maximum, chacune avec ses options justifiées (une recommandation possible, jamais appliquée sans sa réponse).
 4. Langage simple ; tout terme technique est défini en une phrase la première fois.
 5. **Secrets** : jamais demandés dans la conversation, jamais affichés, jamais dans le code, Git ou les journaux. Saisie directe par l'utilisatrice dans l'environnement cloud Claude Code, Vercel, Supabase. Rappeler que l'environnement cloud est visible par quiconque peut le modifier.
 6. Échantillon d'abord (10 à 20 éléments) pour tout traitement, vérifié par tests automatiques.
