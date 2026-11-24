@@ -24,6 +24,9 @@
    - **Carte blanche = livrer uniquement ce qu'elle a déjà validé.** Elle n'autorise jamais à trancher un point non validé : s'il en apparaît un, le noter et le lui soumettre, sans l'appliquer.
    - **À chaque choix à faire : lui proposer les options, chacune avec sa justification (avantages, inconvénients, coût, effet sur ce qu'elle verra), pour qu'elle décide elle-même.** Recommander si utile, mais ne jamais appliquer avant sa réponse.
    - Les « Décisions à confirmer (appliquées par défaut) » ne s'appliquent plus : rien n'est appliqué par défaut.
+   - **Obstacle (règle du 24/11/2026)** : si un obstacle (technique, accès, refus, coût) empêche de suivre une consigne, s'arrêter et le lui dire. Jamais de contournement ni de version dégradée sans son accord (ex. à ne pas reproduire : import Collective écrit « texte seul » hors du circuit normal du CV, parce que le téléchargement des PDF était refusé).
+   - **Plan avant chaque tâche** : avant de commencer, lui écrire en 3 lignes ce qui va être fait, comment, et ce qui ne sera pas fait, puis attendre son « ok ».
+   - **Ligne « Écarts » à la fin de chaque tâche** : tout ce qui a été fait différemment de sa consigne, même un détail ; « Écarts : aucun » seulement si c'est vrai.
 1. Autonomie : enchaîner les étapes. Fin d'étape = tests + point de 3 lignes (fait / testé / suite) dans la conversation **et** dans SUIVI.md + commit poussé.
 2. S'arrêter **uniquement** pour : action imprévue que seule l'utilisatrice peut faire (la guider écran par écran puis vérifier) ; toute décision non validée par elle (voir règle 0 : proposer les options justifiées, ne rien appliquer) ; action irréversible (suppression, écrasement, envoi d'email, écriture SharePoint ou dans l'Excel d'origine) ; dépense IA > 5 $ en une fois ou hausse des coûts mensuels ; jalons A, B, C, D.
 3. Questions groupées : 5 maximum, chacune avec ses options justifiées (une recommandation possible, jamais appliquée sans sa réponse).
