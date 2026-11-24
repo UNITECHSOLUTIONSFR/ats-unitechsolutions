@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { traiterCV } from "@/lib/consultants/cv-arriere-plan";
 import { ESPACE_ADEQUATIONS } from "@/lib/cv-unitech/service";
+import { deposerCVRecu } from "@/lib/emails/depot";
 import { cheminCVCollective } from "./fichier";
 
 /** Compte de l'administratrice qui a demandé l'import (historique des fiches). */
@@ -10,7 +11,8 @@ const ACTEUR = "db7f1a37-f71c-4aa2-98f8-30cd67874ca4";
 /**
  * Candidats Collective (24/11/2026) : chaque CV passe par le circuit normal d'un CV ajouté à la main — fichier lu une fois,
  * parcours rempli par l'IA (compétences, expériences), champs vides complétés. Le PDF est rangé dans l'espace privé de
- * l'outil et s'ouvre depuis la fiche (/api/documents/[id]/fichier) ; pas de dépôt dans SharePoint (décision du 24/11/2026).
+ * l'outil et s'ouvre depuis la fiche (/api/documents/[id]/fichier) ; il est aussi déposé dans SharePoint, comme un CV ajouté
+ * à la main (« Candidatures reçues »), décision du 24/11/2026.
  * L'ancienne copie « texte seul » est retirée de la fiche (marquée supprimée, rien n'est effacé).
  */
 /** Range le PDF dans l'outil et fait pointer le document de la fiche vers lui. */
@@ -58,6 +60,25 @@ export async function traiterImportsCollective(supabase: SupabaseClient, budgetM
       erreurs++;
       await supabase.from("imports_collective").update({ statut: "erreur", message: (e as Error).message.slice(0, 300), traite_le: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("application_id", it.application_id);
     }
+  }
+  // Dépôt dans SharePoint (circuit normal), aussi pour les CV traités avant cette décision. La fiche garde le lien vers la
+  // copie de l'outil (consultable directement).
+  const { data: aDeposer } = await supabase.from("imports_collective").select("application_id, consultant_id, nom_fichier").eq("statut", "fait").is("depose_le", null).limit(20);
+  for (const it of aDeposer ?? []) {
+    if (Date.now() - debut > budgetMs) break;
+    try {
+      const identifiant = `collective-cv:${it.application_id}`;
+      const [{ data: doc }, { data: c }, fichier] = await Promise.all([
+        supabase.from("documents").select("id, url_web, created_at").eq("sharepoint_item_id", identifiant).maybeSingle(),
+        supabase.from("consultants").select("prenom, nom").eq("id", it.consultant_id).maybeSingle(),
+        supabase.storage.from(ESPACE_ADEQUATIONS).download(cheminCVCollective(identifiant)!),
+      ]);
+      if (!doc || !c || fichier.error || !fichier.data) throw new Error("CV introuvable dans l'outil");
+      await deposerCVRecu(supabase, doc.id, Buffer.from(await fichier.data.arrayBuffer()), it.nom_fichier, { prenom: c.prenom, nom: c.nom }, doc.created_at as string);
+      await supabase.from("documents").update({ url_web: doc.url_web }).eq("id", doc.id);
+      await supabase.from("imports_collective").update({ depose_le: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("application_id", it.application_id);
+      ranges++;
+    } catch (e) { console.error("Dépôt SharePoint (Collective) :", (e as Error).message); }
   }
   const { count } = await supabase.from("imports_collective").select("application_id", { count: "exact", head: true }).eq("statut", "a_traiter");
   return { faits, erreurs, restants: count ?? 0, ranges };
