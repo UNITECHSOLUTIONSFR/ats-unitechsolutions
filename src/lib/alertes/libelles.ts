@@ -9,6 +9,7 @@ export const LIBELLES_ALERTES: Record<string, string> = {
   telephone_invalide: "Téléphone à vérifier",
   nom_manquant: "Nom manquant",
   cv_illisible: "CV à vérifier (illisible)",
+  cv_a_rattacher: "CV à rattacher",
   association_douteuse: "Association CV à vérifier",
   disponibilite_ancienne: "Disponibilité ancienne",
   autre: "À compléter",

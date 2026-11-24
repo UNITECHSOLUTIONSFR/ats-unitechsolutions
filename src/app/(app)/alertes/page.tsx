@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { exigerUtilisateur } from "@/lib/acces";
-import { traiterAlertes } from "@/lib/alertes/actions";
+import { rattacherCV, traiterAlertes } from "@/lib/alertes/actions";
 import { ALERTES_TECHNIQUES, alerteVisible, detailAlerte, LIBELLES_ALERTES } from "@/lib/alertes/libelles";
 
 export default async function Alertes({ searchParams }: { searchParams: Promise<{ type?: string }> }) {
@@ -17,7 +17,7 @@ export default async function Alertes({ searchParams }: { searchParams: Promise<
   const parType = new Map<string, number>();
   for (const a of toutes ?? []) parType.set(a.type, (parType.get(a.type) ?? 0) + 1);
 
-  const ICONES: Record<string, string> = { doublon_possible: "👥", telephone_invalide: "☎", nom_manquant: "❓", cv_illisible: "📄", association_douteuse: "🔗", disponibilite_ancienne: "⏳", autre: "✎" };
+  const ICONES: Record<string, string> = { doublon_possible: "👥", telephone_invalide: "☎", nom_manquant: "❓", cv_illisible: "📄", cv_a_rattacher: "📎", association_douteuse: "🔗", disponibilite_ancienne: "⏳", autre: "✎" };
 
   return (
     <div className="space-y-5">
@@ -54,6 +54,15 @@ export default async function Alertes({ searchParams }: { searchParams: Promise<
                     <span className="text-xs text-slate-400">· {new Date(a.created_at).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })}</span>
                   </div>
                   <div className="truncate text-slate-500">{detailAlerte(a.details as Record<string, unknown>, estAdmin)}</div>
+                  {a.type === "cv_a_rattacher" && (
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      {(((a.details as { suggestions?: { id: string; nom: string }[] })?.suggestions) ?? []).map((f) => (
+                        <button key={f.id} formAction={rattacherCV} name="rattacher" value={`${a.id}:${f.id}`} className="bouton-primaire py-1 text-xs">Rattacher à {f.nom}</button>
+                      ))}
+                      <input name={`fiche_${a.id}`} placeholder="ou collez le lien de la fiche" className="champ h-8 w-56 text-xs" />
+                      <button formAction={rattacherCV} name="rattacher" value={`${a.id}:`} className="bouton-secondaire py-1 text-xs">Rattacher</button>
+                    </div>
+                  )}
                 </div>
                 <div className="flex shrink-0 gap-2">
                   {fusion && <Link href={`/alertes/fusion?a=${a.consultant_id}&b=${fusion}`} className="bouton-primaire py-1.5 text-xs">Comparer</Link>}

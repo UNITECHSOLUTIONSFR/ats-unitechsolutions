@@ -13,6 +13,8 @@ export interface BilanSynchroCV {
   sansPdf: number;
   fichesReliees: number;
   fichesCreees: number;
+  /** CV qu'on ne sait pas rattacher : alerte « CV à rattacher » (décision 8A). */
+  aRattacher?: number;
 }
 
 interface Doc {
@@ -117,17 +119,17 @@ export async function synchroniserCV(supabase: SupabaseClient): Promise<BilanSyn
       const souples = ids.length ? [] : fichesNomSouple(a.prenom, a.nom, fiches);
       if (!ids.length && souples.length === 1) ids = souples;
       if (ids.length === 1) { consultantId = ids[0]; bilan.fichesReliees++; }
-      else if (!ids.length && !souples.length && miseEnService && estPosterieur(fichierParItem.get(w.sharepoint_item_id), miseEnService)) {
-        const { data: cree } = await supabase.from("consultants").insert({
-          prenom: a.prenom, nom: a.nom, trigramme: a.trigramme, intitule_poste: a.fonction, metier: w.metier_dossier, source: "sharepoint", statut: "candidat",
-        }).select("id").single();
-        if (cree) {
-          consultantId = cree.id;
-          bilan.fichesCreees++;
-          // Un autre fichier au même nom trouvé la même nuit rejoint cette fiche (jamais une fiche par fichier).
-          parNom.set(normaliserNomPersonne(a.prenom, a.nom), [cree.id]);
-          fiches.push({ id: cree.id, prenom: a.prenom, nom: a.nom });
-          await supabase.from("alertes").insert({ type: "autre", consultant_id: cree.id, document_id: w.id, details: { motif: "coordonnées à compléter (fiche créée depuis un CV SharePoint)" } });
+      else if (miseEnService && estPosterieur(fichierParItem.get(w.sharepoint_item_id), miseEnService)) {
+        // Décision 8A (24/11/2026) : plus aucune fiche créée automatiquement. Le CV attend dans « Cas à vérifier »
+        // (« CV à rattacher »), avec les fiches qui pourraient correspondre, et l'équipe le rattache en un clic.
+        const proches = (ids.length ? ids : souples.length ? souples : fiches.filter((f) => calculerTrigrammeSimple(f.prenom, f.nom) === a.trigramme).map((f) => f.id)).slice(0, 5);
+        const { data: deja } = await supabase.from("alertes").select("id").eq("type", "cv_a_rattacher").eq("document_id", w.id).eq("statut", "ouverte").limit(1);
+        if (!deja?.length) {
+          await supabase.from("alertes").insert({ type: "cv_a_rattacher", document_id: w.id, details: {
+            fichier: w.nom_fichier, motif: ids.length > 1 || souples.length > 1 ? "plusieurs fiches possibles" : "aucune fiche trouvée",
+            suggestions: proches.map((id) => { const f = fiches.find((x) => x.id === id); return { id, nom: f ? `${f.prenom} ${f.nom}` : id }; }),
+          } });
+          bilan.aRattacher = (bilan.aRattacher ?? 0) + 1;
         }
       }
       if (consultantId) maj.consultant_id = consultantId;
@@ -184,3 +186,10 @@ export function memeDate(a: string | null | undefined, b: string | null | undefi
   if (!a || !b) return a === b;
   return new Date(a).getTime() === new Date(b).getTime();
 }
+
+/** Trigramme sans dépendance (1re lettre du prénom + 2 premières du nom, sans accents) pour proposer des fiches proches. */
+function calculerTrigrammeSimple(prenom: string, nom: string): string {
+  const net = (t: string) => (t ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z]/g, "").toUpperCase();
+  return `${net(prenom).slice(0, 1)}${net(nom).slice(0, 2)}`;
+}
+
