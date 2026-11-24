@@ -29,10 +29,10 @@ const STATUTS_PROPOSITION: Record<string, string> = {
   propose: "Proposé", appele: "Appelé", envoye_client: "Envoyé au client", retenu: "Retenu", refuse: "Refusé",
 };
 
-export default async function PageMission({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tous?: string }> }) {
+export default async function PageMission({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ profil?: string }> }) {
   const { id } = await params;
-  // Les 20 premiers profils d'abord (page légère) ; les 30 suivants sur demande.
-  const tous = (await searchParams).tous === "1";
+  // Profil ouvert en détail (clic sur sa carte) ; les autres restent en petites cartes.
+  const profilOuvert = (await searchParams).profil ?? null;
   const { utilisateur, supabase } = await exigerUtilisateur();
   const { data: mission } = await supabase
     .from("missions")
@@ -140,12 +140,52 @@ export default async function PageMission({ params, searchParams }: { params: Pr
           </div>
         </div>
 
-        {proposes.slice(0, tous ? proposes.length : 20).map((c, i) => (
-          <CarteCandidat key={c.consultant_id} rang={i + 1} c={c} missionId={id} statut={suivi.get(c.consultant_id)} ouvert={i < 3} cv={cvParConsultant.get(c.consultant_id)} avis={avisParConsultant.get(c.consultant_id)} retour={retourParConsultant.get(c.consultant_id)} />
-        ))}
-        {!tous && proposes.length > 20 && (
-          <Link href={`/missions/${id}?tous=1`} scroll={false} className="bouton-secondaire w-full justify-center">Voir les {proposes.length - 20} autres profils</Link>
-        )}
+        {/* Profil choisi : détail complet (analyse, boutons, CV). */}
+        {(() => {
+          const i = proposes.findIndex((c) => c.consultant_id === profilOuvert);
+          if (i < 0) return null;
+          const c = proposes[i];
+          return (
+            <div id="detail" className="scroll-mt-4 space-y-2">
+              <Link href={`/missions/${id}`} scroll={false} className="text-sm font-semibold text-marque-600 hover:underline">← Revenir à tous les profils</Link>
+              <CarteCandidat rang={i + 1} c={c} missionId={id} statut={suivi.get(c.consultant_id)} ouvert cv={cvParConsultant.get(c.consultant_id)} avis={avisParConsultant.get(c.consultant_id)} retour={retourParConsultant.get(c.consultant_id)} />
+            </div>
+          );
+        })()}
+
+        {/* Tous les profils en petites cartes, par groupe de note (seuils de la légende ci-dessus). */}
+        {[
+          { titre: "Très bonne adéquation", sous: "75 et plus", min: 75, max: 101 },
+          { titre: "À étudier", sous: "50 à 74", min: 50, max: 75 },
+          { titre: "Correspondance faible", sous: "31 à 49", min: 0, max: 50 },
+        ].map((g) => {
+          const liste = proposes.map((c, i) => ({ c, rang: i + 1 })).filter(({ c }) => { const n = Math.round(noteAffichee(c)); return n >= g.min && n < g.max; });
+          if (!liste.length) return null;
+          return (
+            <section key={g.titre} className="space-y-3">
+              <h3 className="text-base font-bold text-nuit">{g.titre} <span className="font-normal text-slate-400">({liste.length}) · {g.sous}</span></h3>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {liste.map(({ c, rang }) => {
+                  const n = Math.round(noteAffichee(c));
+                  const actif = c.consultant_id === profilOuvert;
+                  return (
+                    <Link key={c.consultant_id} href={`/missions/${id}?profil=${c.consultant_id}#detail`}
+                      className={`carte flex items-center gap-3 p-3 transition hover:ring-2 hover:ring-marque-200 ${actif ? "ring-2 ring-marque-500" : ""}`}>
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-nuit text-sm font-bold text-white">{`${c.prenom?.[0] ?? ""}${c.nom?.[0] ?? ""}`.replace("—", "").toUpperCase() || "?"}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-semibold text-nuit">{c.prenom === "—" ? "" : c.prenom} {c.nom}</span>
+                        <span className="block truncate text-xs text-slate-500">{c.intitule_poste ?? "Poste non renseigné"}</span>
+                        <span className="block truncate text-xs text-slate-400">{suivi.get(c.consultant_id) ? `Suivi : ${suivi.get(c.consultant_id)}` : c.disponible_le ? `Disponible le ${new Date(c.disponible_le).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })}` : `Disponibilité : ${c.disponibilite ?? "non renseignée"}`}</span>
+                      </span>
+                      <span className={`shrink-0 rounded-full px-2.5 py-1 text-sm font-bold ${n >= 75 ? "bg-emerald-50 text-emerald-700" : n >= 50 ? "bg-marque-50 text-marque-700" : "bg-slate-100 text-slate-600"}`}>{n}</span>
+                      <span className="sr-only">Rang {rang}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
         {!proposes.length && !resume.calculeLe && (
           <div className="carte p-8 text-center text-sm text-slate-500">
             <p className="font-medium text-nuit">Classement en préparation…</p>
