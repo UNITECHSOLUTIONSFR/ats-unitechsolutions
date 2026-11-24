@@ -25,6 +25,15 @@ import ChoixStatut from "../statut";
 import { EtiquetteTrello } from "../trello";
 import { LIBELLE_STATUT } from "@/lib/missions/statuts";
 
+/** Ancienneté d'une date en jours (cartes des profils). */
+function joursDepuis(date: string): number {
+  return Math.floor((new Date().getTime() - Date.parse(date)) / 86_400_000);
+}
+function ilYa(date: string): string {
+  const j = joursDepuis(date);
+  return j < 1 ? "Aujourd'hui" : j < 30 ? `Il y a ${j} jour${j > 1 ? "s" : ""}` : j < 365 ? `Il y a ${Math.floor(j / 30)} mois` : `Il y a ${Math.floor(j / 365)} an${j >= 730 ? "s" : ""}`;
+}
+
 const STATUTS_PROPOSITION: Record<string, string> = {
   propose: "Proposé", appele: "Appelé", envoye_client: "Envoyé au client", retenu: "Retenu", refuse: "Refusé",
 };
@@ -64,6 +73,12 @@ export default async function PageMission({ params, searchParams }: { params: Pr
   const cvParConsultant = new Map<string, { id: string; word: string; pdf: string | null }>();
   for (const g of cvMission ?? []) if (!cvParConsultant.has(g.consultant_id)) cvParConsultant.set(g.consultant_id, { id: g.id, word: g.word_url, pdf: g.pdf_url });
   const suivi = new Map((propositions ?? []).map((p) => [p.consultant_id, p.statut as string]));
+  // Cartes (24/11/2026) : date d'arrivée du profil et TJM / salaire de sa fiche (jamais le TJM de la mission).
+  const { data: infosFiches } = proposes.length
+    ? await supabase.from("consultants").select("id, created_at, tjm_salaire").in("id", proposes.map((c) => c.consultant_id))
+    : { data: [] };
+  const infos = new Map((infosFiches ?? []).map((f) => [f.id as string, { arrivee: f.created_at as string, tjm: (f.tjm_salaire as string | null) ?? null }]));
+
   const shortlist: ProfilShortlist[] = classement.filter((c) => suivi.has(c.consultant_id) && suivi.get(c.consultant_id) !== "refuse").map((c) => ({
     trigramme: c.trigramme, poste: c.intitule_poste, annees: c.annees_experience, score: Math.round(noteAffichee(c)),
     disponibilite: c.disponible_le ? new Date(c.disponible_le).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" }) : c.disponibilite ?? "à préciser", pdf: c.pdf_anonyme_url,
@@ -168,16 +183,28 @@ export default async function PageMission({ params, searchParams }: { params: Pr
                 {liste.map(({ c, rang }) => {
                   const n = Math.round(noteAffichee(c));
                   const actif = c.consultant_id === profilOuvert;
+                  const info = infos.get(c.consultant_id);
+                  const nouveau = !!info && joursDepuis(info.arrivee) < 7;
+                  const statut = suivi.get(c.consultant_id);
                   return (
                     <Link key={c.consultant_id} href={`/missions/${id}?profil=${c.consultant_id}#detail`}
-                      className={`carte flex items-center gap-3 p-3 transition hover:ring-2 hover:ring-marque-200 ${actif ? "ring-2 ring-marque-500" : ""}`}>
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-nuit text-sm font-bold text-white">{`${c.prenom?.[0] ?? ""}${c.nom?.[0] ?? ""}`.replace("—", "").toUpperCase() || "?"}</span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-semibold text-nuit">{c.prenom === "—" ? "" : c.prenom} {c.nom}</span>
-                        <span className="block truncate text-xs text-slate-500">{c.intitule_poste ?? "Poste non renseigné"}</span>
-                        <span className="block truncate text-xs text-slate-400">{suivi.get(c.consultant_id) ? `Suivi : ${suivi.get(c.consultant_id)}` : c.disponible_le ? `Disponible le ${new Date(c.disponible_le).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })}` : `Disponibilité : ${c.disponibilite ?? "non renseignée"}`}</span>
+                      className={`carte flex flex-col gap-3 p-5 transition hover:ring-2 hover:ring-marque-200 ${actif ? "ring-2 ring-marque-500" : ""}`}>
+                      <span className="flex items-start gap-3">
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-nuit text-sm font-bold text-white">{`${c.prenom?.[0] ?? ""}${c.nom?.[0] ?? ""}`.replace("—", "").toUpperCase() || "?"}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-base font-semibold text-nuit">{c.prenom === "—" ? "" : c.prenom} {c.nom}</span>
+                          <span className="block truncate text-sm text-slate-500">{c.intitule_poste ?? "Poste non renseigné"}</span>
+                          {info && <span className="block text-xs text-slate-400">{ilYa(info.arrivee)}</span>}
+                        </span>
                       </span>
-                      <span className={`shrink-0 rounded-full px-2.5 py-1 text-sm font-bold ${n >= 75 ? "bg-emerald-50 text-emerald-700" : n >= 50 ? "bg-marque-50 text-marque-700" : "bg-slate-100 text-slate-600"}`}>{n}</span>
+                      <span className="flex flex-wrap gap-2">
+                        {info?.tjm && <span className="rounded-lg bg-marque-50 px-2.5 py-1 text-sm font-semibold text-marque-700 ring-1 ring-marque-200">💶 {info.tjm}</span>}
+                        {nouveau && <span className="rounded-lg bg-white px-2.5 py-1 text-sm font-semibold text-slate-600 ring-1 ring-slate-300">✦ Nouveau</span>}
+                      </span>
+                      <span className="mt-auto flex items-center justify-between border-t border-slate-100 pt-3">
+                        <span className="text-sm font-medium text-slate-500">{statut ? (STATUTS_PROPOSITION[statut] ?? statut) : "◌ Non sélectionné"}</span>
+                        <span className={`rounded-full px-2.5 py-1 text-sm font-bold ${n >= 75 ? "bg-emerald-50 text-emerald-700" : n >= 50 ? "bg-marque-50 text-marque-700" : "bg-slate-100 text-slate-600"}`}>{n}</span>
+                      </span>
                       <span className="sr-only">Rang {rang}</span>
                     </Link>
                   );
