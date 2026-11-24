@@ -9,6 +9,7 @@ import { ESPACE_ADEQUATIONS } from "@/lib/cv-unitech/service";
 import { deposerCVRecu } from "@/lib/emails/depot";
 import { resoudreCompetences } from "@/lib/matching/competences";
 import { cheminCVCollective } from "./fichier";
+import { actualiserProjection } from "@/lib/tableau/projection";
 
 /** Compte de l'administratrice qui a demandé l'import (historique des fiches). */
 const ACTEUR = "db7f1a37-f71c-4aa2-98f8-30cd67874ca4";
@@ -23,7 +24,7 @@ const ACTEUR = "db7f1a37-f71c-4aa2-98f8-30cd67874ca4";
  * La nuit (19 h - 6 h, heure de Paris), plusieurs CV sont traités en même temps.
  */
 const heureParis = () => Number(new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", hour12: false }).format(new Date()));
-const enParallele = () => { const h = heureParis(); return h >= 19 || h < 6 ? 4 : 1; };
+const enParallele = () => { const h = heureParis(); return h >= 19 || h < 6 ? 8 : 1; };
 
 async function telecharger(lien: string): Promise<{ contenu: Buffer; type: string }> {
   const r = await fetch(lien);
@@ -61,7 +62,7 @@ async function traiterUn(supabase: SupabaseClient, it: Element): Promise<boolean
     const { contenu, type } = await telecharger(it.cv_lien);
     const nom = /\.(pdf|docx?)$/i.test(it.nom_fichier) ? it.nom_fichier : `${it.nom_fichier}.pdf`;
     const message = await traiterCV(it.consultant_id, new File([new Uint8Array(contenu)], nom, { type }), ACTEUR,
-      { deposer: false, sansIA: true, urlWeb: it.cv_lien, origine: "collective", identifiant: `collective-cv:${it.application_id}` });
+      { deposer: false, sansIA: true, sansProjection: true, urlWeb: it.cv_lien, origine: "collective", identifiant: `collective-cv:${it.application_id}` });
     await rangerFichier(supabase, it.application_id, contenu, type);
     await supabase.from("documents").update({ supprime_sharepoint: true }).eq("sharepoint_item_id", `collective:${it.application_id}`);
     await supabase.from("imports_collective").update({ statut: "fait", message, traite_le: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("application_id", it.application_id);
@@ -136,6 +137,8 @@ export async function traiterImportsCollective(supabase: SupabaseClient, budgetM
     const r = await Promise.all(paquet.map((it) => traiterUn(supabase, it as Element)));
     faits += r.filter(Boolean).length; erreurs += r.filter((x) => !x).length;
   }
+  // Liste de l'écran Consultants mise à jour une fois pour tout le passage.
+  if (faits) await actualiserProjection(supabase).catch(() => undefined);
   // 2. Dépôt SharePoint des CV traités avant cette décision.
   let deposes = 0;
   const { data: aDeposer } = await supabase.from("imports_collective").select("application_id, consultant_id, nom_fichier").eq("statut", "fait").is("depose_le", null).limit(20);

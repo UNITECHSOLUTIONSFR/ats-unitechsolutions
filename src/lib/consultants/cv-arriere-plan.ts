@@ -63,7 +63,7 @@ export async function traiterCV(consultantId: string, fichier: File, utilisateur
     consultant_id: consultantId, source: "interface", par: utilisateurId,
     modifications: { cv: { avant: null, apres: lecture.nom }, ...Object.fromEntries(Object.entries(complements).map(([k, v]) => [k, { avant: null, apres: v }])) },
   });
-  await actualiserProjection(admin).catch(() => undefined);
+  if (!options.sansProjection) await actualiserProjection(admin).catch(() => undefined);
   const { evaluerProfil } = await import("@/lib/matching/profil");
   await evaluerProfil(consultantId, admin).catch((e) => console.error("Matching du profil :", (e as Error).message));
   return message;

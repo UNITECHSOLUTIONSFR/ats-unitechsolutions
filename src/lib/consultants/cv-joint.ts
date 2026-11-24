@@ -65,6 +65,8 @@ export interface OptionsCV {
   urlWeb?: string | null;
   /** Pas de lecture par l'IA au moment de l'enregistrement. */
   sansIA?: boolean;
+  /** Traitement par lots : la liste de l'écran Consultants est mise à jour une fois à la fin, pas après chaque CV. */
+  sansProjection?: boolean;
   /** Origine du document (ex. « collective ») et identifiant unique (jamais deux fois le même CV). */
   origine?: string;
   identifiant?: string;
