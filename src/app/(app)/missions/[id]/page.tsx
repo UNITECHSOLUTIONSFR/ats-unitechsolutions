@@ -22,6 +22,9 @@ import type { AvisMission } from "@/lib/ai";
 export const maxDuration = 120;
 import { donnerRetourMatching, suivreProposition } from "@/lib/missions/actions";
 import ChoixStatut from "../statut";
+import NavigationProfils from "./navigation-profils";
+import { ApercuDuCV } from "../../consultants/[id]/blocs-mission";
+import { Suspense } from "react";
 import { EtiquetteTrello } from "../trello";
 import { LIBELLE_STATUT } from "@/lib/missions/statuts";
 
@@ -155,15 +158,29 @@ export default async function PageMission({ params, searchParams }: { params: Pr
           </div>
         </div>
 
-        {/* Profil choisi : détail complet (analyse, boutons, CV). */}
+        {/* Profil choisi : fenêtre à droite (avis de l'IA, expériences, CV) ; clic en dehors, ✕ ou Échap pour fermer, ← → pour naviguer. */}
         {(() => {
           const i = proposes.findIndex((c) => c.consultant_id === profilOuvert);
           if (i < 0) return null;
           const c = proposes[i];
+          const lien = (j: number) => (j >= 0 && j < proposes.length ? `/missions/${id}?profil=${proposes[j].consultant_id}` : null);
           return (
-            <div id="detail" className="scroll-mt-4 space-y-2">
-              <Link href={`/missions/${id}`} scroll={false} className="text-sm font-semibold text-marque-600 hover:underline">← Revenir à tous les profils</Link>
-              <CarteCandidat rang={i + 1} c={c} missionId={id} statut={suivi.get(c.consultant_id)} ouvert cv={cvParConsultant.get(c.consultant_id)} avis={avisParConsultant.get(c.consultant_id)} retour={retourParConsultant.get(c.consultant_id)} />
+            <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={`${c.prenom} ${c.nom}`}>
+              <Link href={`/missions/${id}`} scroll={false} className="absolute inset-0 bg-nuit/30 backdrop-blur-[1px]" aria-label="Fermer" />
+              <div className="absolute inset-y-0 right-0 flex w-full max-w-[1100px] flex-col bg-slate-50 shadow-2xl sm:w-[85vw]">
+                <div className="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 sm:px-6">
+                  <Link href={`/missions/${id}`} scroll={false} className="flex h-9 w-9 items-center justify-center rounded-xl ring-1 ring-slate-200 hover:bg-slate-50" aria-label="Fermer">✕</Link>
+                  <span className="min-w-0 flex-1 truncate text-lg font-bold text-nuit">{c.prenom === "—" ? "" : c.prenom} {c.nom} <span className="font-normal text-slate-400">({i + 1}/{proposes.length})</span></span>
+                  <span className="hidden text-sm text-slate-500 sm:inline">Utilisez ← → pour naviguer</span>
+                  {lien(i - 1) && <Link href={lien(i - 1)!} scroll={false} className="flex h-9 w-9 items-center justify-center rounded-xl ring-1 ring-slate-200 hover:bg-slate-50" aria-label="Profil précédent">←</Link>}
+                  {lien(i + 1) && <Link href={lien(i + 1)!} scroll={false} className="flex h-9 w-9 items-center justify-center rounded-xl ring-1 ring-slate-200 hover:bg-slate-50" aria-label="Profil suivant">→</Link>}
+                </div>
+                <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
+                  <CarteCandidat rang={i + 1} c={c} missionId={id} statut={suivi.get(c.consultant_id)} ouvert cv={cvParConsultant.get(c.consultant_id)} avis={avisParConsultant.get(c.consultant_id)} retour={retourParConsultant.get(c.consultant_id)} />
+                  <Suspense fallback={<div className="squelette h-[480px]" />}><ApercuDuCV consultantId={c.consultant_id} /></Suspense>
+                </div>
+              </div>
+              <NavigationProfils precedent={lien(i - 1)} suivant={lien(i + 1)} fermer={`/missions/${id}`} />
             </div>
           );
         })()}
@@ -187,7 +204,7 @@ export default async function PageMission({ params, searchParams }: { params: Pr
                   const nouveau = !!info && joursDepuis(info.arrivee) < 7;
                   const statut = suivi.get(c.consultant_id);
                   return (
-                    <Link key={c.consultant_id} href={`/missions/${id}?profil=${c.consultant_id}#detail`}
+                    <Link key={c.consultant_id} href={`/missions/${id}?profil=${c.consultant_id}`} scroll={false}
                       className={`carte flex flex-col gap-3 p-5 transition hover:ring-2 hover:ring-marque-200 ${actif ? "ring-2 ring-marque-500" : ""}`}>
                       <span className="flex items-start gap-3">
                         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-nuit text-sm font-bold text-white">{`${c.prenom?.[0] ?? ""}${c.nom?.[0] ?? ""}`.replace("—", "").toUpperCase() || "?"}</span>
