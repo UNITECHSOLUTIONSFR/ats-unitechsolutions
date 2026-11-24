@@ -24,6 +24,9 @@ export async function apercuCV(supabase: SupabaseClient, consultantId: string): 
     supabase.from("cv_unitech_generes").select("drive_id, word_item_id, word_nom, word_url").eq("consultant_id", consultantId)
       .not("word_item_id", "is", null).order("created_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
+  // CV rangé dans l'outil (candidats Collective, 24/11/2026) : affiché directement depuis l'outil.
+  const dansOutil = (docs ?? []).find((d) => d.type === "word_nominatif" && String(d.url_web ?? "").startsWith("/api/documents/"));
+  if (dansOutil) return { url: dansOutil.url_web as string, ouvrir: dansOutil.url_web as string, nom: dansOutil.nom_fichier as string, texte: null };
   const fichiers = (docs ?? []).filter((d) => !String(d.sharepoint_drive_id).startsWith("boite:"));
   const candidats = [
     ...fichiers.filter((d) => d.type === "word_nominatif"), ...fichiers.filter((d) => d.type === "pdf_anonyme"),

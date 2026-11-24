@@ -169,7 +169,7 @@ export default async function FicheConsultant({ params, searchParams }: { params
               {(documents ?? []).map((d) => (
                 <li key={d.id}>
                   <span className="text-slate-500">{TYPES_DOC[d.type]} : </span>
-                  {d.url_web?.includes("sharepoint.com") ? <a href={d.url_web} target="_blank" rel="noreferrer" className="lien break-all">{d.nom_fichier}</a> : d.nom_fichier}
+                  {d.url_web?.includes("sharepoint.com") || d.url_web?.startsWith("/api/documents/") ? <a href={d.url_web} target="_blank" rel="noreferrer" className="lien break-all">{d.nom_fichier}</a> : d.nom_fichier}
                 </li>
               ))}
             </ul>
