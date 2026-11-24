@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { exigerUtilisateur } from "@/lib/acces";
 import { apercuCV } from "@/lib/consultants/apercu-cv";
+import { dureeMois, periode } from "@/lib/matching/v3-calcul";
 import { evaluationPourMission, missionsPourConsultant } from "@/lib/matching/pour-consultant";
 import { suivreProposition } from "@/lib/missions/actions";
 import { EvaluationIA, JaugeScore, niveauScore } from "../../missions/evaluation";
@@ -81,20 +82,57 @@ export async function MissionsPourLui({ consultantId }: { consultantId: string }
 /** Aperçu du CV dans la fiche (lecture seule), avec un lien pour l'ouvrir dans SharePoint. */
 export async function ApercuDuCV({ consultantId }: { consultantId: string }) {
   const { supabase } = await exigerUtilisateur();
-  const a = await apercuCV(supabase, consultantId);
+  const [a, { data: experiences }] = await Promise.all([
+    apercuCV(supabase, consultantId),
+    supabase.from("experiences_cv").select("ordre, role, entreprise, debut, fin, duree_mois, responsabilites, technologies").eq("consultant_id", consultantId).order("ordre"),
+  ]);
+  const duree = (m: number | null) => !m ? null : m < 12 ? `${m} mois` : `${Math.floor(m / 12)} an${m >= 24 ? "s" : ""}${m % 12 ? ` ${m % 12} mois` : ""}`;
+  const fichier = a.url ? (
+    <iframe src={a.url} title={a.nom ?? "CV"} className="h-[70vh] min-h-[480px] w-full border-t border-slate-100 bg-slate-50" />
+  ) : a.texte ? (
+    <pre className="max-h-[70vh] overflow-y-auto whitespace-pre-wrap border-t border-slate-100 bg-slate-50 px-4 py-3 font-sans text-sm text-slate-700 sm:px-6">{a.texte}</pre>
+  ) : (
+    <p className="border-t border-slate-100 px-4 py-6 text-sm text-slate-500 sm:px-6">Aucun CV enregistré pour ce consultant.</p>
+  );
   return (
     <section className="carte overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 pb-3 pt-4 sm:px-6">
-        <h2 className="titre-section">CV</h2>
-        {a.ouvrir && <a href={a.ouvrir} target="_blank" rel="noreferrer" className="text-sm font-semibold text-marque-600 hover:underline">Ouvrir dans SharePoint ↗</a>}
+        <h2 className="titre-section">{experiences?.length ? "Expériences" : "CV"}</h2>
+        {a.ouvrir && <a href={a.ouvrir} target="_blank" rel="noreferrer" className="text-sm font-semibold text-marque-600 hover:underline">{a.ouvrir.includes("sharepoint.com") ? "Ouvrir dans SharePoint ↗" : "Ouvrir le CV ↗"}</a>}
       </div>
-      {a.url ? (
-        <iframe src={a.url} title={a.nom ?? "CV"} className="h-[70vh] min-h-[480px] w-full border-t border-slate-100 bg-slate-50" />
-      ) : a.texte ? (
-        <pre className="max-h-[70vh] overflow-y-auto whitespace-pre-wrap border-t border-slate-100 bg-slate-50 px-4 py-3 font-sans text-sm text-slate-700 sm:px-6">{a.texte}</pre>
-      ) : (
-        <p className="border-t border-slate-100 px-4 py-6 text-sm text-slate-500 sm:px-6">Aucun CV enregistré pour ce consultant.</p>
-      )}
+      {experiences?.length ? (
+        <>
+          {/* Récapitulatif des expériences (tiré du CV, déjà lu une fois) : plus lisible que le CV brut, affiché en dessous. */}
+          <ul className="divide-y divide-slate-100 border-t border-slate-100">
+            {experiences.map((x) => {
+              const mois = (x.duree_mois as number | null) ?? dureeMois(x.debut as string | null, x.fin as string | null);
+              return (
+                <li key={x.ordre as number} className="flex gap-4 px-4 py-4 sm:px-6">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-2 ring-nuit/80 text-lg" aria-hidden>🏢</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-nuit">{x.role as string}</div>
+                    {x.entreprise && <div className="text-sm text-slate-700">{x.entreprise as string}</div>}
+                    <div className="text-xs text-slate-400">{[periode(x.debut as string | null, x.fin as string | null), duree(mois)].filter(Boolean).join(" · ")}</div>
+                    {x.responsabilites && (
+                      <details className="group mt-2 text-sm text-slate-700">
+                        <summary className="cursor-pointer list-none">
+                          <span className="line-clamp-2 group-open:line-clamp-none">{x.responsabilites as string}</span>
+                          <span className="text-xs font-semibold text-slate-500 group-open:hidden">Voir plus…</span>
+                        </summary>
+                        {(x.technologies as string[] | null)?.length ? <p className="mt-1 text-xs text-slate-500">Technologies : {(x.technologies as string[]).join(", ")}</p> : null}
+                      </details>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          <details className="border-t border-slate-100">
+            <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-marque-600 sm:px-6">Voir le CV complet</summary>
+            {fichier}
+          </details>
+        </>
+      ) : fichier}
     </section>
   );
 }
