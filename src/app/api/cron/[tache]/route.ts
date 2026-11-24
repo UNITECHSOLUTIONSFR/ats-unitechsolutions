@@ -42,6 +42,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const apercus = classements.restants === 0 ? await calculerApercus(clientSupabaseAdmin(), 80_000).catch((e) => ({ erreur: (e as Error).message })) : "plus tard";
     return NextResponse.json({ classements, projection, apercus, decoupage, empreintesExp, reference, testDossiers, testV3b });
   }
+  // Candidats Collective : CV passés par le circuit normal (file d'attente imports_collective).
+  if (tache === "collective") {
+    const { traiterImportsCollective } = await import("@/lib/collective/import");
+    return NextResponse.json(await traiterImportsCollective(clientSupabaseAdmin()));
+  }
   if (!(tache in TACHES)) return new NextResponse("Tâche inconnue", { status: 404 });
   const supabase = clientSupabaseAdmin();
   // Tâches planifiées (GitHub ou Supabase) : pas de double passage. La relance, lancée par un administrateur, n'est pas concernée.

@@ -4,7 +4,7 @@ import { clientSupabaseAdmin } from "@/lib/supabase/admin";
 import { normaliserTelephone } from "@/lib/metier/telephone";
 import { normaliserEmail } from "@/lib/metier/dedoublonnage";
 import { actualiserProjection } from "@/lib/tableau/projection";
-import { enregistrerCVJoint, lireCVJoint } from "./cv-joint";
+import { enregistrerCVJoint, lireCVJoint, type OptionsCV } from "./cv-joint";
 
 /**
  * CV joint lu en arrière-plan (17/11/2026) : la fiche s'ouvre tout de suite, l'IA lit le CV pendant ce temps
@@ -23,16 +23,17 @@ export async function lireCVEnArrierePlan(consultantId: string, fichier: File, u
   try { after(travail); } catch { await travail(); }
 }
 
-async function traiterCV(consultantId: string, fichier: File, utilisateurId: string): Promise<void> {
+/** Circuit normal d'un CV (aussi utilisé pour les candidats Collective, avec leurs options). */
+export async function traiterCV(consultantId: string, fichier: File, utilisateurId: string, options: OptionsCV = {}): Promise<string | null> {
   const admin = clientSupabaseAdmin();
   const lecture = await lireCVJoint(fichier);
   if ("erreur" in lecture) {
     await admin.from("consultants").update({ cv_en_lecture: null, cv_lecture_message: lecture.erreur }).eq("id", consultantId);
-    return;
+    return lecture.erreur;
   }
   const { data: c } = await admin.from("consultants").select("prenom, nom, email, telephone_e164, intitule_poste, localisation, linkedin, experience").eq("id", consultantId).maybeSingle();
-  if (!c) return;
-  const avertissement = await enregistrerCVJoint(consultantId, lecture, { prenom: c.prenom, nom: c.nom });
+  if (!c) return "Fiche introuvable.";
+  const avertissement = await enregistrerCVJoint(consultantId, lecture, { prenom: c.prenom, nom: c.nom }, options);
   // Champs laissés vides complétés à partir du CV (ce que l'équipe a saisi reste prioritaire).
   const p = lecture.profil;
   const complements: Record<string, unknown> = {};
@@ -65,4 +66,5 @@ async function traiterCV(consultantId: string, fichier: File, utilisateurId: str
   await actualiserProjection(admin).catch(() => undefined);
   const { evaluerProfil } = await import("@/lib/matching/profil");
   await evaluerProfil(consultantId, admin).catch((e) => console.error("Matching du profil :", (e as Error).message));
+  return message;
 }

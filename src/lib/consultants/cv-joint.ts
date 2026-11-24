@@ -56,16 +56,26 @@ export async function lireCVJoint(fichier: File): Promise<LectureCV | { erreur: 
 }
 
 /** Enregistre le CV lu sur la fiche : document, fichier rangé dans SharePoint (« Candidatures reçues »), compétences. */
-export async function enregistrerCVJoint(consultantId: string, lecture: LectureCV, personne: { prenom: string; nom: string }): Promise<string | null> {
+export interface OptionsCV {
+  /** Dépôt dans SharePoint (dossier métier) : oui par défaut ; non pour les CV Collective tant que l'utilisatrice ne l'a pas validé. */
+  deposer?: boolean;
+  /** Lien du fichier quand il n'est pas déposé dans SharePoint (ex. PDF chez Collective). */
+  urlWeb?: string | null;
+  /** Origine du document (ex. « collective ») et identifiant unique (jamais deux fois le même CV). */
+  origine?: string;
+  identifiant?: string;
+}
+
+export async function enregistrerCVJoint(consultantId: string, lecture: LectureCV, personne: { prenom: string; nom: string }, options: OptionsCV = {}): Promise<string | null> {
   const admin = clientSupabaseAdmin();
   const maintenant = new Date().toISOString();
   const { data: doc, error } = await admin.from("documents").insert({
-    consultant_id: consultantId, type: "word_nominatif", sharepoint_drive_id: "boite:manuel", sharepoint_item_id: `manuel/${randomUUID()}`,
-    nom_fichier: lecture.nom, empreinte_sha256: empreinteSHA256(lecture.contenu), texte_extrait: lecture.texte || null,
+    consultant_id: consultantId, type: "word_nominatif", sharepoint_drive_id: options.origine ?? "boite:manuel", sharepoint_item_id: options.identifiant ?? `manuel/${randomUUID()}`,
+    nom_fichier: lecture.nom, empreinte_sha256: empreinteSHA256(lecture.contenu), texte_extrait: lecture.texte || null, url_web: options.urlWeb ?? null,
     texte_extractible: lecture.extractible, modifie_sharepoint_le: maintenant, statut_association: "non_traite",
   }).select("id").single();
   if (error || !doc) return "Le CV n'a pas pu être enregistré.";
-  await deposerCVRecu(admin, doc.id, lecture.contenu, lecture.nom, personne, maintenant).catch(() => undefined);
+  if (options.deposer !== false) await deposerCVRecu(admin, doc.id, lecture.contenu, lecture.nom, personne, maintenant).catch(() => undefined);
   if (lecture.profil && lecture.modele) {
     const correspondance = await resoudreCompetences(admin, lecture.profil.competences.map((c) => c.nom));
     await enregistrerProfil(admin, consultantId, doc.id, lecture.profil, lecture.modele, correspondance);
