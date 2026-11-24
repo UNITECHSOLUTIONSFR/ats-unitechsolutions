@@ -33,7 +33,8 @@ export function refusFichierCV(fichier: File): string | null {
   return null;
 }
 
-export async function lireCVJoint(fichier: File): Promise<LectureCV | { erreur: string }> {
+/** sansIA : le CV est enregistré sans lecture par l'IA (lue plus tard en lot, ou pas du tout). */
+export async function lireCVJoint(fichier: File, sansIA = false): Promise<LectureCV | { erreur: string }> {
   const refus = refusFichierCV(fichier);
   if (refus) return { erreur: refus };
   const contenu = Buffer.from(await fichier.arrayBuffer());
@@ -41,6 +42,7 @@ export async function lireCVJoint(fichier: File): Promise<LectureCV | { erreur: 
   const linkedin = /(?:https?:\/\/)?(?:[a-z]{2,3}\.)?linkedin\.com\/in\/[A-Za-z0-9\-_%]+/i.exec(extrait.texte)?.[0] ?? null;
   const base = { nom: fichier.name, contenu, texte: extrait.texte, extractible: extrait.extractible, linkedin, profil: null, modele: null };
   if (!extrait.extractible) return { ...base, avertissement: "CV enregistré, mais illisible (scanné ?) : champs et compétences non remplis." };
+  if (sansIA) return { ...base, avertissement: null };
   if ((await etatBudgetMois()).depasse) return { ...base, avertissement: "CV enregistré ; lecture par l'IA reportée (plafond du mois atteint)." };
   let usages: UsageIA[] = [];
   try {
@@ -61,6 +63,8 @@ export interface OptionsCV {
   deposer?: boolean;
   /** Lien du fichier quand il n'est pas déposé dans SharePoint (ex. PDF chez Collective). */
   urlWeb?: string | null;
+  /** Pas de lecture par l'IA au moment de l'enregistrement. */
+  sansIA?: boolean;
   /** Origine du document (ex. « collective ») et identifiant unique (jamais deux fois le même CV). */
   origine?: string;
   identifiant?: string;

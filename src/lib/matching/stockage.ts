@@ -64,7 +64,7 @@ export async function calculerEtRanger(missionId: string, supabase: SupabaseClie
       supabase.from("classements_mission").select("version, a_recalculer").eq("mission_id", missionId).maybeSingle(),
     ]);
     const dejaLue = deja.data?.version === v4.VERSION_MOTEUR_V4 && !deja.data?.a_recalculer;
-    if (m?.trello_colonne === v4.COLONNE_A_LIRE && !dejaLue) await v4.lireMissionV4(supabase, missionId);
+    if (v4.aLire(m?.trello_colonne) && !dejaLue) await v4.lireMissionV4(supabase, missionId);
     return (await lireClassement(supabase, missionId)) ?? { total: 0, pertinents: 0, eligibles: null, top: [] };
   }
   const debut = Date.now();
@@ -310,6 +310,14 @@ async function passageV4(supabase: SupabaseClient, budgetMs: number): Promise<{ 
     supabase.from("reglages").select("valeur").eq("cle", "anciennes_notes_reconstruites").maybeSingle(),
   ]);
   const parMission = new Map((lignes ?? []).map((l) => [l.mission_id as string, l]));
+  // Rythme (décision du 24/11/2026) : chantier = tout, à chaque passage ; ensuite, lectures des missions nouvelles une fois par
+  // heure de 8 h à 19 h (passage de la première dizaine de minutes), nouveaux CV une seule fois la nuit (passage de 22 h).
+  const { data: chantier } = await supabase.from("reglages").select("valeur").eq("cle", "matching_chantier_jusqu").maybeSingle();
+  const enChantier = Date.now() < Date.parse(String(chantier?.valeur ?? "1970-01-01"));
+  const paris = new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date()).split(":").map(Number);
+  const debutHeure = paris[1] < 10;
+  const fairelectures = enChantier || (debutHeure && paris[0] >= 8 && paris[0] <= 19);
+  const faireNouveauxCV = enChantier || (debutHeure && paris[0] === 22);
   // 1. Décision 5B (une seule fois).
   if (marque?.valeur !== true) {
     for (const l of lignes ?? []) {
@@ -319,9 +327,9 @@ async function passageV4(supabase: SupabaseClient, budgetMs: number): Promise<{ 
     if (!erreurs.length) await supabase.from("reglages").upsert({ cle: "anciennes_notes_reconstruites", valeur: true });
   }
   // 2. Lectures complètes (une fois par mission).
-  const aLire = (missions ?? []).filter((m) => {
+  const aLire = !fairelectures ? [] : (missions ?? []).filter((m) => {
     const l = parMission.get(m.id as string);
-    return m.trello_colonne === v4.COLONNE_A_LIRE && (l?.version !== v4.VERSION_MOTEUR_V4 || l?.a_recalculer);
+    return v4.aLire(m.trello_colonne as string | null) && (l?.version !== v4.VERSION_MOTEUR_V4 || l?.a_recalculer);
   });
   let recalcules = 0;
   for (const m of aLire) {
@@ -336,10 +344,10 @@ async function passageV4(supabase: SupabaseClient, budgetMs: number): Promise<{ 
   let nouveauxCV = 0;
   const { data: dernier } = await supabase.from("dossiers_cv").select("updated_at").order("updated_at", { ascending: false }).limit(1).maybeSingle();
   const dernierCV = Date.parse(String(dernier?.updated_at ?? "1970-01-01"));
-  for (const m of missions ?? []) {
+  for (const m of faireNouveauxCV ? missions ?? [] : []) {
     if (Date.now() - debut > budgetMs) break;
     const l = parMission.get(m.id as string);
-    if (!l?.calcule_le || aLire.some((x) => x.id === m.id)) continue;
+    if (!v4.aLire(m.trello_colonne as string | null) || l?.version !== v4.VERSION_MOTEUR_V4 || !l?.calcule_le || aLire.some((x) => x.id === m.id)) continue;
     const depuis = (l.cv_verifies_le ?? l.calcule_le) as string;
     if (Date.parse(depuis) >= dernierCV) continue;
     try { nouveauxCV += await v4.comparerNouveauxCV(supabase, m.id as string, depuis); }

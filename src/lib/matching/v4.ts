@@ -16,13 +16,17 @@ import { textesCV } from "./v3-reference";
  *   toutes les compétences obligatoires de la mission (option B) ;
  * - chaque CV retenu est comparé EN ENTIER à la fiche de poste par l'IA, critère par critère (atteint / partiel / non),
  *   avec une note sur 100 (option b) ; affichés : les profils notés 31 ou plus, du plus haut au plus bas ;
- * - seules les missions de la colonne Trello « Missions en cours » sont lues, et une seule fois : jamais recalculées,
- *   même modifiées ; elles gardent leurs profils quand elles passent chez un recruteur ;
- * - un nouveau CV est comparé à toutes les missions ouvertes déjà lues, s'il passe le filtre (3B) ;
+ * - seules les missions des colonnes « Missions en cours », « Sourcing Anaëlle » et « Sourcing Amadou » sont lues, une seule
+ *   fois : jamais recalculées, même modifiées ; les autres missions gardent leurs profils ;
+ * - un nouveau CV est comparé à ces missions déjà lues, s'il passe le filtre (3B) ;
+ * - rythme : toutes les 10 minutes pendant le chantier (réglage matching_chantier_jusqu) ; ensuite, lecture des missions
+ *   nouvelles une fois par heure de 8 h à 19 h, et comparaison des nouveaux CV une seule fois la nuit (vers 22 h) ;
  * - chaque note est gardée (empreinte mission + CV) : rien n'est jamais repayé.
  */
 export const VERSION_MOTEUR_V4 = "2026-11-24.1-cv-complet";
-export const COLONNE_A_LIRE = "Missions en cours";
+/** Colonnes Trello dont les missions sont lues par le matching (décision du 24/11/2026). Les autres gardent leurs profils. */
+export const COLONNES_A_LIRE = ["Missions en cours", "Sourcing Anaëlle", "Sourcing Amadou"];
+export const aLire = (colonne: string | null | undefined) => !!colonne && COLONNES_A_LIRE.includes(colonne);
 const PAR_APPEL = 5;
 
 export async function matchingV4Actif(supabase: SupabaseClient): Promise<boolean> {
