@@ -19,7 +19,7 @@ as $$
       and not coalesce(d.supprime_sharepoint, false)
       and coalesce(nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role', '') = 'service_role'
       -- Candidats d'offres Collective expirées : pas d'IA (décision du 24/11/2026).
-      and not exists (select 1 from imports_collective i where i.consultant_id = d.consultant_id and not i.lecture_ia)
+      and not (d.sharepoint_drive_id = 'collective' and exists (select 1 from imports_collective i where i.consultant_id = d.consultant_id and not i.lecture_ia))
     order by d.consultant_id, (d.type = 'word_nominatif') desc, d.modifie_sharepoint_le desc nulls last, d.created_at desc
   )
   select c.consultant_id, c.id, c.texte_extrait, md5(c.texte_extrait)
