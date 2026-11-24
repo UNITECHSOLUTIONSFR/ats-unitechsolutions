@@ -45,7 +45,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   // Candidats Collective : CV passés par le circuit normal (file d'attente imports_collective).
   if (tache === "collective") {
     const { traiterImportsCollective } = await import("@/lib/collective/import");
-    return NextResponse.json(await traiterImportsCollective(clientSupabaseAdmin()));
+    const admin = clientSupabaseAdmin();
+    // Décision 6B (une seule fois) : les 3 CV d'adéquation d'Amine AIT OUMAJOUD copiés dans l'outil, laissés dans SharePoint.
+    let copieAmine: string[] | string = "déjà faite";
+    const { data: marque } = await admin.from("reglages").select("valeur").eq("cle", "copie_adequations_amine").maybeSingle();
+    if (!marque) {
+      const { copierAdequationsDansOutil } = await import("@/lib/cv-unitech/copie-outil");
+      copieAmine = await copierAdequationsDansOutil(admin, ["6e58de87-1170-4076-838c-e3bc5a2b74bf", "679dcc86-049b-4db0-9c71-dfc46e1f5cee", "d71edbdb-5b05-46e7-9d6a-2f2560350340"]);
+      await admin.from("reglages").upsert({ cle: "copie_adequations_amine", valeur: copieAmine });
+    }
+    return NextResponse.json({ ...(await traiterImportsCollective(admin)), copieAmine });
   }
   if (!(tache in TACHES)) return new NextResponse("Tâche inconnue", { status: 404 });
   const supabase = clientSupabaseAdmin();
