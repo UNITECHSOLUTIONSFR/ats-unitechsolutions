@@ -15,29 +15,52 @@ export interface DonneesTableau {
   documents: Record<string, { word?: string; email?: string; pdf?: string }>;
 }
 
+/**
+ * Mise à jour ciblée (vitesse, 25/11/2026) : seulement les lignes de ces fiches. Les lignes « hors Excel » gardent la
+ * position qu'elles ont déjà dans la projection (les positions ne sont recalculées que par la mise à jour complète).
+ */
+export interface FiltreTableau { ids: string[]; positionsHorsExcel: Map<string, number> }
+
 /** Toutes les lignes de l'écran Consultants (onglet principal + fiches créées hors Excel), lues en parallèle. */
-export async function chargerTableau(supabase: SupabaseClient): Promise<DonneesTableau | null> {
+export async function chargerTableau(supabase: SupabaseClient, filtre?: FiltreTableau): Promise<DonneesTableau | null> {
   const { data: onglet } = await supabase.from("tableau_onglets").select("id, entetes, principal").eq("principal", true).maybeSingle();
   if (!onglet) return null;
+  const ids = filtre?.ids;
+  const CHAMPS_HORS_EXCEL = "id, source, prenom, nom, trigramme, email, email_2, telephone_e164, telephone_brut, intitule_poste, disponibilite, disponible_le, disponibilite_maj_le, localisation, notes, statut, experience, tjm_salaire, linkedin, cv_lien, commentaire_email, colonnes_tableau, created_at";
   const [lignes, horsExcel, docs, competences, reperes] = await Promise.all([
-    lireTout<LigneTableau>((a, b) => supabase.from("tableau_lignes").select("id, position, consultant_id, valeurs").eq("onglet_id", onglet.id).order("position").range(a, b)),
-    supabase.from("consultants").select("id, source, prenom, nom, trigramme, email, email_2, telephone_e164, telephone_brut, intitule_poste, disponibilite, disponible_le, disponibilite_maj_le, localisation, notes, statut, experience, tjm_salaire, linkedin, cv_lien, commentaire_email, colonnes_tableau, created_at")
-      .neq("source", "import_excel").order("created_at", { ascending: false }).then((r) => r.data ?? []),
-    lireTout<{ consultant_id: string; type: string; url_web: string | null; sharepoint_drive_id: string }>((a, b) => supabase.from("documents").select("consultant_id, type, url_web, sharepoint_drive_id")
-      .not("consultant_id", "is", null).eq("supprime_sharepoint", false).in("type", ["word_nominatif", "pdf_anonyme"])
-      .order("modifie_sharepoint_le", { ascending: false }).range(a, b)),
+    ids
+      ? supabase.from("tableau_lignes").select("id, position, consultant_id, valeurs").eq("onglet_id", onglet.id).in("consultant_id", ids).order("position").then((r) => (r.data ?? []) as LigneTableau[])
+      : lireTout<LigneTableau>((a, b) => supabase.from("tableau_lignes").select("id, position, consultant_id, valeurs").eq("onglet_id", onglet.id).order("position").range(a, b)),
+    (ids ? supabase.from("consultants").select(CHAMPS_HORS_EXCEL).neq("source", "import_excel").in("id", ids) : supabase.from("consultants").select(CHAMPS_HORS_EXCEL).neq("source", "import_excel"))
+      .order("created_at", { ascending: false }).then((r) => r.data ?? []),
+    ids
+      ? supabase.from("documents").select("consultant_id, type, url_web, sharepoint_drive_id").in("consultant_id", ids).eq("supprime_sharepoint", false).in("type", ["word_nominatif", "pdf_anonyme"])
+        .order("modifie_sharepoint_le", { ascending: false }).then((r) => (r.data ?? []) as { consultant_id: string; type: string; url_web: string | null; sharepoint_drive_id: string }[])
+      : lireTout<{ consultant_id: string; type: string; url_web: string | null; sharepoint_drive_id: string }>((a, b) => supabase.from("documents").select("consultant_id, type, url_web, sharepoint_drive_id")
+        .not("consultant_id", "is", null).eq("supprime_sharepoint", false).in("type", ["word_nominatif", "pdf_anonyme"])
+        .order("modifie_sharepoint_le", { ascending: false }).range(a, b)),
     // Une seule lecture (fonction de la base) : la vue paginée refaisait tout le calcul à chaque page.
-    supabase.rpc("competences_consultants_json").then((r) => {
-      if (r.error) throw new Error(`Compétences des consultants : ${r.error.message}`);
-      return Object.entries((r.data ?? {}) as Record<string, string>).map(([consultant_id, competences]) => ({ consultant_id, competences }));
-    }),
-    lireTout<{ id: string; disponibilite: string | null; disponible_le: string | null; disponibilite_maj_le: string | null; created_at: string; source: string }>((a, b) =>
-      supabase.from("consultants").select("id, disponibilite, disponible_le, disponibilite_maj_le, created_at, source").range(a, b)),
+    // Mise à jour ciblée : même texte (compétences triées, séparées par « · »), lu seulement pour ces fiches.
+    ids
+      ? supabase.rpc("competences_consultants_json_ids", { p_ids: ids }).then((r) => {
+        if (r.error) throw new Error(`Compétences des consultants : ${r.error.message}`);
+        return Object.entries((r.data ?? {}) as Record<string, string>).map(([consultant_id, competences]) => ({ consultant_id, competences }));
+      })
+      : supabase.rpc("competences_consultants_json").then((r) => {
+        if (r.error) throw new Error(`Compétences des consultants : ${r.error.message}`);
+        return Object.entries((r.data ?? {}) as Record<string, string>).map(([consultant_id, competences]) => ({ consultant_id, competences }));
+      }),
+    ids
+      ? supabase.from("consultants").select("id, disponibilite, disponible_le, disponibilite_maj_le, created_at, source").in("id", ids).then((r) => (r.data ?? []) as { id: string; disponibilite: string | null; disponible_le: string | null; disponibilite_maj_le: string | null; created_at: string; source: string }[])
+      : lireTout<{ id: string; disponibilite: string | null; disponible_le: string | null; disponibilite_maj_le: string | null; created_at: string; source: string }>((a, b) =>
+        supabase.from("consultants").select("id, disponibilite, disponible_le, disponibilite_maj_le, created_at, source").range(a, b)),
   ]);
 
   // Fiches créées hors Excel (emails, CV SharePoint, saisie) pas encore reliées à une ligne : en haut, les plus récentes d'abord.
   const relies = new Set(lignes.map((l) => l.consultant_id).filter(Boolean));
-  lignes.unshift(...lignesHorsExcel(horsExcel.filter((c) => !relies.has(c.id)) as FicheHorsExcel[], onglet.entetes, Math.max(0, ...lignes.map((l) => l.position)) + 1));
+  const hors = lignesHorsExcel(horsExcel.filter((c) => !relies.has(c.id)) as FicheHorsExcel[], onglet.entetes, Math.max(0, ...lignes.map((l) => l.position)) + 1);
+  if (filtre) for (const l of hors) { const p = filtre.positionsHorsExcel.get(l.id); if (p === undefined) return null; l.position = p; }
+  lignes.unshift(...hors);
   // Compétences du CV analysé : cherchables depuis la barre de recherche (« java paris »).
   const parConsultant = new Map(competences.map((c) => [c.consultant_id, c.competences]));
   const parId = new Map(reperes.map((r) => [r.id, r]));

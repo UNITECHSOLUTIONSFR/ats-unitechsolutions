@@ -2,7 +2,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { clientSupabaseAdmin } from "@/lib/supabase/admin";
-import { chargerTableau } from "./chargement";
+import { chargerTableau, type FiltreTableau } from "./chargement";
 import { normaliserRecherche, valeurEcran } from "./modele";
 
 /**
@@ -20,10 +20,28 @@ export function actualiserProjection(supabase: SupabaseClient = clientSupabaseAd
   return enCours;
 }
 
-async function construire(supabase: SupabaseClient): Promise<BilanProjection> {
+/**
+ * Vitesse (25/11/2026) : après la modification de quelques fiches, seules leurs lignes sont recalculées (même résultat
+ * que la mise à jour complète, qui relisait toute la base à chaque enregistrement). Fiche sans ligne encore (nouvelle) ou
+ * cas inattendu : mise à jour complète, comme avant.
+ */
+export async function actualiserProjectionConsultants(ids: string[], supabase: SupabaseClient = clientSupabaseAdmin()): Promise<BilanProjection> {
+  const uniques = [...new Set(ids.filter(Boolean))];
+  if (!uniques.length) return actualiserProjection(supabase);
+  const { data: existantes } = await supabase.from("tableau_vue").select("id, position, consultant_id").in("consultant_id", uniques);
+  const avecLigne = new Set((existantes ?? []).map((e) => e.consultant_id as string));
+  if (uniques.some((id) => !avecLigne.has(id))) return actualiserProjection(supabase);
+  const positionsHorsExcel = new Map((existantes ?? []).map((e) => [e.id as string, e.position as number]));
+  const r = await construire(supabase, { ids: uniques, positionsHorsExcel });
+  return r ?? actualiserProjection(supabase);
+}
+
+async function construire(supabase: SupabaseClient): Promise<BilanProjection>;
+async function construire(supabase: SupabaseClient, filtre: FiltreTableau): Promise<BilanProjection | null>;
+async function construire(supabase: SupabaseClient, filtre?: FiltreTableau): Promise<BilanProjection | null> {
   const debut = Date.now();
-  const d = await chargerTableau(supabase);
-  if (!d) return { lignes: 0, ecrites: 0, retirees: 0, dureeMs: Date.now() - debut };
+  const d = await chargerTableau(supabase, filtre);
+  if (!d) return filtre ? null : { lignes: 0, ecrites: 0, retirees: 0, dureeMs: Date.now() - debut };
   const lignes = d.lignes.map((l) => {
     const affiche = Object.fromEntries(Object.entries(l.valeurs).map(([c, v]) => [c, valeurEcran(d.champs[c], v)]));
     // Même texte cherchable que l'ancien écran : valeur saisie + valeur affichée de chaque colonne + compétences du CV.
@@ -38,10 +56,17 @@ async function construire(supabase: SupabaseClient): Promise<BilanProjection> {
     return { ...ligne, empreinte: createHash("sha1").update(JSON.stringify(ligne)).digest("base64") };
   });
 
-  // Empreintes actuelles en une seule lecture (fonction de la base).
-  const { data: emp, error: errEmp } = await supabase.rpc("tableau_vue_empreintes");
-  if (errEmp) throw new Error(`Projection du tableau : ${errEmp.message}`);
-  const existantes = Object.entries((emp ?? {}) as Record<string, string>).map(([id, empreinte]) => ({ id, empreinte }));
+  // Empreintes actuelles en une seule lecture (fonction de la base) ; mise à jour ciblée : celles de ces fiches seulement.
+  let existantes: { id: string; empreinte: string }[];
+  if (filtre) {
+    const { data: e, error } = await supabase.from("tableau_vue").select("id, empreinte").in("consultant_id", filtre.ids);
+    if (error) throw new Error(`Projection du tableau : ${error.message}`);
+    existantes = (e ?? []) as { id: string; empreinte: string }[];
+  } else {
+    const { data: emp, error: errEmp } = await supabase.rpc("tableau_vue_empreintes");
+    if (errEmp) throw new Error(`Projection du tableau : ${errEmp.message}`);
+    existantes = Object.entries((emp ?? {}) as Record<string, string>).map(([id, empreinte]) => ({ id, empreinte }));
+  }
   const avant = new Map(existantes.map((e) => [e.id, e.empreinte]));
   const aEcrire = lignes.filter((l) => avant.get(l.id) !== l.empreinte);
   for (let i = 0; i < aEcrire.length; i += 400) {

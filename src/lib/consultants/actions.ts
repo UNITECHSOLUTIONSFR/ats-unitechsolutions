@@ -131,8 +131,8 @@ export async function modifierConsultant(formData: FormData) {
       await admin.from("journal_acces").insert({ utilisateur_id: utilisateur.id, action: "modification", consultant_id: id, details: { champs: Object.keys(modifications) } });
       // Répercussion partout : ligne du tableau et Excel d'origine (cette nuit, en remplaçant la case), puis écran Consultants.
       await repercuterFiche(admin, id, { ...avant, ...apres }, Object.keys(modifications), libres);
-      const { actualiserProjection } = await import("@/lib/tableau/projection");
-      await actualiserProjection(admin).catch(() => undefined);
+      const { actualiserProjectionConsultants } = await import("@/lib/tableau/projection");
+      await actualiserProjectionConsultants([id], admin).catch(() => undefined);
     } catch (e) {
       console.error("Suite de l'enregistrement de la fiche :", (e as Error).message);
     }
