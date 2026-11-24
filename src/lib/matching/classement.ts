@@ -15,7 +15,7 @@ import { motifCompetence } from "./motifs";
 import { famillesDansTexte } from "./referentiel";
 
 /** Évaluation IA détaillée (matching v2) : récapitulatif du profil et analyse point par point des exigences. */
-export interface DetailIA { recapitulatif: string; analyse: { exigence: string; atteint: boolean; explication: string }[] }
+export interface DetailIA { recapitulatif: string; analyse: { exigence: string; atteint: boolean; explication: string; niveau?: "atteint" | "partiel" | "non" }[] }
 
 export interface LigneClassement {
   consultant_id: string;
@@ -225,10 +225,10 @@ export function noteAffichee(l: LigneClassement): number {
   return l.avisIA?.note ?? l.resultat.score;
 }
 
-/** Seuil d'affichage : seuls les profils lus par l'IA et notés au moins 60 sont proposés (décision du 17/11/2026). */
-export const SEUIL_PERTINENT = 60;
+/** Seuil d'affichage : profils lus par l'IA et notés 31 ou plus, du plus haut au plus bas (décision du 24/11/2026). */
+export const SEUIL_PERTINENT = 31;
 
-/** Profil pertinent : non écarté, lu par l'IA et noté 60 ou plus. Un profil non lu par l'IA n'est jamais proposé. */
+/** Profil affiché : non écarté, lu par l'IA et noté 31 ou plus. Un profil non lu par l'IA n'est jamais proposé. */
 export function estPertinent(l: LigneClassement): boolean {
   return !l.resultat.elimine && l.eligible !== false && l.avisIA?.note != null && l.avisIA.note >= SEUIL_PERTINENT;
 }

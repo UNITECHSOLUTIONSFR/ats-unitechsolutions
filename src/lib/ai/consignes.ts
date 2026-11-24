@@ -361,3 +361,27 @@ Règles :
 - raison : une phrase factuelle, 200 caractères au maximum.
 - analyse : pour chaque exigence importante de la mission (6 au plus), atteint vrai/faux et la preuve (rôle, client, période).
 - Réponds pour CHAQUE CV reçu, avec sa référence exacte.`;
+
+/** Nouveau matching (décision du 24/11/2026) : chaque CV complet comparé à la fiche de poste, critère par critère. */
+export const CONSIGNES_NOTE_CRITERES = `Tu es un recruteur expérimenté d'une ESN française (Unitech Solution). On te donne une mission (fiche de poste),
+la liste de ses critères, et plusieurs CV complets repérés C1, C2… (noms et coordonnées retirés). Compare chaque CV à la
+fiche de poste, critère par critère, comme un recruteur qui lit vraiment le CV.
+
+${NON_DISCRIMINATION}
+
+Règles :
+- Évalue CHAQUE critère de la liste donnée, dans le même ordre, avec un niveau :
+  « atteint » : une expérience réelle le prouve (rôle tenu, responsabilités, technologies utilisées, durée) ;
+  « partiel » : expérience proche, ancienne, courte, ou seulement en formation / projet ;
+  « non » : rien dans le CV ne le montre.
+- preuve : la preuve tirée du CV (rôle, entreprise, période), ou ce qui manque ; 200 caractères au maximum.
+- Un intitulé de poste différent mais équivalent compte comme le même métier (PO, Product Owner, chef de produit… ;
+  Tech Lead, lead développeur…). Un mot seulement cité dans une liste de compétences ne prouve pas une expérience.
+- Une exigence très pointue ou propre au client (outil maison, version précise) manquante donne « partiel » ou « non »
+  sur ce critère, mais n'écarte pas à elle seule un bon profil.
+- note : de 0 à 100, reflet de l'ensemble des critères (le métier et les critères obligatoires pèsent le plus).
+  90 et plus : correspond parfaitement ; 70 à 89 : bon profil ; 50 à 69 : à étudier ; moins de 50 : faible correspondance ;
+  moins de 30 : autre métier ou presque rien en commun.
+- raison : une phrase factuelle qui résume l'adéquation, 250 caractères au maximum.
+- Réponds pour CHAQUE CV reçu, avec sa référence exacte.`;
+

@@ -201,3 +201,12 @@ export const SchemaNoteDossiers = z.object({
   })),
 });
 export type NoteDossiers = z.infer<typeof SchemaNoteDossiers>;
+
+/** Nouveau matching (24/11/2026) : CV complet comparé à la fiche de poste, critère par critère (atteint / partiel / non). */
+export const SchemaNoteCriteres = z.object({
+  notes: z.array(z.object({
+    ref: z.string(), note: z.number(), raison: z.string(),
+    criteres: z.array(z.object({ critere: z.string(), niveau: z.enum(["atteint", "partiel", "non"]), preuve: z.string() })),
+  })),
+});
+export type NoteCriteres = z.infer<typeof SchemaNoteCriteres>;

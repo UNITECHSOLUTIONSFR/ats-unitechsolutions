@@ -12,7 +12,7 @@ export async function enregistrerUsages(usages: UsageIA[], reference?: string) {
 }
 
 /** Cumul du mois en cours et plafond réglé (25 $ par défaut). */
-export async function etatBudgetMois(): Promise<{ depense: number; plafond: number; depasse: boolean; jour: number; plafondJour: number }> {
+export async function etatBudgetMois(): Promise<{ depense: number; plafond: number; depasse: boolean; jour: number; plafondJour: number | null }> {
   const admin = clientSupabaseAdmin();
   const debut = new Date();
   debut.setUTCDate(1);
@@ -28,7 +28,9 @@ export async function etatBudgetMois(): Promise<{ depense: number; plafond: numb
   ]);
   const valeur = (cle: string, defaut: number) => Number((reglages ?? []).find((r) => r.cle === cle)?.valeur ?? defaut);
   const depense = Number(mois ?? 0), depenseJour = Number(jour ?? 0);
-  const plafond = valeur("plafond_ia_mensuel_usd", 25), plafondJour = valeur("plafond_ia_jour_usd", 1);
-  // FinOps : plafond du mois ET plafond du jour ; au-delà, plus aucun appel payant jusqu'au lendemain.
-  return { depense, plafond, depasse: depense >= plafond || depenseJour >= plafondJour, jour: depenseJour, plafondJour };
+  const plafond = valeur("plafond_ia_mensuel_usd", 25);
+  // Plafond du jour supprimé le 24/11/2026 (décision de l'utilisatrice, à rediscuter) : il ne s'applique que s'il est réglé.
+  const reglageJour = (reglages ?? []).find((r) => r.cle === "plafond_ia_jour_usd");
+  const plafondJour = reglageJour ? Number(reglageJour.valeur) : null;
+  return { depense, plafond, depasse: depense >= plafond || (plafondJour !== null && depenseJour >= plafondJour), jour: depenseJour, plafondJour };
 }

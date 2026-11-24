@@ -34,6 +34,8 @@ export interface ClassementResume {
 }
 export interface ClassementStocke extends ClassementResume {
   calculeLe: string | null;
+  /** Version du moteur qui a produit ce classement (« ancienne note » si ce n'est pas le nouveau matching). */
+  version?: string | null;
   /** Vrai quand un recalcul est demandé ou en cours : le classement affiché est celui d'avant. */
   miseAJour: boolean;
 }
@@ -53,6 +55,18 @@ const CALCUL_ABANDONNE_MS = 6 * 60_000;
 
 /** Calcule le classement d'une mission (tri de toute la base, puis avis de l'IA sur les 30 premiers) et le range. */
 export async function calculerEtRanger(missionId: string, supabase: SupabaseClient = clientSupabaseAdmin()): Promise<ClassementResume> {
+  // Nouveau matching (24/11/2026) : seules les missions de « Missions en cours » sont lues, une seule fois ; les autres
+  // gardent leur classement (aucun recalcul, même modifiées).
+  const v4 = await import("./v4");
+  if (await v4.matchingV4Actif(supabase)) {
+    const [{ data: m }, deja] = await Promise.all([
+      supabase.from("missions").select("trello_colonne").eq("id", missionId).maybeSingle(),
+      supabase.from("classements_mission").select("version, a_recalculer").eq("mission_id", missionId).maybeSingle(),
+    ]);
+    const dejaLue = deja.data?.version === v4.VERSION_MOTEUR_V4 && !deja.data?.a_recalculer;
+    if (m?.trello_colonne === v4.COLONNE_A_LIRE && !dejaLue) await v4.lireMissionV4(supabase, missionId);
+    return (await lireClassement(supabase, missionId)) ?? { total: 0, pertinents: 0, eligibles: null, top: [] };
+  }
   const debut = Date.now();
   // Réservation : si un autre calcul de cette mission tourne déjà, on ne le double pas.
   const { data: reserve } = await supabase.rpc("reserver_calcul_classement", { p_mission_id: missionId, p_abandon_secondes: CALCUL_ABANDONNE_MS / 1000 });
@@ -103,11 +117,11 @@ export async function calculerEtRanger(missionId: string, supabase: SupabaseClie
 /** Dernier classement rangé (sans le détail des scores). Null si la mission n'a jamais été classée. */
 export async function lireClassement(supabase: SupabaseClient, missionId: string): Promise<ClassementStocke | null> {
   const { data } = await supabase.from("classements_mission")
-    .select("total, pertinents, eligibles, top, calcule_le, a_recalculer, en_calcul_depuis").eq("mission_id", missionId).maybeSingle();
+    .select("total, pertinents, eligibles, top, calcule_le, a_recalculer, en_calcul_depuis, version").eq("mission_id", missionId).maybeSingle();
   if (!data?.calcule_le) return null;
   return {
     total: data.total, pertinents: data.pertinents, eligibles: data.eligibles as number | null, top: data.top as LigneClassement[], calculeLe: data.calcule_le,
-    miseAJour: data.a_recalculer || !!data.en_calcul_depuis,
+    miseAJour: data.a_recalculer || !!data.en_calcul_depuis, version: data.version as string | null,
   };
 }
 
@@ -151,6 +165,8 @@ export async function demanderRecalcul(supabase: SupabaseClient, missionIds?: st
   if (!ids.length) return;
   // Ligne créée si besoin (mission nouvelle) ; un classement existant est gardé tel quel jusqu'au recalcul.
   await supabase.from("classements_mission").upsert(ids.map((id) => ({ mission_id: id })), { onConflict: "mission_id", ignoreDuplicates: true });
+  // Nouveau matching : une mission n'est lue qu'une fois, jamais recalculée (même modifiée).
+  if (await (await import("./v4")).matchingV4Actif(supabase)) return;
   await supabase.from("classements_mission").update({ a_recalculer: true, demande_le: maintenant }).in("mission_id", ids);
 }
 
@@ -158,7 +174,8 @@ export async function demanderRecalcul(supabase: SupabaseClient, missionIds?: st
  * Tâche « matching » : recalcule, une mission après l'autre et dans le temps imparti, les classements à refaire :
  * demandés, jamais calculés, d'une ancienne version du moteur, ou vieux de plus de 20 heures.
  */
-export async function recalculerEnAttente(supabase: SupabaseClient, budgetMs = 230_000): Promise<{ recalcules: number; restants: number; erreurs: string[] }> {
+export async function recalculerEnAttente(supabase: SupabaseClient, budgetMs = 230_000): Promise<{ recalcules: number; restants: number; erreurs: string[]; nouveauxCV?: number }> {
+  if (await (await import("./v4")).matchingV4Actif(supabase)) return passageV4(supabase, budgetMs);
   const debut = Date.now();
   // Empreintes de sens des fiches nouvelles ou modifiées d'abord (une minute au plus par passage), mais seulement si
   // une fiche, un profil, une compétence ou un document a changé depuis la dernière vérification : la recherche des
@@ -274,3 +291,60 @@ export async function pageClassementComplet(supabase: SupabaseClient, missionId:
     }).filter((l) => l.nom),
   };
 }
+
+/**
+ * Passage du nouveau matching (toutes les 10 minutes) :
+ * 1. une fois : anciens classements v3 reconstruits avec leurs vraies notes (décision 5B, sans IA) ;
+ * 2. missions de « Missions en cours » pas encore lues (ou lecture incomplète) : lues une fois ;
+ * 3. nouveaux CV découpés : comparés à toutes les missions ouvertes déjà lues (3B).
+ * Une lecture complète ne démarre que s'il reste assez de temps (elle peut durer 2 à 3 minutes).
+ */
+async function passageV4(supabase: SupabaseClient, budgetMs: number): Promise<{ recalcules: number; restants: number; erreurs: string[]; nouveauxCV: number }> {
+  const debut = Date.now();
+  const v4 = await import("./v4");
+  await empreintesSiChangement(supabase).catch((e) => console.error("Empreintes :", (e as Error).message));
+  const erreurs: string[] = [];
+  const [{ data: missions }, { data: lignes }, { data: marque }] = await Promise.all([
+    supabase.from("missions").select("id, trello_colonne").in("statut", STATUTS_SUIVIS),
+    supabase.from("classements_mission").select("mission_id, calcule_le, version, a_recalculer, cv_verifies_le"),
+    supabase.from("reglages").select("valeur").eq("cle", "anciennes_notes_reconstruites").maybeSingle(),
+  ]);
+  const parMission = new Map((lignes ?? []).map((l) => [l.mission_id as string, l]));
+  // 1. Décision 5B (une seule fois).
+  if (marque?.valeur !== true) {
+    for (const l of lignes ?? []) {
+      if (l.version !== "2026-11-23.2-v3-ia") continue;
+      try { await v4.reconstruireAnciennesNotes(supabase, l.mission_id as string); } catch (e) { erreurs.push(`5B ${String(l.mission_id).slice(0, 8)} : ${(e as Error).message.slice(0, 100)}`); }
+    }
+    if (!erreurs.length) await supabase.from("reglages").upsert({ cle: "anciennes_notes_reconstruites", valeur: true });
+  }
+  // 2. Lectures complètes (une fois par mission).
+  const aLire = (missions ?? []).filter((m) => {
+    const l = parMission.get(m.id as string);
+    return m.trello_colonne === v4.COLONNE_A_LIRE && (l?.version !== v4.VERSION_MOTEUR_V4 || l?.a_recalculer);
+  });
+  let recalcules = 0;
+  for (const m of aLire) {
+    if (Date.now() - debut > Math.min(budgetMs, 60_000)) break;
+    try { await v4.lireMissionV4(supabase, m.id as string); recalcules++; }
+    catch (e) {
+      erreurs.push(`${String(m.id).slice(0, 8)} : ${(e as Error).message.slice(0, 120)}`);
+      await supabase.from("classements_mission").update({ erreur: (e as Error).message.slice(0, 300) }).eq("mission_id", m.id);
+    }
+  }
+  // 3. Nouveaux CV comparés aux missions déjà lues.
+  let nouveauxCV = 0;
+  const { data: dernier } = await supabase.from("dossiers_cv").select("updated_at").order("updated_at", { ascending: false }).limit(1).maybeSingle();
+  const dernierCV = Date.parse(String(dernier?.updated_at ?? "1970-01-01"));
+  for (const m of missions ?? []) {
+    if (Date.now() - debut > budgetMs) break;
+    const l = parMission.get(m.id as string);
+    if (!l?.calcule_le || aLire.some((x) => x.id === m.id)) continue;
+    const depuis = (l.cv_verifies_le ?? l.calcule_le) as string;
+    if (Date.parse(depuis) >= dernierCV) continue;
+    try { nouveauxCV += await v4.comparerNouveauxCV(supabase, m.id as string, depuis); }
+    catch (e) { erreurs.push(`nouveaux CV ${String(m.id).slice(0, 8)} : ${(e as Error).message.slice(0, 100)}`); }
+  }
+  return { recalcules, restants: aLire.length - recalcules, erreurs, nouveauxCV };
+}
+

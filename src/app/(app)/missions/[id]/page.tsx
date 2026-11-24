@@ -4,6 +4,7 @@ import { BoutonSuivi } from "./bouton-suivi";
 import { notFound } from "next/navigation";
 import { exigerUtilisateur } from "@/lib/acces";
 import { estPertinent, noteAffichee, type LigneClassement } from "@/lib/matching/classement";
+import { VERSION_MOTEUR_V4 } from "@/lib/matching/v4";
 import { classementAAfficher, matchingV2Actif } from "@/lib/matching/stockage";
 import BoutonRecalculer from "./recalculer";
 import { formaterTelephone } from "@/lib/metier/telephone";
@@ -55,8 +56,9 @@ export default async function PageMission({ params, searchParams }: { params: Pr
     ? supabase.rpc("profils_par_competence", { p_ids: ((mission.mission_competences ?? []) as unknown as { competence_id: string }[]).map((e) => e.competence_id) })
     : Promise.resolve({ data: [] as unknown[] });
   const classement = resume.top;
-  // Affichés : uniquement les profils que l'IA a lus et jugés pertinents (note ≥ 60). Les autres ne sont pas montrés.
+  // Affichés : les profils que l'IA a comparés à la fiche de poste et notés 31 ou plus, du plus haut au plus bas (24/11/2026).
   const proposes = classement.filter(estPertinent);
+  const nouveauMatching = resume.version === VERSION_MOTEUR_V4;
   const avisParConsultant = new Map((avisExistants ?? []).map((a) => [a.consultant_id as string, a.contenu as AvisMission]));
   // Dernier CV Unitech généré pour cette mission, par consultant : rouvert sans nouvelle génération.
   const cvParConsultant = new Map<string, { id: string; word: string; pdf: string | null }>();
@@ -122,13 +124,14 @@ export default async function PageMission({ params, searchParams }: { params: Pr
         <div className="carte flex flex-wrap items-center justify-between gap-4 p-5">
           <div>
             <h2 className="text-lg font-bold tracking-tight text-nuit">
-              {resume.pertinents} profil(s) pertinent(s) pour cette mission
+              {proposes.length} profil(s) pour cette mission
             </h2>
-            <p className="sous-titre">{v2 ? "Seuls les profils dont le CV remplit les critères ci-dessus et que l'IA, après lecture du CV complet, juge pertinents (note de 60 et plus) sont affichés." : "Seuls les profils que l'IA a lus et jugés pertinents (note de 60 et plus) sont affichés."} La note est une aide à la décision, jamais un refus automatique.</p>
+            <p className="sous-titre">{nouveauMatching ? "Chaque CV retenu a été comparé en entier à la fiche de poste, critère par critère. Affichés : les profils notés 31 et plus, du plus haut au plus bas." : "Profils notés 31 et plus, du plus haut au plus bas, avec les notes calculées avant le 24/11/2026 (ancienne note)."} La note est une aide à la décision, jamais un refus automatique.</p>
             <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
               {resume.calculeLe && <span>Classement du {new Date(resume.calculeLe).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Paris" })}</span>}
+              {resume.calculeLe && !nouveauMatching && <span className="pastille">Ancienne note</span>}
               {resume.miseAJour && <span className="pastille pastille-orange">Mise à jour en cours…</span>}
-              <BoutonRecalculer missionId={id} />
+              {!nouveauMatching && <BoutonRecalculer missionId={id} />}
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
@@ -137,22 +140,22 @@ export default async function PageMission({ params, searchParams }: { params: Pr
           </div>
         </div>
 
-        {proposes.slice(0, tous ? 100 : 20).map((c, i) => (
+        {proposes.slice(0, tous ? proposes.length : 20).map((c, i) => (
           <CarteCandidat key={c.consultant_id} rang={i + 1} c={c} missionId={id} statut={suivi.get(c.consultant_id)} ouvert={i < 3} cv={cvParConsultant.get(c.consultant_id)} avis={avisParConsultant.get(c.consultant_id)} retour={retourParConsultant.get(c.consultant_id)} />
         ))}
         {!tous && proposes.length > 20 && (
-          <Link href={`/missions/${id}?tous=1`} scroll={false} className="bouton-secondaire w-full justify-center">Voir les {proposes.length - 20} autres profils pertinents</Link>
+          <Link href={`/missions/${id}?tous=1`} scroll={false} className="bouton-secondaire w-full justify-center">Voir les {proposes.length - 20} autres profils</Link>
         )}
         {!proposes.length && !resume.calculeLe && (
           <div className="carte p-8 text-center text-sm text-slate-500">
             <p className="font-medium text-nuit">Classement en préparation…</p>
-            <p className="mt-1">L&apos;IA lit les CV des profils qui conviennent : comptez une à deux minutes, puis rechargez la page.</p>
+            <p className="mt-1">Seules les missions de la colonne Trello « Missions en cours » sont lues par l&apos;IA (une seule fois) : comptez quelques minutes après leur arrivée, puis rechargez la page.</p>
           </div>
         )}
         {!proposes.length && !!resume.calculeLe && (
           <div className="carte p-8 text-center text-sm text-slate-500">
             <p className="font-medium text-nuit">Aucun profil pertinent pour l&apos;instant.</p>
-            <p className="mt-1">Aucun CV de la base ne remplit tous les critères avec une expérience prouvée. Si un critère est trop strict, corrigez-le ci-dessus : le classement se recalcule aussitôt. Un profil ajouté ensuite est comparé à la mission automatiquement.</p>
+            <p className="mt-1">Aucun CV de la base n&apos;a obtenu 31 ou plus pour cette mission. Un CV ajouté ensuite est comparé à la mission automatiquement.</p>
           </div>
         )}
       </section>

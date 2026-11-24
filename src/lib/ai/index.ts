@@ -8,7 +8,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
 import { LONGUEUR_MAX_TEXTE, MAX_TOKENS, MODELES, estimerCoutUSD } from "./config";
-import { CONSIGNES_NOTE_CV_COMPLET, CONSIGNES_NOTE_DOSSIERS, CONSIGNES_REFERENCE, CONSIGNES_EXPERIENCES_CV, CONSIGNES_CRITERES_MISSION, CONSIGNES_NOTE_CANDIDATS, CONSIGNES_NOTE_CV, CONSIGNES_TRI_CANDIDATS } from "./consignes";
+import { CONSIGNES_NOTE_CRITERES, CONSIGNES_NOTE_CV_COMPLET, CONSIGNES_NOTE_DOSSIERS, CONSIGNES_REFERENCE, CONSIGNES_EXPERIENCES_CV, CONSIGNES_CRITERES_MISSION, CONSIGNES_NOTE_CANDIDATS, CONSIGNES_NOTE_CV, CONSIGNES_TRI_CANDIDATS } from "./consignes";
 import { CONSIGNES_ADEQUATION, CONSIGNES_AVIS_MISSION, CONSIGNES_CV_UNITECH, CONSIGNES_MISSION, CONSIGNES_PROFIL_CV, CONSIGNES_RECHERCHE, CONSIGNES_REPONSE_DISPO } from "./consignes";
 import {
   PROMPT_VERSION,
@@ -26,6 +26,8 @@ import {
   SchemaExperiencesCV,
   SchemaReference,
   SchemaNoteDossiers,
+  SchemaNoteCriteres,
+  type NoteCriteres,
   type NoteDossiers,
   type Reference,
   type ExperiencesCV,
@@ -46,10 +48,10 @@ import {
 } from "./schemas";
 
 export { PROMPT_VERSION };
-export type { NoteDossiers, ExperiencesCV, CriteresMission, ExigencesMission, ProfilCV, ReponseDisponibilite, CVStructure, Adequation, CriteresRecherche, AvisMission };
+export type { NoteDossiers, NoteCriteres, ExperiencesCV, CriteresMission, ExigencesMission, ProfilCV, ReponseDisponibilite, CVStructure, Adequation, CriteresRecherche, AvisMission };
 
 export interface UsageIA {
-  usage: "fiche_cv" | "mission" | "tri_email" | "analyse_approfondie" | "reponse_disponibilite" | "lecture_scan" | "cv_unitech" | "adequation" | "recherche" | "avis_mission" | "tri_candidats" | "note_candidats" | "criteres_mission" | "note_cv" | "empreintes" | "experiences_cv" | "reference_matching" | "note_dossiers" | "note_cv_complet";
+  usage: "fiche_cv" | "mission" | "tri_email" | "analyse_approfondie" | "reponse_disponibilite" | "lecture_scan" | "cv_unitech" | "adequation" | "recherche" | "avis_mission" | "tri_candidats" | "note_candidats" | "criteres_mission" | "note_cv" | "empreintes" | "experiences_cv" | "reference_matching" | "note_dossiers" | "note_cv_complet" | "note_criteres";
   modele: string;
   mode: "standard" | "batch";
   tokens_entree: number;
@@ -421,6 +423,13 @@ export async function lireLotNoteDossiers(idLot: string): Promise<{ termine: boo
     resultats.push({ id: r.custom_id, donnees: lireJSON(m, SchemaNoteDossiers), usage: usageDepuisReponse(m.usage, MODELES.noteDossiers, "note_dossiers", "batch") });
   }
   return { termine: true, resultats };
+}
+
+/** Nouveau matching (24/11/2026) : CV complets comparés à la fiche de poste, critère par critère (5 par appel). */
+export async function noterCriteres(texte: string): Promise<ResultatIA<NoteCriteres>> {
+  const r = await appeler(MODELES.noteCriteres, CONSIGNES_NOTE_CRITERES, SchemaNoteCriteres, texte, MAX_TOKENS.noteCriteres, "note_criteres");
+  if (!r.donnees) throw Object.assign(new ErreurIA("Comparaison des CV impossible à produire."), { usages: [r.usage] });
+  return { donnees: r.donnees, modele: MODELES.noteCriteres, promptVersion: PROMPT_VERSION, usages: [r.usage] };
 }
 
 /** Matching v3, seconde lecture : CV complets des profils retenus (5 par appel). */

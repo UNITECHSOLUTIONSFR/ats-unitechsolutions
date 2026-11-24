@@ -88,8 +88,8 @@ export default async function Sante() {
         <Indicateur bon={!erreursEmails} titre="Emails en erreur (7 jours)" valeur={String(erreursEmails ?? 0)} texte={erreursEmails ? "Des emails n'ont pas pu être lus." : "Tous les emails ont été lus."} lien="/parametres/emails" />
         <Indicateur bon={!budget.depasse && budget.depense < budget.plafond * 0.8} titre="Coût IA du mois"
           valeur={`${budget.depense.toFixed(2)} $ / ${budget.plafond} $`} texte={budget.depasse ? "Plafond atteint : les analyses sont suspendues." : budget.depense >= budget.plafond * 0.8 ? "Plus de 80 % du plafond." : "Sous le plafond."} lien="/parametres/couts" />
-        <Indicateur bon={budget.jour < budget.plafondJour * 0.8} titre="Coût IA du jour"
-          valeur={`${budget.jour.toFixed(2)} $ / ${budget.plafondJour} $`} texte={budget.jour >= budget.plafondJour ? "Plafond du jour atteint : plus aucun appel payant jusqu'à minuit." : "Aucun appel payant sans nouvelle donnée ou action de l'équipe."} lien="/parametres/couts" />
+        <Indicateur bon={budget.plafondJour === null || budget.jour < budget.plafondJour * 0.8} titre="Coût IA du jour"
+          valeur={budget.plafondJour === null ? `${budget.jour.toFixed(2)} $` : `${budget.jour.toFixed(2)} $ / ${budget.plafondJour} $`} texte={budget.plafondJour === null ? "Pas de plafond par jour (seul le plafond du mois s'applique)." : budget.jour >= budget.plafondJour ? "Plafond du jour atteint : plus aucun appel payant jusqu'à minuit." : "Aucun appel payant sans nouvelle donnée ou action de l'équipe."} lien="/parametres/couts" />
         <Indicateur bon={(alertes ?? 0) < 50} titre="Cas à vérifier" valeur={String(alertes ?? 0)} texte="Doublons possibles, téléphones, CV illisibles…" lien="/alertes" />
       </section>
       <p className="text-xs text-slate-500">Les traitements automatiques tournent chaque nuit (Excel 2 h, CV 2 h 30) et toutes les heures (emails), lancés par GitHub.</p>

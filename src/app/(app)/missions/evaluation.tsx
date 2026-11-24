@@ -80,7 +80,7 @@ export function EvaluationIA({ note, raison, detail }: { note: number | null | u
           <ul className="space-y-2">
             {detail.analyse.map((a) => (
               <li key={a.exigence} className="flex gap-2">
-                <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ring-1 ${a.atteint ? "bg-emerald-50 text-emerald-600 ring-emerald-200" : "bg-red-50 text-red-600 ring-red-200"}`}>{a.atteint ? "✓" : "✕"}</span>
+                <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ring-1 ${a.niveau === "partiel" ? "bg-amber-50 text-amber-600 ring-amber-200" : a.atteint ? "bg-emerald-50 text-emerald-600 ring-emerald-200" : "bg-red-50 text-red-600 ring-red-200"}`} title={a.niveau === "partiel" ? "Partiel" : a.atteint ? "Atteint" : "Non"}>{a.niveau === "partiel" ? "~" : a.atteint ? "✓" : "✕"}</span>
                 <span className="text-slate-700"><b className="text-nuit">{a.exigence} :</b> {a.explication}</span>
               </li>
             ))}
