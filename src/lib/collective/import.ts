@@ -113,13 +113,18 @@ async function avancerParcours(supabase: SupabaseClient): Promise<string> {
   const nombre = Math.max(0, Math.floor(reste / COUT_ESTIME_PAR_CV) - 1);
   const choisis = prets.slice(0, nombre);
   if (!choisis.length) return "budget du jour insuffisant : parcours reportés";
-  const { data: docs } = await supabase.from("documents").select("id, sharepoint_item_id, texte_extrait")
-    .in("sharepoint_item_id", choisis.map((p) => `collective-cv:${p.application_id}`)).eq("texte_extractible", true);
+  // Lecture par paquets de 200 : une seule requête avec 2 000 identifiants était trop longue (aucun document renvoyé).
+  const docs: { id: string; sharepoint_item_id: string; texte_extrait: string | null }[] = [];
+  for (let i = 0; i < choisis.length; i += 200) {
+    const { data } = await supabase.from("documents").select("id, sharepoint_item_id, texte_extrait")
+      .in("sharepoint_item_id", choisis.slice(i, i + 200).map((p) => `collective-cv:${p.application_id}`)).eq("texte_extractible", true);
+    docs.push(...((data ?? []) as typeof docs));
+  }
   const parId = new Map(choisis.map((p) => [`collective-cv:${p.application_id}`, p]));
-  const textes = (docs ?? []).filter((d) => d.texte_extrait).map((d) => ({ id: d.id as string, texte: d.texte_extrait as string }));
+  const textes = docs.filter((d) => d.texte_extrait).map((d) => ({ id: d.id as string, texte: d.texte_extrait as string }));
   if (!textes.length) return "aucun texte lisible";
   const id = await envoyerLotProfilsCV(textes);
-  const documents = Object.fromEntries((docs ?? []).filter((d) => d.texte_extrait).map((d) => [d.id, parId.get(d.sharepoint_item_id as string)!]));
+  const documents = Object.fromEntries(docs.filter((d) => d.texte_extrait).map((d) => [d.id, parId.get(d.sharepoint_item_id as string)!]));
   await supabase.from("reglages").upsert({ cle: "collective_lot_parcours", valeur: { lot: id, documents } });
   return `lot de parcours envoyé (${textes.length} CV)`;
 }
