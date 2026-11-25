@@ -63,6 +63,12 @@ export default async function PageMission({ params, searchParams }: { params: Pr
     matchingV2Actif(supabase),
     supabase.from("retours_matching").select("consultant_id, avis").eq("mission_id", id),
   ]);
+  // Cartes déjà ouvertes par la personne connectée (« Lu » / « Pas encore lu ») ; la carte ouverte est notée tout de suite.
+  const [{ data: lus }] = await Promise.all([
+    supabase.from("profils_lus").select("consultant_id").eq("mission_id", id).eq("utilisateur_id", utilisateur.id),
+    profilOuvert ? supabase.from("profils_lus").upsert({ mission_id: id, consultant_id: profilOuvert, utilisateur_id: utilisateur.id }, { ignoreDuplicates: true }) : Promise.resolve(null),
+  ]);
+  const dejaLus = new Set([...(lus ?? []).map((l) => l.consultant_id as string), ...(profilOuvert ? [profilOuvert] : [])]);
   const retourParConsultant = new Map((retours ?? []).map((r) => [r.consultant_id as string, r.avis as "bon" | "pas"]));
   // Lancé en même temps que le reste de la page (au lieu d'après) : nombre de profils par compétence demandée.
   const possedeesP = ((mission.mission_competences ?? []) as unknown as { competence_id: string }[]).length
@@ -218,6 +224,9 @@ export default async function PageMission({ params, searchParams }: { params: Pr
                       <span className="flex flex-wrap gap-2">
                         {info?.tjm && <span className="rounded-lg bg-marque-50 px-2.5 py-1 text-sm font-semibold text-marque-700 ring-1 ring-marque-200">💶 {info.tjm}</span>}
                         {nouveau && <span className="rounded-lg bg-white px-2.5 py-1 text-sm font-semibold text-slate-600 ring-1 ring-slate-300">✦ Nouveau</span>}
+                        {dejaLus.has(c.consultant_id)
+                          ? <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-sm font-medium text-slate-500">✓ Lu</span>
+                          : <span className="rounded-lg bg-sky-50 px-2.5 py-1 text-sm font-semibold text-sky-700 ring-1 ring-sky-200">● Pas encore lu</span>}
                       </span>
                       <span className="mt-auto flex items-center justify-between border-t border-slate-100 pt-3">
                         <span className="text-sm font-medium text-slate-500">{statut ? (STATUTS_PROPOSITION[statut] ?? statut) : "◌ Non sélectionné"}</span>
