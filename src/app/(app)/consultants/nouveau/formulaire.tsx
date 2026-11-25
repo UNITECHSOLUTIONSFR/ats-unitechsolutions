@@ -4,6 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
 import { creerConsultant, type EtatCreation } from "@/lib/consultants/actions";
 import { calculerTrigramme } from "@/lib/metier/trigramme";
+import { messageCVTropLourd } from "@/lib/consultants/taille-cv";
 
 /** Nouvelle fiche : les mêmes colonnes que le fichier Excel de suivi, dans le même ordre, et le CV en pièce jointe. */
 export default function Formulaire() {
@@ -12,6 +13,7 @@ export default function Formulaire() {
   const [nom, setNom] = useState("");
   const [trigramme, setTrigramme] = useState<string | null>(null); // null = calculé automatiquement
   const [fichier, setFichier] = useState("");
+  const [tropLourd, setTropLourd] = useState<string | null>(null);
   const aujourdHui = new Date().toISOString().slice(0, 10);
   const trigrammeAuto = calculerTrigramme(prenom, nom);
   // Même prénom et nom déjà dans la base : prévenu avant de créer un doublon (vérifié une fois la frappe terminée).
@@ -65,8 +67,15 @@ export default function Formulaire() {
           <span className="block truncate font-semibold text-nuit">{fichier || "CV (pièce jointe)"}</span>
           <span className="block text-xs text-slate-500">PDF ou Word · 4 Mo maximum · rangé dans SharePoint et analysé (compétences)</span>
         </span>
-        <input type="file" name="cv" accept=".pdf,.docx,.doc" className="sr-only" onChange={(e) => setFichier(e.target.files?.[0]?.name ?? "")} />
+        <input type="file" name="cv" accept=".pdf,.docx,.doc" className="sr-only" onChange={(e) => {
+          const f = e.target.files?.[0];
+          const refus = f ? messageCVTropLourd(f.size) : null;
+          setTropLourd(refus);
+          // Trop lourd : le fichier n'est jamais envoyé (choix effacé).
+          if (refus) { e.target.value = ""; setFichier(""); } else setFichier(f?.name ?? "");
+        }} />
       </label>
+      {tropLourd && <p role="alert" className="text-sm text-red-700 sm:col-span-2">{tropLourd}</p>}
       {doublons.length > 0 && (
         <div role="alert" className="rounded-xl bg-amber-50 px-3 py-2.5 text-sm text-amber-900 ring-1 ring-amber-200 sm:col-span-2">
           <b>Cette personne a peut-être déjà une fiche.</b> Ouvrez-la et ajoutez-y le CV plutôt que de créer un doublon :
