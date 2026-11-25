@@ -367,3 +367,10 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Obstacles notés cette nuit (à lui soumettre, rien de contourné) : 25 CV Collective de plus de 4 Mo refusés par la règle normale d'ajout de CV (fiche créée, pas de CV) ; 4 liens de CV refusés par Collective (403).
 - Panne de la base (25/11, 2 h 35 → 3 h 27, heure de Paris) : base hors service ≈ 50 min (probable manque de mémoire de la machine Micro pendant la synchro CV de 2 h 35 + matching + textes), revenue seule (redémarrage). Synchro CV de la nuit non faite. Depuis, les tâches planifiées (pg_cron) échouent au démarrage (« job startup timeout ») : options soumises à l'utilisatrice, rien de modifié.
 - Matching (nuit du 25/11) : 14 missions des 3 colonnes lues ; correction : un CV sans texte lisible ne compte plus comme note manquante (4 missions relues inutilement à chaque passage). Dépense IA de la nuit : 0,68 $ (plafond 1 $).
+
+## 25/11/2026 — Journée
+- 225 CV relus chaque nuit : cause = liste des profils lue jusqu'à 1 000 seulement (1 760) ; corrigé + un seul Word de référence (option A). Reste 48 CV (profil tiré d'un CV ajouté à la main) : question posée (A garder / B remplacer).
+- CV Collective : plus de limite de taille (1A, dépôt SharePoint en morceaux) ; 25 CV repris. CV ajoutés à la main : limite 4 Mo gardée, message clair avant envoi (en ligne le 25/11 à 19 h 06).
+- Collective : 598 candidatures récupérées en douceur le matin, importées le soir (343 fiches créées, sans IA). Récupération du reste la nuit du 25 au 26 (arrêt à 1 800 profils).
+- Matching par le sens (décision du 25/11) en ligne : test Apache Hop (0 → 316 profils, 2 min, 0,25 $) puis 17 missions ouvertes (sauf Sourcing M.CISSE) relues la nuit ; plafond IA du jour relevé à 5 $ pour cette nuit (demande écrite de l'utilisatrice).
+- En attente de sa réponse : lecture du profil des ≈ 1 900 candidats Collective (≈ 1,30 $) ; 48 CV (A/B).
