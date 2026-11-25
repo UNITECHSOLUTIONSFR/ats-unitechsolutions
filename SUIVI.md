@@ -374,3 +374,4 @@ Aucune pour l'instant. Prochaine action : suivre `GUIDE_PREPARATION.md` (parties
 - Collective : 598 candidatures récupérées en douceur le matin, importées le soir (343 fiches créées, sans IA). Récupération du reste la nuit du 25 au 26 (arrêt à 1 800 profils).
 - Matching par le sens (décision du 25/11) en ligne : test Apache Hop (0 → 316 profils, 2 min, 0,25 $) puis 17 missions ouvertes (sauf Sourcing M.CISSE) relues la nuit ; plafond IA du jour relevé à 5 $ pour cette nuit (demande écrite de l'utilisatrice).
 - En attente de sa réponse : lecture du profil des ≈ 1 900 candidats Collective (≈ 1,30 $) ; 48 CV (A/B).
+- Plafonds IA (25/11, 23 h 40, demande de l'utilisatrice, phase de test) : plafond du jour 8 $, plafond du mois 30 $ ; à remettre à des valeurs « run » quand l'outil sera en service courant. Collective : aucune action jusqu'au vendredi 27/11 18 h (point prévu le 27/11 à 16 h 30). Missions : pastille « Lu / Pas encore lu » par personne.
