@@ -23,9 +23,9 @@ export async function cvAAnalyser(supabase: SupabaseClient) {
   }
   // Tous les profils, page par page : la base n'en renvoie que 1 000 à la fois (1 760 profils le 25/11/2026 : les CV au-delà
   // des 1 000 premiers étaient renvoyés à l'IA chaque nuit, ≈ 225 CV pour rien).
-  const profils: { document_id: string | null; prompt_version: string | null }[] = [];
+  const profils: { consultant_id: string; document_id: string | null; prompt_version: string | null }[] = [];
   for (let debut = 0; ; debut += 1000) {
-    const { data } = await supabase.from("profils").select("document_id, prompt_version").order("consultant_id").range(debut, debut + 999);
+    const { data } = await supabase.from("profils").select("consultant_id, document_id, prompt_version").order("consultant_id").range(debut, debut + 999);
     profils.push(...((data ?? []) as typeof profils));
     if (!data || data.length < 1000) break;
   }
@@ -33,10 +33,18 @@ export async function cvAAnalyser(supabase: SupabaseClient) {
   const faits = new Set(profils.filter((p) => p.prompt_version === PROMPT_VERSION).map((p) => p.document_id));
   // Un seul CV de référence par consultant, toujours le même : le Word le plus récent (décision du 25/11/2026). Avant, un
   // consultant à plusieurs Word voyait ses CV lus à tour de rôle chaque nuit (≈ 225 CV relus pour rien).
+  // Option A (25/11/2026) : un profil tiré d'un CV ajouté à la main, reçu par email ou venu de Collective est gardé ;
+  // le Word SharePoint de ce consultant n'est pas relu pour le remplacer.
+  const surAutreCV = new Set<string>();
+  const docsProfils = profils.filter((p) => p.document_id && p.prompt_version === PROMPT_VERSION).map((p) => p.document_id as string);
+  for (let i = 0; i < docsProfils.length; i += 300) {
+    const { data } = await supabase.from("documents").select("consultant_id, sharepoint_drive_id").in("id", docsProfils.slice(i, i + 300)).eq("supprime_sharepoint", false);
+    for (const d of data ?? []) if (String(d.sharepoint_drive_id).startsWith("boite:") || d.sharepoint_drive_id === "collective") surAutreCV.add(d.consultant_id as string);
+  }
   const reference = new Map<string, (typeof words)[number]>();
   for (const w of words) if (!reference.has(w.consultant_id)) reference.set(w.consultant_id, w);
   // Deux échecs (Haiku puis Sonnet) : le CV n'est plus renvoyé (il est signalé dans « Cas à vérifier »).
-  return [...reference.values()].filter((w) => !faits.has(w.id) && (echecs.get(w.id) ?? 0) < 2)
+  return [...reference.values()].filter((w) => !faits.has(w.id) && !surAutreCV.has(w.consultant_id) && (echecs.get(w.id) ?? 0) < 2)
     .map((w) => ({ ...w, repli: (echecs.get(w.id) ?? 0) === 1 }));
 }
 

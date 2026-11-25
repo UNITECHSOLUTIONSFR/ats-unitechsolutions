@@ -31,8 +31,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (minute >= 20 && minute < 30) after(() => executerTache("emails", clientSupabaseAdmin(), { planifiee: true }).then(() => undefined).catch((e) => console.error("Emails :", (e as Error).message)));
     // Matching v3 : découpage des CV en expériences (lot de nuit, seulement s'il y a des CV nouveaux) et empreintes.
     const { avancerDecoupage, empreintesV3 } = await import("@/lib/matching/v3");
-    const decoupage = await avancerDecoupage(clientSupabaseAdmin()).catch((e) => ({ etat: `erreur : ${(e as Error).message.slice(0, 200)}` }));
-    const empreintesExp = await empreintesV3(clientSupabaseAdmin(), 70_000).catch((e) => ({ erreur: (e as Error).message.slice(0, 200) }));
+    // Matching par le sens (25/11/2026) : le découpage des CV par l'IA n'est plus nécessaire (décision de l'utilisatrice).
+    const parLeSens = await (await import("@/lib/matching/v5")).matchingV5Actif(clientSupabaseAdmin());
+    const decoupage = parLeSens ? "arrêté (matching par le sens)" : await avancerDecoupage(clientSupabaseAdmin()).catch((e) => ({ etat: `erreur : ${(e as Error).message.slice(0, 200)}` }));
+    const empreintesExp = parLeSens ? "arrêté (matching par le sens)" : await empreintesV3(clientSupabaseAdmin(), 70_000).catch((e) => ({ erreur: (e as Error).message.slice(0, 200) }));
     const { avancerReference, avancerTestDossiers, avancerTestV3b } = await import("@/lib/matching/v3-reference");
     const reference = await avancerReference(clientSupabaseAdmin()).catch((e) => `erreur : ${(e as Error).message.slice(0, 200)}`);
     const testDossiers = await avancerTestDossiers(clientSupabaseAdmin()).catch((e) => `erreur : ${(e as Error).message.slice(0, 200)}`);

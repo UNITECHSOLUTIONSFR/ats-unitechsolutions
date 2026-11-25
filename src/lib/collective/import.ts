@@ -104,7 +104,7 @@ async function avancerParcours(supabase: SupabaseClient): Promise<string> {
     await supabase.from("reglages").delete().eq("cle", "collective_lot_parcours");
     return `parcours enregistrés : ${enregistres}`;
   }
-  const { data: prets } = await supabase.from("imports_collective").select("application_id, consultant_id").eq("statut", "fait").eq("lecture_ia", true).is("parcours_le", null).limit(400);
+  const { data: prets } = await supabase.from("imports_collective").select("application_id, consultant_id").eq("statut", "fait").eq("lecture_ia", true).is("parcours_le", null).limit(2000);
   if (!prets?.length) return "aucun parcours à lire";
   const budget = await etatBudgetMois();
   if (budget.depasse) return "plafond IA atteint : parcours reportés";
