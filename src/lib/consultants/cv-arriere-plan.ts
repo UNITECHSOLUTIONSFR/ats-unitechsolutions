@@ -26,7 +26,7 @@ export async function lireCVEnArrierePlan(consultantId: string, fichier: File, u
 /** Circuit normal d'un CV (aussi utilisé pour les candidats Collective, avec leurs options). */
 export async function traiterCV(consultantId: string, fichier: File, utilisateurId: string, options: OptionsCV = {}): Promise<string | null> {
   const admin = clientSupabaseAdmin();
-  const lecture = await lireCVJoint(fichier, options.sansIA);
+  const lecture = await lireCVJoint(fichier, options.sansIA, options.origine === "collective");
   if ("erreur" in lecture) {
     await admin.from("consultants").update({ cv_en_lecture: null, cv_lecture_message: lecture.erreur }).eq("id", consultantId);
     return lecture.erreur;

@@ -56,17 +56,45 @@ export async function graphEnvoyer<T>(methode: "PATCH" | "POST", chemin: string,
   return (r.status === 204 ? null : await r.json()) as T;
 }
 
-/** Dépose un fichier (4 Mo au plus) dans un dossier SharePoint ; le dossier est créé s'il n'existe pas. Renvoie l'adresse web du fichier. */
+/**
+ * Dépose un fichier dans un dossier SharePoint ; le dossier est créé s'il n'existe pas. Renvoie l'adresse web du fichier.
+ * Au-delà de 4 Mo (limite d'un dépôt en une fois), le fichier est envoyé en plusieurs morceaux (session de dépôt Graph).
+ */
 export async function graphTeleverser(driveId: string, cheminFichier: string, contenu: Buffer, typeContenu: string, fetchFn: typeof fetch = fetch,
   siExiste: "replace" | "rename" = "replace"): Promise<{ id: string; webUrl: string; name: string }> {
   const jeton = await obtenirJeton(fetchFn);
   const chemin = cheminFichier.split("/").map(encodeURIComponent).join("/");
+  if (contenu.length > 4 * 1024 * 1024) return televerserEnMorceaux(driveId, chemin, cheminFichier, contenu, jeton, fetchFn, siExiste);
   // « rename » : un fichier existant n'est jamais écrasé (le nouveau reçoit un suffixe).
   const r = await fetchFn(`${GRAPH}/drives/${driveId}/root:/${chemin}:/content?@microsoft.graph.conflictBehavior=${siExiste}`, {
     method: "PUT", headers: { Authorization: `Bearer ${jeton}`, "Content-Type": typeContenu }, body: new Uint8Array(contenu),
   });
   if (!r.ok) throw new Error(`Graph ${r.status} (dépôt de ${cheminFichier}) : ${(await r.text()).slice(0, 300)}`);
   return (await r.json()) as { id: string; webUrl: string; name: string };
+}
+
+/** Morceaux de 3,75 Mo (multiple de 320 Kio, comme l'exige Graph). */
+const TAILLE_MORCEAU = 12 * 320 * 1024;
+
+async function televerserEnMorceaux(driveId: string, chemin: string, cheminFichier: string, contenu: Buffer, jeton: string,
+  fetchFn: typeof fetch, siExiste: "replace" | "rename"): Promise<{ id: string; webUrl: string; name: string }> {
+  const s = await fetchFn(`${GRAPH}/drives/${driveId}/root:/${chemin}:/createUploadSession`, {
+    method: "POST", headers: { Authorization: `Bearer ${jeton}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ item: { "@microsoft.graph.conflictBehavior": siExiste } }),
+  });
+  if (!s.ok) throw new Error(`Graph ${s.status} (session de dépôt de ${cheminFichier}) : ${(await s.text()).slice(0, 300)}`);
+  const { uploadUrl } = (await s.json()) as { uploadUrl: string };
+  for (let debut = 0; debut < contenu.length; debut += TAILLE_MORCEAU) {
+    const fin = Math.min(debut + TAILLE_MORCEAU, contenu.length);
+    // L'adresse de la session porte déjà l'autorisation : pas de jeton dans cet appel (exigence de Graph).
+    const r = await fetchFn(uploadUrl, {
+      method: "PUT", headers: { "Content-Length": String(fin - debut), "Content-Range": `bytes ${debut}-${fin - 1}/${contenu.length}` },
+      body: new Uint8Array(contenu.subarray(debut, fin)),
+    });
+    if (!r.ok) throw new Error(`Graph ${r.status} (morceau ${debut}-${fin - 1} de ${cheminFichier}) : ${(await r.text()).slice(0, 300)}`);
+    if (fin === contenu.length) return (await r.json()) as { id: string; webUrl: string; name: string };
+  }
+  throw new Error(`Dépôt de ${cheminFichier} inachevé.`);
 }
 
 /**

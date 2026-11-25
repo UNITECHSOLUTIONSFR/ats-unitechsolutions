@@ -26,16 +26,18 @@ export interface LectureCV {
  * Sert à remplir les champs laissés vides du formulaire, puis à enregistrer les compétences.
  */
 /** Fichier refusé (format ou taille) : message, sinon null. Vérifié avant toute lecture. */
-export function refusFichierCV(fichier: File): string | null {
+export function refusFichierCV(fichier: File, sansLimiteTaille = false): string | null {
   const ext = fichier.name.toLowerCase().split(".").pop() ?? "";
   if (!EXTENSIONS.includes(ext)) return "CV refusé : formats acceptés PDF ou Word.";
-  if (fichier.size > 4 * 1024 * 1024) return "CV refusé : 4 Mo au maximum.";
+  // Limite de taille levée le 25/11/2026 (décision de l'utilisatrice) pour les CV que le serveur télécharge lui-même
+  // (Collective) ; les CV envoyés depuis le navigateur restent limités par l'hébergeur tant que l'envoi direct n'est pas fait.
+  if (!sansLimiteTaille && fichier.size > 4 * 1024 * 1024) return "CV refusé : 4 Mo au maximum.";
   return null;
 }
 
 /** sansIA : le CV est enregistré sans lecture par l'IA (lue plus tard en lot, ou pas du tout). */
-export async function lireCVJoint(fichier: File, sansIA = false): Promise<LectureCV | { erreur: string }> {
-  const refus = refusFichierCV(fichier);
+export async function lireCVJoint(fichier: File, sansIA = false, sansLimiteTaille = false): Promise<LectureCV | { erreur: string }> {
+  const refus = refusFichierCV(fichier, sansLimiteTaille);
   if (refus) return { erreur: refus };
   const contenu = Buffer.from(await fichier.arrayBuffer());
   const extrait = await extraireTexte(contenu, fichier.name).catch(() => ({ texte: "", extractible: false }));
