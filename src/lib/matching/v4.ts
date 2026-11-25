@@ -81,6 +81,9 @@ async function noterCandidats(supabase: SupabaseClient, missionId: string, ids: 
   let aLire = ids.filter((id) => !notes.has(id) && cles.has(id));
   if (aLire.length && (await etatBudgetMois().catch(() => ({ depasse: true }))).depasse) return { notes, manquants: aLire.length };
   const textes = aLire.length ? await textesCV(supabase, aLire) : new Map<string, string>();
+  // CV sans texte lisible : impossible à noter ; il ne compte pas comme « note manquante » (sinon la mission serait relue
+  // à chaque passage, alors qu'une mission n'est lue qu'une fois).
+  const sansTexte = new Set(aLire.filter((id) => !textes.get(id)));
   aLire = aLire.filter((id) => textes.get(id));
   const lots = Array.from({ length: Math.ceil(aLire.length / PAR_APPEL) }, (_, i) => aLire.slice(i * PAR_APPEL, (i + 1) * PAR_APPEL));
   for (let i = 0; i < lots.length; i += 8) {
@@ -101,7 +104,7 @@ async function noterCandidats(supabase: SupabaseClient, missionId: string, ids: 
       }
     }));
   }
-  return { notes, manquants: ids.filter((id) => cles.has(id) && !notes.has(id)).length };
+  return { notes, manquants: ids.filter((id) => cles.has(id) && !notes.has(id) && !sansTexte.has(id)).length };
 }
 
 /** Lignes d'affichage des profils notés. */
