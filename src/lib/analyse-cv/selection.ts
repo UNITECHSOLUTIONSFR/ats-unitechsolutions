@@ -21,14 +21,23 @@ export async function cvAAnalyser(supabase: SupabaseClient) {
     words.push(...((data ?? []) as typeof words));
     if (!data || data.length < 1000) break;
   }
-  const { data: profils } = await supabase.from("profils").select("document_id, prompt_version");
+  // Tous les profils, page par page : la base n'en renvoie que 1 000 à la fois (1 760 profils le 25/11/2026 : les CV au-delà
+  // des 1 000 premiers étaient renvoyés à l'IA chaque nuit, ≈ 225 CV pour rien).
+  const profils: { document_id: string | null; prompt_version: string | null }[] = [];
+  for (let debut = 0; ; debut += 1000) {
+    const { data } = await supabase.from("profils").select("document_id, prompt_version").order("consultant_id").range(debut, debut + 999);
+    profils.push(...((data ?? []) as typeof profils));
+    if (!data || data.length < 1000) break;
+  }
   const echecs = await echecsRecents(supabase);
-  const faits = new Set((profils ?? []).filter((p) => p.prompt_version === PROMPT_VERSION).map((p) => p.document_id));
-  // Un seul CV par consultant : le plus récent.
-  const parConsultant = new Map<string, (typeof words)[number]>();
+  const faits = new Set(profils.filter((p) => p.prompt_version === PROMPT_VERSION).map((p) => p.document_id));
+  // Un seul CV de référence par consultant, toujours le même : le Word le plus récent (décision du 25/11/2026). Avant, un
+  // consultant à plusieurs Word voyait ses CV lus à tour de rôle chaque nuit (≈ 225 CV relus pour rien).
+  const reference = new Map<string, (typeof words)[number]>();
+  for (const w of words) if (!reference.has(w.consultant_id)) reference.set(w.consultant_id, w);
   // Deux échecs (Haiku puis Sonnet) : le CV n'est plus renvoyé (il est signalé dans « Cas à vérifier »).
-  for (const w of words) if (!faits.has(w.id) && (echecs.get(w.id) ?? 0) < 2 && !parConsultant.has(w.consultant_id)) parConsultant.set(w.consultant_id, w);
-  return [...parConsultant.values()].map((w) => ({ ...w, repli: (echecs.get(w.id) ?? 0) === 1 }));
+  return [...reference.values()].filter((w) => !faits.has(w.id) && (echecs.get(w.id) ?? 0) < 2)
+    .map((w) => ({ ...w, repli: (echecs.get(w.id) ?? 0) === 1 }));
 }
 
 
