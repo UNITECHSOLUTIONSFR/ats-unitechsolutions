@@ -37,7 +37,7 @@ const verdictDeNote = (n: number): "pertinent" | "a_etudier" | "hors_sujet" => (
 
 interface Mission { intitule: string; client: string | null; texte_besoin: string | null; localisation: string | null; competences: { nom: string; obligatoire: boolean }[] }
 
-async function chargerMission(supabase: SupabaseClient, missionId: string): Promise<Mission | null> {
+export async function chargerMission(supabase: SupabaseClient, missionId: string): Promise<Mission | null> {
   const { data: m } = await supabase.from("missions").select("intitule, client, texte_besoin, localisation, mission_competences(obligatoire, competences(nom_canonique))").eq("id", missionId).maybeSingle();
   if (!m) return null;
   const competences = ((m.mission_competences ?? []) as unknown as { obligatoire: boolean; competences: { nom_canonique: string } | null }[])

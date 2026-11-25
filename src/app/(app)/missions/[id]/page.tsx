@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { exigerUtilisateur } from "@/lib/acces";
 import { estPertinent, noteAffichee, type LigneClassement } from "@/lib/matching/classement";
 import { VERSION_MOTEUR_V4 } from "@/lib/matching/v4";
+import { VERSION_MOTEUR_V5 } from "@/lib/matching/v5";
 import { classementAAfficher, matchingV2Actif } from "@/lib/matching/stockage";
 import BoutonRecalculer from "./recalculer";
 import { formaterTelephone } from "@/lib/metier/telephone";
@@ -70,7 +71,7 @@ export default async function PageMission({ params, searchParams }: { params: Pr
   const classement = resume.top;
   // Affichés : les profils que l'IA a comparés à la fiche de poste et notés 31 ou plus, du plus haut au plus bas (24/11/2026).
   const proposes = classement.filter(estPertinent);
-  const nouveauMatching = resume.version === VERSION_MOTEUR_V4;
+  const nouveauMatching = resume.version === VERSION_MOTEUR_V4 || resume.version === VERSION_MOTEUR_V5;
   const avisParConsultant = new Map((avisExistants ?? []).map((a) => [a.consultant_id as string, a.contenu as AvisMission]));
   // Dernier CV Unitech généré pour cette mission, par consultant : rouvert sans nouvelle génération.
   const cvParConsultant = new Map<string, { id: string; word: string; pdf: string | null }>();

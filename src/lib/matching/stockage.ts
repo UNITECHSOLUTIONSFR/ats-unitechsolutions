@@ -175,6 +175,7 @@ export async function demanderRecalcul(supabase: SupabaseClient, missionIds?: st
  * demandés, jamais calculés, d'une ancienne version du moteur, ou vieux de plus de 20 heures.
  */
 export async function recalculerEnAttente(supabase: SupabaseClient, budgetMs = 230_000): Promise<{ recalcules: number; restants: number; erreurs: string[]; nouveauxCV?: number }> {
+  if (await (await import("./v5")).matchingV5Actif(supabase)) return passageV5(supabase, budgetMs);
   if (await (await import("./v4")).matchingV4Actif(supabase)) return passageV4(supabase, budgetMs);
   const debut = Date.now();
   // Empreintes de sens des fiches nouvelles ou modifiées d'abord (une minute au plus par passage), mais seulement si
@@ -356,3 +357,52 @@ async function passageV4(supabase: SupabaseClient, budgetMs: number): Promise<{ 
   return { recalcules, restants: aLire.length - recalcules, erreurs, nouveauxCV };
 }
 
+
+/**
+ * Passage du matching par le sens (décision du 25/11/2026), toutes les 10 minutes :
+ * 1. empreintes des CV nouveaux ou modifiés (gratuites) ;
+ * 2. missions ouvertes à lire : nouvelles (jamais lues), celles désignées pour être refaites (réglage matching_v5_a_lire)
+ *    et celles dont la lecture n'est pas terminée ; chacune est comparée à toute la base puis ses 500 plus proches lues ;
+ * 3. nouveaux CV comparés aux missions ouvertes déjà lues.
+ */
+async function passageV5(supabase: SupabaseClient, budgetMs: number): Promise<{ recalcules: number; restants: number; erreurs: string[]; nouveauxCV: number }> {
+  const debut = Date.now();
+  const finAvant = debut + budgetMs;
+  const v5 = await import("./v5");
+  await empreintesSiChangement(supabase).catch((e) => console.error("Empreintes :", (e as Error).message));
+  const erreurs: string[] = [];
+  const [{ data: missions }, { data: lignes }, { data: liste }] = await Promise.all([
+    supabase.from("missions").select("id, created_at").eq("statut", "ouverte").order("created_at", { ascending: false }),
+    supabase.from("classements_mission").select("mission_id, calcule_le, version, a_recalculer, cv_verifies_le, seuil_sens"),
+    supabase.from("reglages").select("valeur").eq("cle", "matching_v5_a_lire").maybeSingle(),
+  ]);
+  const parMission = new Map((lignes ?? []).map((l) => [l.mission_id as string, l]));
+  const designees = new Set(((liste?.valeur ?? []) as string[]));
+  const aLire = (missions ?? []).filter((m) => {
+    const l = parMission.get(m.id as string);
+    if (l?.version === v5.VERSION_MOTEUR_V5) return !!l.a_recalculer;
+    return !l || !l.calcule_le || designees.has(m.id as string);
+  });
+  let recalcules = 0;
+  for (const m of aLire) {
+    if (Date.now() > finAvant - 30_000) break;
+    try {
+      await v5.lireMissionV5(supabase, m.id as string, finAvant);
+      recalcules++;
+      if (designees.delete(m.id as string)) await supabase.from("reglages").upsert({ cle: "matching_v5_a_lire", valeur: [...designees] });
+    } catch (e) {
+      erreurs.push(`${String(m.id).slice(0, 8)} : ${(e as Error).message.slice(0, 120)}`);
+      await supabase.from("classements_mission").update({ erreur: (e as Error).message.slice(0, 300) }).eq("mission_id", m.id);
+    }
+  }
+  // Nouveaux CV : comparés aux missions ouvertes déjà lues par le sens.
+  let nouveauxCV = 0;
+  for (const m of missions ?? []) {
+    if (Date.now() > finAvant - 20_000) break;
+    const l = parMission.get(m.id as string);
+    if (l?.version !== v5.VERSION_MOTEUR_V5 || !l.calcule_le || l.seuil_sens == null || aLire.some((x) => x.id === m.id)) continue;
+    try { nouveauxCV += await v5.nouveauxCVMissionV5(supabase, m.id as string, String(l.cv_verifies_le ?? l.calcule_le), Number(l.seuil_sens), finAvant); }
+    catch (e) { erreurs.push(`nouveaux CV ${String(m.id).slice(0, 8)} : ${(e as Error).message.slice(0, 100)}`); }
+  }
+  return { recalcules, restants: aLire.length - recalcules, erreurs, nouveauxCV };
+}

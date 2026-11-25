@@ -30,12 +30,13 @@ export const aLire = (colonne: string | null | undefined) => !!colonne && COLONN
 const PAR_APPEL = 5;
 
 export async function matchingV4Actif(supabase: SupabaseClient): Promise<boolean> {
-  const { data } = await supabase.from("reglages").select("valeur").eq("cle", "matching_v4").maybeSingle();
-  return data?.valeur === true;
+  // Le matching par le sens (v5) remplace aussi les anciens calculs : mêmes garde-fous que v4 (aucun recalcul à l'ancienne).
+  const { data } = await supabase.from("reglages").select("cle, valeur").in("cle", ["matching_v4", "matching_v5"]);
+  return (data ?? []).some((r) => r.valeur === true);
 }
 
-type Note = { note: number; raison: string; detail: DetailIA };
-const empreinte = (...parties: string[]) => createHash("md5").update(parties.join("|")).digest("hex");
+export type Note = { note: number; raison: string; detail: DetailIA };
+export const empreinte = (...parties: string[]) => createHash("md5").update(parties.join("|")).digest("hex");
 
 /** Le CV contient-il toutes les compétences obligatoires de la mission (mot exact ou synonyme trouvé dans une expérience) ? */
 export function contientObligatoires(l: LigneV3): boolean {
@@ -50,7 +51,7 @@ export function candidatsV4(lignes: LigneV3[], restreindre?: Set<string>): Ligne
 }
 
 /** Texte envoyé à l'IA : la fiche de poste (sans TJM) et la liste des critères à évaluer, dans l'ordre. */
-async function texteMissionCriteres(supabase: SupabaseClient, missionId: string): Promise<string> {
+export async function texteMissionCriteres(supabase: SupabaseClient, missionId: string): Promise<string> {
   const [mission, { data: ex }] = await Promise.all([
     texteMissionIA(supabase, missionId),
     supabase.from("exigences_v3").select("type, ordre, libelle, poids").eq("mission_id", missionId).order("ordre"),
@@ -59,7 +60,7 @@ async function texteMissionCriteres(supabase: SupabaseClient, missionId: string)
   return `${mission}\n\nCRITÈRES À ÉVALUER, DANS CET ORDRE :\n${criteres.join("\n")}`;
 }
 
-function detailDepuis(n: NoteCriteres["notes"][number]): DetailIA {
+export function detailDepuis(n: NoteCriteres["notes"][number]): DetailIA {
   return {
     recapitulatif: n.raison.slice(0, 600),
     analyse: n.criteres.slice(0, 10).map((c) => ({ exigence: c.critere.slice(0, 120), atteint: c.niveau === "atteint", niveau: c.niveau, explication: c.preuve.slice(0, 300) })),
@@ -108,7 +109,7 @@ async function noterCandidats(supabase: SupabaseClient, missionId: string, ids: 
 }
 
 /** Lignes d'affichage des profils notés. */
-async function lignesDepuisNotes(supabase: SupabaseClient, notes: Map<string, Note>, similarites: Map<string, number>): Promise<LigneClassement[]> {
+export async function lignesDepuisNotes(supabase: SupabaseClient, notes: Map<string, Note>, similarites: Map<string, number>): Promise<LigneClassement[]> {
   const ids = [...notes.keys()];
   if (!ids.length) return [];
   const fiches = await chargerCandidats(supabase, ids);
@@ -139,7 +140,7 @@ async function lignesDepuisNotes(supabase: SupabaseClient, notes: Map<string, No
 const tri = (a: LigneClassement, b: LigneClassement) => (b.avisIA?.note ?? -1) - (a.avisIA?.note ?? -1) || (b.similarite ?? 0) - (a.similarite ?? 0);
 
 /** Ce qui est rangé dans classements_mission pour une liste de profils notés. */
-function rangement(lignes: LigneClassement[]) {
+export function rangement(lignes: LigneClassement[]) {
   const top = [...lignes].sort(tri);
   return {
     total: top.length, pertinents: top.filter(estPertinent).length, eligibles: null, top,
