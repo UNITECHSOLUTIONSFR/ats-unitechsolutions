@@ -372,7 +372,7 @@ async function passageV5(supabase: SupabaseClient, budgetMs: number): Promise<{ 
   await empreintesSiChangement(supabase).catch((e) => console.error("Empreintes :", (e as Error).message));
   const erreurs: string[] = [];
   const [{ data: missions }, { data: lignes }, { data: liste }] = await Promise.all([
-    supabase.from("missions").select("id, created_at").eq("statut", "ouverte").order("created_at", { ascending: false }),
+    supabase.from("missions").select("id, created_at, trello_colonne").eq("statut", "ouverte").order("created_at", { ascending: false }),
     supabase.from("classements_mission").select("mission_id, calcule_le, version, a_recalculer, cv_verifies_le, seuil_sens"),
     supabase.from("reglages").select("valeur").eq("cle", "matching_v5_a_lire").maybeSingle(),
   ]);
@@ -381,6 +381,8 @@ async function passageV5(supabase: SupabaseClient, budgetMs: number): Promise<{ 
   const aLire = (missions ?? []).filter((m) => {
     const l = parMission.get(m.id as string);
     if (l?.version === v5.VERSION_MOTEUR_V5) return !!l.a_recalculer;
+    // Missions de « Sourcing M.CISSE » : gardent leurs profils actuels (décision du 25/11/2026).
+    if (m.trello_colonne === "Sourcing M.CISSE") return false;
     return !l || !l.calcule_le || designees.has(m.id as string);
   });
   let recalcules = 0;
