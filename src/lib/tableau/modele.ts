@@ -100,10 +100,10 @@ export interface LigneTableau {
   /** Texte cherchable en plus des colonnes (compétences du CV analysé). */
   recherche?: string;
   /** Repères de la fiche reliée, pour les filtres rapides. */
-  meta?: { dispoMaj?: string | null; dispoLe?: string | null; dispo?: string | null; creeLe?: string; source?: string; cvAnalyse?: boolean };
+  meta?: { dispoMaj?: string | null; dispoLe?: string | null; dispo?: string | null; creeLe?: string; source?: string; cvAnalyse?: boolean; statut?: string | null };
 }
 
-export type FiltreRapide = "disponibles" | "a_verifier" | "semaine" | "cv" | "email_jour" | "sharepoint_jour";
+export type FiltreRapide = "disponibles" | "a_verifier" | "semaine" | "cv" | "email_jour" | "sharepoint_jour" | "unitech" | "ailleurs" | "ne_pas_contacter";
 
 /** Date du jour à Paris (AAAA-MM-JJ). */
 const jourParis = (t: number | string) => new Date(t).toLocaleDateString("fr-CA", { timeZone: "Europe/Paris" });
@@ -113,6 +113,9 @@ export function filtreRapide(l: LigneTableau, f: FiltreRapide, maintenant: numbe
   const m = l.meta;
   if (!m) return false;
   if (f === "cv") return !!m.cvAnalyse;
+  if (f === "unitech") return m.statut === "en_mission_unitech";
+  if (f === "ailleurs") return m.statut === "en_mission_ailleurs";
+  if (f === "ne_pas_contacter") return m.statut === "ne_pas_contacter";
   // Fiches créées aujourd'hui depuis une candidature email, ou depuis un CV déposé dans SharePoint.
   if (f === "email_jour" || f === "sharepoint_jour") return m.source === (f === "email_jour" ? "email" : "sharepoint") && !!m.creeLe && jourParis(m.creeLe) === jourParis(maintenant);
   if (f === "semaine") return !!m.creeLe && Date.parse(m.creeLe) > maintenant - 7 * 86_400_000;

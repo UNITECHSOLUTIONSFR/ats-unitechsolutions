@@ -54,9 +54,9 @@ export async function chargerTableau(supabase: SupabaseClient, filtre?: FiltreTa
         return Object.entries((r.data ?? {}) as Record<string, string>).map(([consultant_id, competences]) => ({ consultant_id, competences }));
       }),
     ids
-      ? supabase.from("consultants").select("id, disponibilite, disponible_le, disponibilite_maj_le, created_at, source").in("id", ids).then((r) => (r.data ?? []) as { id: string; disponibilite: string | null; disponible_le: string | null; disponibilite_maj_le: string | null; created_at: string; source: string }[])
-      : lireTout<{ id: string; disponibilite: string | null; disponible_le: string | null; disponibilite_maj_le: string | null; created_at: string; source: string }>((a, b) =>
-        supabase.from("consultants").select("id, disponibilite, disponible_le, disponibilite_maj_le, created_at, source").range(a, b)),
+      ? supabase.from("consultants").select("id, disponibilite, disponible_le, disponibilite_maj_le, created_at, source, statut").in("id", ids).then((r) => (r.data ?? []) as { id: string; disponibilite: string | null; disponible_le: string | null; disponibilite_maj_le: string | null; created_at: string; source: string; statut: string | null }[])
+      : lireTout<{ id: string; disponibilite: string | null; disponible_le: string | null; disponibilite_maj_le: string | null; created_at: string; source: string; statut: string | null }>((a, b) =>
+        supabase.from("consultants").select("id, disponibilite, disponible_le, disponibilite_maj_le, created_at, source, statut").range(a, b)),
   ]);
 
   // Fiches créées hors Excel (emails, CV SharePoint, saisie) pas encore reliées à une ligne : en haut, les plus récentes d'abord.
@@ -71,7 +71,7 @@ export async function chargerTableau(supabase: SupabaseClient, filtre?: FiltreTa
     if (!l.consultant_id) continue;
     if (parConsultant.has(l.consultant_id)) l.recherche = parConsultant.get(l.consultant_id);
     const r = parId.get(l.consultant_id);
-    if (r) l.meta = { dispo: r.disponibilite, dispoLe: r.disponible_le, dispoMaj: r.disponibilite_maj_le, creeLe: r.created_at, source: r.source, cvAnalyse: parConsultant.has(l.consultant_id) };
+    if (r) l.meta = { dispo: r.disponibilite, dispoLe: r.disponible_le, dispoMaj: r.disponibilite_maj_le, creeLe: r.created_at, source: r.source, cvAnalyse: parConsultant.has(l.consultant_id), statut: r.statut };
   }
 
   const documents: Record<string, { word?: string; email?: string; pdf?: string }> = {};

@@ -9,14 +9,15 @@ import { normaliserTelephone } from "@/lib/metier/telephone";
 import { normaliserEmail } from "@/lib/metier/dedoublonnage";
 import { enregistrerCVJoint, lireCVJoint, refusFichierCV } from "./cv-joint";
 import { lireCVEnArrierePlan } from "./cv-arriere-plan";
+import { STATUTS_FICHE } from "./statuts";
 
-const STATUTS = ["candidat", "consultant", "en_mission", "inactif"];
+const STATUTS: string[] = [...STATUTS_FICHE];
 
 /** Modifie une fiche depuis l'interface, en gardant l'historique et la trace dans le journal d'accès. */
 export async function modifierConsultant(formData: FormData) {
   const { utilisateur, supabase } = await exigerUtilisateur();
   const id = String(formData.get("id"));
-  const CHAMPS_FICHE = "prenom, nom, trigramme, intitule_poste, disponibilite, disponible_le, telephone_e164, telephone_brut, email, email_2, localisation, mobilite, statut, notes, experience, tjm_salaire, linkedin, cv_lien, commentaire_email";
+  const CHAMPS_FICHE = "prenom, nom, trigramme, intitule_poste, disponibilite, disponible_le, telephone_e164, telephone_brut, email, email_2, localisation, mobilite, statut, notes, experience, tjm_salaire, linkedin, cv_lien, commentaire_email, statut_motif, mission_client, mission_fin";
   const [{ data: avant }, { data: profilAvant }, { data: compsAvant }] = await Promise.all([
     supabase.from("consultants").select(CHAMPS_FICHE).eq("id", id).maybeSingle(),
     supabase.from("profils").select("annees_experience, seniorite, resume").eq("consultant_id", id).maybeSingle(),
@@ -55,6 +56,10 @@ export async function modifierConsultant(formData: FormData) {
     linkedin: texte("linkedin"),
     cv_lien: texte("cv_lien"),
     commentaire_email: texte("commentaire_email"),
+    // Détails du statut (26/11/2026) : gardés seulement pour le statut concerné.
+    mission_client: ["en_mission_unitech", "en_mission_ailleurs"].includes(statut) ? texte("mission_client") : null,
+    mission_fin: ["en_mission_unitech", "en_mission_ailleurs"].includes(statut) && /^\d{4}-\d{2}-\d{2}$/.test(texte("mission_fin") ?? "") ? texte("mission_fin") : null,
+    statut_motif: statut === "ne_pas_contacter" ? texte("statut_motif") : null,
   };
 
   const modifications: Record<string, { avant: unknown; apres: unknown }> = {};

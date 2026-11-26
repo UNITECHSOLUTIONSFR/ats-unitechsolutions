@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import type { ChampFiche } from "@/lib/import/excel";
 import { valeurEcran, VIDE, type FiltreRapide, type Filtres, type Tri } from "@/lib/tableau/modele";
+import { pastilleStatut } from "@/lib/consultants/statuts";
 import type { CriteresTableau, LigneAffichee, PageTableau } from "@/lib/tableau/page";
 import { modifierCellules } from "@/lib/tableau/actions";
 import { classePastille } from "@/lib/statuts";
@@ -331,6 +332,7 @@ export default function TableauExcel({ vues, criteresInitiaux, premiere, ongletI
                           <IconeFiche className="h-4 w-4" />
                         </button>
                       ) : <span className="w-4" />}
+                      {(() => { const p = pastilleStatut(l.meta?.statut); return p && <span className={`whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10px] font-bold ${p.classes}`}>{p.texte}</span>; })()}
                       {l.consultant_id && l.documents?.word && (
                         <a href={l.documents.word} target="_blank" rel="noreferrer" title="Ouvrir le CV Word (SharePoint)"
                           className="rounded-md bg-marque-50 px-1.5 py-0.5 text-[10px] font-bold text-marque-700 hover:bg-marque-100">Word</a>
@@ -549,7 +551,8 @@ function ModificationMasse({ entetes, nombre, onAnnuler, onValider }: {
   );
 }
 
-const RAPIDES = [["disponibles", "Disponibles maintenant"], ["a_verifier", "Disponibilité à vérifier (> 3 mois)"], ["semaine", "Ajoutés cette semaine"], ["cv", "CV analysé"]] as const;
+const RAPIDES = [["disponibles", "Disponibles maintenant"], ["a_verifier", "Disponibilité à vérifier (> 3 mois)"], ["semaine", "Ajoutés cette semaine"], ["cv", "CV analysé"],
+  ["unitech", "Consultants Unitech en mission"], ["ailleurs", "En mission ailleurs"], ["ne_pas_contacter", "Ne pas contacter"]] as const;
 
 function Pastille({ texte, onRetirer }: { texte: string; onRetirer: () => void }) {
   return (

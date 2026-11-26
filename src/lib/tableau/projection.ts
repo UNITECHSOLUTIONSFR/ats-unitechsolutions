@@ -79,7 +79,7 @@ async function construire(supabase: SupabaseClient, filtre?: FiltreTableau): Pro
     const ligne = {
       id: l.id, position: l.position, consultant_id: l.consultant_id, valeurs: l.valeurs, affiche, recherche,
       chiffres: recherche.replace(/\D/g, ""), dispo: m?.dispo ?? null, dispo_le: m?.dispoLe ?? null, dispo_maj: m?.dispoMaj ?? null,
-      cree_le: m?.creeLe ?? null, source: m?.source ?? null, cv_analyse: !!m?.cvAnalyse,
+      cree_le: m?.creeLe ?? null, source: m?.source ?? null, cv_analyse: !!m?.cvAnalyse, statut: m?.statut ?? null,
       documents: (l.consultant_id && d.documents[l.consultant_id]) || {},
     };
     // Empreinte = contenu (sans la position) + « : » + position : quand des fiches sont ajoutées, la base décale les positions

@@ -6,6 +6,7 @@ import { exigerUtilisateur } from "@/lib/acces";
 import { estPertinent, noteAffichee, type LigneClassement } from "@/lib/matching/classement";
 import { VERSION_MOTEUR_V4 } from "@/lib/matching/v4";
 import { VERSION_MOTEUR_V5 } from "@/lib/matching/v5";
+import { pastilleStatut } from "@/lib/consultants/statuts";
 import { classementAAfficher, matchingV2Actif } from "@/lib/matching/stockage";
 import BoutonRecalculer from "./recalculer";
 import { formaterTelephone } from "@/lib/metier/telephone";
@@ -76,7 +77,7 @@ export default async function PageMission({ params, searchParams }: { params: Pr
     : Promise.resolve({ data: [] as unknown[] });
   const classement = resume.top;
   // Affichés : les profils que l'IA a comparés à la fiche de poste et notés 31 ou plus, du plus haut au plus bas (24/11/2026).
-  const proposes = classement.filter(estPertinent);
+  const pertinents = classement.filter(estPertinent);
   const nouveauMatching = resume.version === VERSION_MOTEUR_V4 || resume.version === VERSION_MOTEUR_V5;
   const avisParConsultant = new Map((avisExistants ?? []).map((a) => [a.consultant_id as string, a.contenu as AvisMission]));
   // Dernier CV Unitech généré pour cette mission, par consultant : rouvert sans nouvelle génération.
@@ -84,10 +85,12 @@ export default async function PageMission({ params, searchParams }: { params: Pr
   for (const g of cvMission ?? []) if (!cvParConsultant.has(g.consultant_id)) cvParConsultant.set(g.consultant_id, { id: g.id, word: g.word_url, pdf: g.pdf_url });
   const suivi = new Map((propositions ?? []).map((p) => [p.consultant_id, p.statut as string]));
   // Cartes (24/11/2026) : date d'arrivée du profil et TJM / salaire de sa fiche (jamais le TJM de la mission).
-  const { data: infosFiches } = proposes.length
-    ? await supabase.from("consultants").select("id, created_at, tjm_salaire").in("id", proposes.map((c) => c.consultant_id))
+  const { data: infosFiches } = pertinents.length
+    ? await supabase.from("consultants").select("id, created_at, tjm_salaire, statut").in("id", pertinents.map((c) => c.consultant_id))
     : { data: [] };
-  const infos = new Map((infosFiches ?? []).map((f) => [f.id as string, { arrivee: f.created_at as string, tjm: (f.tjm_salaire as string | null) ?? null }]));
+  const infos = new Map((infosFiches ?? []).map((f) => [f.id as string, { arrivee: f.created_at as string, tjm: (f.tjm_salaire as string | null) ?? null, statut: (f.statut as string | null) ?? null }]));
+  // Statuts de la fiche (26/11/2026) : « ne pas contacter » n'est plus proposé ; « en mission » reste visible avec sa pastille.
+  const proposes = pertinents.filter((c) => infos.get(c.consultant_id)?.statut !== "ne_pas_contacter");
 
   const shortlist: ProfilShortlist[] = classement.filter((c) => suivi.has(c.consultant_id) && suivi.get(c.consultant_id) !== "refuse").map((c) => ({
     trigramme: c.trigramme, poste: c.intitule_poste, annees: c.annees_experience, score: Math.round(noteAffichee(c)),
@@ -224,6 +227,7 @@ export default async function PageMission({ params, searchParams }: { params: Pr
                       <span className="flex flex-wrap gap-2">
                         {info?.tjm && <span className="rounded-lg bg-marque-50 px-2.5 py-1 text-sm font-semibold text-marque-700 ring-1 ring-marque-200">💶 {info.tjm}</span>}
                         {nouveau && <span className="rounded-lg bg-white px-2.5 py-1 text-sm font-semibold text-slate-600 ring-1 ring-slate-300">✦ Nouveau</span>}
+                        {(() => { const p = pastilleStatut(info?.statut); return p && <span className={`rounded-lg px-2.5 py-1 text-sm font-semibold ${p.classes}`}>{p.texte}</span>; })()}
                         {dejaLus.has(c.consultant_id)
                           ? <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-sm font-medium text-slate-500">✓ Lu</span>
                           : <span className="rounded-lg bg-sky-50 px-2.5 py-1 text-sm font-semibold text-sky-700 ring-1 ring-sky-200">● Pas encore lu</span>}

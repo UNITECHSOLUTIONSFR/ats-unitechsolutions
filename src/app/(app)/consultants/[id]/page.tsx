@@ -1,4 +1,6 @@
 import Link from "next/link";
+import ChampStatut from "./champ-statut";
+import { LIBELLES_STATUT, pastilleStatut } from "@/lib/consultants/statuts";
 import { LectureCVEnCours } from "./lecture-cv";
 import { BoutonWhatsApp } from "../../whatsapp";
 import { notFound, redirect } from "next/navigation";
@@ -86,7 +88,12 @@ export default async function FicheConsultant({ params, searchParams }: { params
             <h1 className="break-words text-2xl font-bold tracking-[-0.03em] sm:text-3xl">{c.prenom} {c.nom} <span className="font-mono text-base font-medium text-white/60">{c.trigramme}</span></h1>
             <p className="text-white/80">{c.intitule_poste ?? "Poste non renseigné"}{c.localisation ? ` · ${c.localisation}` : ""}</p>
             <div className="mt-2 flex flex-wrap gap-2 text-xs">
-              <span className="rounded-full bg-white/20 px-2.5 py-0.5 font-medium capitalize ring-1 ring-white/25">{c.statut === "en_mission" ? "candidat" : c.statut}</span>
+              {(() => {
+                const p = pastilleStatut(c.statut);
+                if (!p) return <span className="rounded-full bg-white/20 px-2.5 py-0.5 font-medium ring-1 ring-white/25">{LIBELLES_STATUT[c.statut] ?? c.statut}</span>;
+                const detail = c.statut === "ne_pas_contacter" ? c.statut_motif : [c.mission_client, c.mission_fin ? `fin le ${new Date(c.mission_fin).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })}` : null].filter(Boolean).join(" · ");
+                return <span className={`rounded-full px-2.5 py-0.5 font-bold ${p.classes}`}>{p.texte}{detail ? ` · ${detail}` : ""}</span>;
+              })()}
               <span className={`rounded-full px-2.5 py-0.5 font-medium ring-1 ${dispoAncienne ? "bg-amber-400/30 ring-amber-200/50" : "bg-white/20 ring-white/25"}`}>
                 {c.disponibilite ?? (c.disponible_le ? `Disponible le ${new Date(c.disponible_le).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })}` : "Disponibilité non renseignée")}
               </span>
@@ -236,13 +243,7 @@ export default async function FicheConsultant({ params, searchParams }: { params
             {majDispo ? `Disponibilité mise à jour le ${majDispo.toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })}` : "Disponibilité jamais mise à jour"}
             {dispoAncienne ? " — à vérifier (plus de 3 mois)" : ""}
           </p>
-          <label className="block">
-            <span className="text-slate-600">Statut</span>
-            <select name="statut" defaultValue={c.statut} className="champ mt-1 w-full">
-              <option value="candidat">Candidat</option><option value="consultant">Consultant</option>
-              <option value="inactif">Inactif</option>
-            </select>
-          </label>
+          <ChampStatut statut={c.statut} client={c.mission_client ?? null} fin={c.mission_fin ?? null} motif={c.statut_motif ?? null} />
           <div className="grid gap-3 sm:grid-cols-2">
             <Champ nom="experience" libelle="Expérience (Excel)" valeur={c.experience} />
             <Champ nom="tjm_salaire" libelle="TJM / salaire" valeur={c.tjm_salaire} />

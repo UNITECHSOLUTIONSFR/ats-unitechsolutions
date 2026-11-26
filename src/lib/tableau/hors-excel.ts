@@ -1,6 +1,7 @@
 import { champsParEntete, COLONNE_DOMAINE, type ChampFiche } from "@/lib/import/excel";
 import { formaterTelephone } from "@/lib/metier/telephone";
 import type { LigneTableau } from "./modele";
+import { STATUTS_EXCEL } from "@/lib/consultants/statuts";
 
 /** Préfixe des lignes calculées (fiches créées hors Excel) : elles n'existent pas dans tableau_lignes. */
 export const PREFIXE_HORS_EXCEL = "fiche:";
@@ -32,7 +33,7 @@ export function lignesHorsExcel(fiches: FicheHorsExcel[], entetes: string[], pre
     poser("prenom", f.prenom); poser("nom", f.nom); poser("trigramme", f.trigramme); poser("email", f.email);
     poser("email_2", f.email_2); poser("telephone", formaterTelephone(f.telephone_e164) || f.telephone_brut);
     poser("intitule_poste", f.intitule_poste); poser("disponibilite", f.disponible_le ?? f.disponibilite);
-    poser("localisation", f.localisation); poser("notes", f.notes); poser("statut", f.statut); poser("experience", f.experience);
+    poser("localisation", f.localisation); poser("notes", f.notes); poser("statut", STATUTS_EXCEL.has(f.statut) ? f.statut : null); poser("experience", f.experience);
     poser("tjm_salaire", f.tjm_salaire); poser("linkedin", f.linkedin); poser("cv_lien", f.cv_lien);
     poser("commentaire_email", f.commentaire_email); poser("date_maj", f.disponibilite_maj_le?.slice(0, 10));
     for (const [colonne, v] of Object.entries(f.colonnes_tableau ?? {})) if (entetes.includes(colonne) && v) valeurs[colonne] = v;
