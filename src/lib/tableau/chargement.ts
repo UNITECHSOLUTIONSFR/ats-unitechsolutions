@@ -31,8 +31,11 @@ export async function chargerTableau(supabase: SupabaseClient, filtre?: FiltreTa
     ids
       ? supabase.from("tableau_lignes").select("id, position, consultant_id, valeurs").eq("onglet_id", onglet.id).in("consultant_id", ids).order("position").then((r) => (r.data ?? []) as LigneTableau[])
       : lireTout<LigneTableau>((a, b) => supabase.from("tableau_lignes").select("id, position, consultant_id, valeurs").eq("onglet_id", onglet.id).order("position").range(a, b)),
-    (ids ? supabase.from("consultants").select(CHAMPS_HORS_EXCEL).neq("source", "import_excel").in("id", ids) : supabase.from("consultants").select(CHAMPS_HORS_EXCEL).neq("source", "import_excel"))
-      .order("created_at", { ascending: false }).then((r) => r.data ?? []),
+    // Toutes les fiches hors Excel, page par page (26/11/2026 : la base n'en renvoie que 1 000 à la fois ; au-delà,
+    // les fiches les plus anciennes n'apparaissaient plus dans l'écran Consultants).
+    ids
+      ? supabase.from("consultants").select(CHAMPS_HORS_EXCEL).neq("source", "import_excel").in("id", ids).order("created_at", { ascending: false }).order("id").then((r) => r.data ?? [])
+      : lireTout<Record<string, unknown>>((a, b) => supabase.from("consultants").select(CHAMPS_HORS_EXCEL).neq("source", "import_excel").order("created_at", { ascending: false }).order("id").range(a, b)),
     ids
       ? supabase.from("documents").select("consultant_id, type, url_web, sharepoint_drive_id").in("consultant_id", ids).eq("supprime_sharepoint", false).in("type", ["word_nominatif", "pdf_anonyme"])
         .order("modifie_sharepoint_le", { ascending: false }).then((r) => (r.data ?? []) as { consultant_id: string; type: string; url_web: string | null; sharepoint_drive_id: string }[])
@@ -58,7 +61,7 @@ export async function chargerTableau(supabase: SupabaseClient, filtre?: FiltreTa
 
   // Fiches créées hors Excel (emails, CV SharePoint, saisie) pas encore reliées à une ligne : en haut, les plus récentes d'abord.
   const relies = new Set(lignes.map((l) => l.consultant_id).filter(Boolean));
-  const hors = lignesHorsExcel(horsExcel.filter((c) => !relies.has(c.id)) as FicheHorsExcel[], onglet.entetes, Math.max(0, ...lignes.map((l) => l.position)) + 1);
+  const hors = lignesHorsExcel((horsExcel as unknown as FicheHorsExcel[]).filter((c) => !relies.has(c.id)), onglet.entetes, Math.max(0, ...lignes.map((l) => l.position)) + 1);
   if (filtre) for (const l of hors) { const p = filtre.positionsHorsExcel.get(l.id); if (p === undefined) return null; l.position = p; }
   lignes.unshift(...hors);
   // Compétences du CV analysé : cherchables depuis la barre de recherche (« java paris »).

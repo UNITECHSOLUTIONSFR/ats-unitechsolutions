@@ -1,7 +1,7 @@
 import { after, NextResponse, type NextRequest } from "next/server";
 import { revalidateTag } from "next/cache";
 import { calculerApercus, recalculerEnAttente } from "@/lib/matching/stockage";
-import { actualiserProjection } from "@/lib/tableau/projection";
+import { actualiserProjection, actualiserProjectionSiChangement } from "@/lib/tableau/projection";
 import { clientSupabaseAdmin } from "@/lib/supabase/admin";
 import { autorisationTachesValide } from "@/lib/securite/secret";
 import { poursuivreEnvoi } from "@/lib/relance/declenchement";
@@ -65,7 +65,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   // Nouvelles fiches possibles : accueil rafraîchi et projection de l'écran Consultants mise à jour après la réponse.
   // Les classements des missions, rangés dans la base, sont refaits par la tâche « matching ».
   if (tache !== "relance") revalidateTag("accueil", "max");
-  if (tache === "excel" || tache === "excel_lecture" || tache === "emails" || tache === "cv") after(() => actualiserProjection().then(() => undefined).catch(() => undefined));
+  // Seulement si quelque chose a changé (26/11/2026) : la tâche emails, chaque heure, relisait toute la liste pour rien.
+  if (tache === "excel" || tache === "excel_lecture" || tache === "emails" || tache === "cv") after(() => actualiserProjectionSiChangement().then(() => undefined).catch(() => undefined));
   // Relance lancée par un administrateur : tant qu'il reste des emails à envoyer, l'appel suivant est enchaîné.
   if (tache === "relance" && r.ok && Number(r.rapport.envoyes ?? 0) > 0) after(poursuivreEnvoi);
   return NextResponse.json(r, { status: r.ok ? 200 : 500 });

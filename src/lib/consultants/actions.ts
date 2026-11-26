@@ -213,7 +213,7 @@ export async function creerConsultant(_e: EtatCreation, formData: FormData): Pro
   // CV joint : rangé dans SharePoint, compétences enregistrées (lecture déjà faite) ; la fiche sort dans la recherche et le matching.
   if (enArrierePlan) await lireCVEnArrierePlan(cree.id, fichier as File, utilisateur.id);
   const avertissement = lecture ? await enregistrerCVJoint(cree.id, lecture, { prenom: prenom ?? "—", nom }) : null;
-  invaliderTableau();
+  invaliderTableau([cree.id]);
   revalidatePath("/consultants");
   // Nouvelle fiche : comparée tout de suite aux missions ouvertes (matching dans les deux sens).
   const { evaluerProfilApres } = await import("@/lib/matching/profil");

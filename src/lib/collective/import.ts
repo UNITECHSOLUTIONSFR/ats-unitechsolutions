@@ -9,7 +9,7 @@ import { ESPACE_ADEQUATIONS } from "@/lib/cv-unitech/service";
 import { deposerCVRecu } from "@/lib/emails/depot";
 import { resoudreCompetences } from "@/lib/matching/competences";
 import { cheminCVCollective } from "./fichier";
-import { actualiserProjection } from "@/lib/tableau/projection";
+import { actualiserProjectionConsultants } from "@/lib/tableau/projection";
 
 /** Compte de l'administratrice qui a demandé l'import (historique des fiches). */
 const ACTEUR = "db7f1a37-f71c-4aa2-98f8-30cd67874ca4";
@@ -100,6 +100,8 @@ async function avancerParcours(supabase: SupabaseClient): Promise<string> {
       }
       await supabase.from("imports_collective").update({ parcours_le: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("application_id", cible.application_id);
     }
+    // Liste de l'écran Consultants : lignes des fiches complétées seulement.
+    await actualiserProjectionConsultants(Object.values(lot.documents).map((d) => d.consultant_id), supabase).catch(() => undefined);
     await enregistrerUsages(usages, `collective-parcours:${lot.lot}`).catch(() => undefined);
     await supabase.from("reglages").delete().eq("cle", "collective_lot_parcours");
     return `parcours enregistrés : ${enregistres}`;
@@ -133,6 +135,7 @@ export async function traiterImportsCollective(supabase: SupabaseClient, budgetM
   const debut = Date.now();
   // 1. CV en attente : par paquets (plusieurs à la fois la nuit).
   let faits = 0, erreurs = 0;
+  const touches = new Set<string>();
   const n = enParallele();
   while (Date.now() - debut < budgetMs) {
     const { data: paquet } = await supabase.from("imports_collective").select("application_id, consultant_id, cv_lien, nom_fichier").eq("statut", "a_traiter").order("created_at").limit(n);
@@ -141,9 +144,10 @@ export async function traiterImportsCollective(supabase: SupabaseClient, budgetM
     await supabase.from("imports_collective").update({ statut: "erreur", message: "en cours", updated_at: new Date().toISOString() }).in("application_id", paquet.map((p) => p.application_id));
     const r = await Promise.all(paquet.map((it) => traiterUn(supabase, it as Element)));
     faits += r.filter(Boolean).length; erreurs += r.filter((x) => !x).length;
+    paquet.forEach((it, k) => { if (r[k]) touches.add(it.consultant_id as string); });
   }
-  // Liste de l'écran Consultants mise à jour une fois pour tout le passage.
-  if (faits) await actualiserProjection(supabase).catch(() => undefined);
+  // Liste de l'écran Consultants : seules les lignes des fiches traitées sont calculées (26/11/2026, base plus légère).
+  if (touches.size) await actualiserProjectionConsultants([...touches], supabase).catch(() => undefined);
   // 2. Dépôt SharePoint des CV traités avant cette décision.
   let deposes = 0;
   const { data: aDeposer } = await supabase.from("imports_collective").select("application_id, consultant_id, nom_fichier").eq("statut", "fait").is("depose_le", null).limit(20);
